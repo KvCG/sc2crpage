@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "useDefineForClassFields": true,
+        "lib": ["ES2020", "DOM", "DOM.Iterable"],
+        "module": "ESNext",
+        "skipLibCheck": true,
+
+        /* Bundler mode */
+        "allowImportingTsExtensions": true,
+        "isolatedModules": true,
+        "moduleDetection": "force",
+        "noEmit": true,
+        "jsx": "react-jsx",
+		"allowSyntheticDefaultImports": true, // // This can help with module imports
+    	"esModuleInterop": true, // This can help with module imports
+		"moduleResolution": "node", // Standard Node.js module resolution
+
+        /* Linting */
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+		"pretty": true
+    },
+    "include": ["../../src/client/**/*"],
+	"exclude": ["../../node_modules"]
+}
