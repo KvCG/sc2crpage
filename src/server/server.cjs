@@ -11,14 +11,12 @@ if (process.env.ENVIRONMENT == 'dev') {
     app.use(express_1.default.static(path_1.default.join(__dirname, '../../dist')));
     app.get('*', (_req, res) => {
         res.sendFile(path_1.default.join(__dirname, '../../dist/index.html'));
-        console.log('huh');
     });
 }
 app.use(express_1.default.static(path_1.default.join(__dirname, '../')));
 // Handle SPA routing
 app.get('*', (_req, res) => {
-    console.log('huu====??');
-    res.sendFile(path_1.default.join(__dirname, '../index.html')); 
+    res.sendFile(path_1.default.join(__dirname, '../index.html'));
 });
 // Error handling middleware
 app.use((err, _req, res, _next) => {
