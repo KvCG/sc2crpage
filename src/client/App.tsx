@@ -1,40 +1,35 @@
 import React, { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { search } from './services/getPlayerInfo.ts'
 import './App.css'
+import { AxiosResponse } from 'axios'
 
 // Define functional component using TypeScript
 const App: React.FC = () => {
     // TypeScript infers the type of `count` as number
     const [count, setCount] = useState<number>(0)
+    const [inputValue, setInputValue] = useState<string>('')
+    const [playerInfo, setPlayerInfo] = useState<object[]>([])
 
     return (
         <>
-            <div>
-                <a
-                    href="https://vitejs.dev"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <img src={viteLogo} className="logo" alt="Vite logo" />
-                </a>
-                <a
-                    href="https://react.dev"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <img
-                        src={reactLogo}
-                        className="logo react"
-                        alt="React logo"
-                    />
-                </a>
-            </div>
-            <h1>SC2 CR</h1>
+            <h1>SC2 CR </h1>
             <div className="card">
-                <button onClick={() => setCount(count => count + 1)}>
-                    Joel Noob x{count}
+                <input
+                    type="text"
+                    onInput={e => setInputValue(e.target.value)}
+                />
+                <button
+                    onClick={async () => {
+                        const response: AxiosResponse = await search(inputValue)
+                        setPlayerInfo(response.data)
+                    }}
+                >
+                    Search
                 </button>
+            </div>
+            <div>
+                <h2>Player Data</h2>
+                {JSON.stringify(playerInfo)}
             </div>
         </>
     )
