@@ -33,7 +33,7 @@ const App: React.FC = () => {
             <h1>SC2 CR</h1>
             <div className="card">
                 <button onClick={() => setCount(count => count + 1)}>
-                    Kerverus is awesome x{count}
+                    Kary is awesome x{count}
                 </button>
             </div>
         </>
