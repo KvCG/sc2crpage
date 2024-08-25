@@ -6,9 +6,12 @@ import { AxiosResponse } from 'axios'
 // Define functional component using TypeScript
 const App: React.FC = () => {
     // TypeScript infers the type of `count` as number
-    const [count, setCount] = useState<number>(0)
     const [inputValue, setInputValue] = useState<string>('')
     const [playerInfo, setPlayerInfo] = useState<object[]>([])
+    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const target = e.target as HTMLInputElement
+		setInputValue(target.value)
+    }
 
     return (
         <>
@@ -16,7 +19,7 @@ const App: React.FC = () => {
             <div className="card">
                 <input
                     type="text"
-                    onInput={e => setInputValue(e.target.value)}
+                    onInput={handleInput}
                 />
                 <button
                     onClick={async () => {
