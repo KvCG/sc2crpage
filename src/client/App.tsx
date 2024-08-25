@@ -30,7 +30,7 @@ const App: React.FC = () => {
                     />
                 </a>
             </div>
-            <h1>SC2 CR Official page</h1>
+            <h1>SC2 CR</h1>
             <div className="card">
                 <button onClick={() => setCount(count => count + 1)}>
                     Kerverus is awesome x{count}
