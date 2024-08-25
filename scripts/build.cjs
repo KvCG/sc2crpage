@@ -6,7 +6,7 @@ esbuild
         entryPoints: [path.resolve(__dirname, '../src/server/server.ts')],
         bundle: true,
         platform: 'node',
-        outfile: path.resolve(__dirname, '../dist/server.cjs'),
+        outfile: path.resolve(__dirname, '../dist/webserver/server.cjs'),
         target: 'node20',
         format: 'cjs',
     })
