@@ -27,6 +27,7 @@ app.use('/api', async (req, res) => {
             url: url,
             httpsAgent: agent,
             data: req.body,
+            method: req.method,
         });
         // console.log(response.data)
         res.json(response.data);

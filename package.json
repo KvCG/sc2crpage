@@ -12,9 +12,10 @@
         "preview": "npm run build:server && node dist/webserver/server.cjs",
         "ds": "tsc --project src/server/ && npm run renameFiles && nodemon --env-file=.env src/server/server.cjs",
         "renameFiles": "powershell -Command \"Move-Item -Path 'src/server/server.js' -Destination 'src/server/server.cjs' -Force\"",
-        "buildImg": "docker build -t sc2cr .",
+        "buildImg": "docker build --no-cache -t sc2cr .",
         "localPod": "docker run -dp 127.0.0.1:3000:3000 sc2cr",
-        "pushImg": "docker push kerverus/sc2cr:latest"
+		"tagImg": "docker tag sc2cr:latest kerverus/sc2cr:latest",
+		"pushImg": "npm run buildImg && npm run tagImg && docker push kerverus/sc2cr:latest"
     },
     "dependencies": {
         "axios": "^1.7.5",
