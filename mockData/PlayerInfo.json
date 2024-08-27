@@ -1,0 +1,61 @@
+[
+    {
+        "leagueMax": 5,
+        "ratingMax": 3511,
+        "totalGamesPlayed": 2571,
+        "previousStats": { "rating": 3325, "gamesPlayed": 417, "rank": 45721 },
+        "currentStats": { "rating": 3448, "gamesPlayed": 175, "rank": 23117 },
+        "members": {
+            "terranGamesPlayed": 2571,
+            "character": {
+                "realm": 1,
+                "name": "Kerverus#425",
+                "id": 340752743,
+                "accountId": 320852693,
+                "region": "US",
+                "battlenetId": 6334489
+            },
+            "account": {
+                "battleTag": "Kerverus#11258",
+                "id": 320852693,
+                "partition": "GLOBAL",
+                "hidden": null
+            },
+            "clan": {
+                "tag": "IMCR",
+                "id": 109064,
+                "region": "US",
+                "name": "Imperial Phoenix CR",
+                "members": 15,
+                "activeMembers": 13,
+                "avgRating": 3222,
+                "avgLeagueType": 4,
+                "games": 1528
+            }
+        }
+    },
+    {
+        "leagueMax": 5,
+        "ratingMax": 2705,
+        "totalGamesPlayed": 535,
+        "previousStats": { "rating": null, "gamesPlayed": null, "rank": null },
+        "currentStats": { "rating": null, "gamesPlayed": null, "rank": null },
+        "members": {
+            "protossGamesPlayed": 535,
+            "character": {
+                "realm": 1,
+                "name": "Kerverus#1",
+                "id": 224270390,
+                "accountId": 224270466,
+                "region": "US",
+                "battlenetId": 11540066
+            },
+            "account": {
+                "battleTag": "kerverus#11643",
+                "id": 224270466,
+                "partition": "GLOBAL",
+                "hidden": null
+            }
+        }
+    }
+]
