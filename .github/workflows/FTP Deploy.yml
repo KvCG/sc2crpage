@@ -39,13 +39,13 @@ jobs:
           ${{ runner.os }}-buildx-
 
     - name: Build Docker image
-      run: |
+     run: |
         docker buildx build \
-  --cache-to=type=local,mode=max,path=/tmp/.buildx-cache \
-  --cache-from=type=local,mode=max,path=/tmp/.buildx-cache \
-  -t ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr:latest \
-  . \
-  --push
+          --cache-to=type=local,mode=max,path=/tmp/.buildx-cache \
+          --cache-from=type=local,mode=max,path=/tmp/.buildx-cache \
+          -t ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr:latest \
+          . \
+          --push
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
