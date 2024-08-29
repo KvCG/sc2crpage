@@ -1,8 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import './index.css'
-import { createTheme, MantineProvider, MantineThemeOverride } from '@mantine/core'
+import {
+    createTheme,
+    MantineProvider,
+    MantineThemeOverride,
+} from '@mantine/core'
+import { BrowserRouter } from 'react-router-dom'
 
 const theme: MantineThemeOverride = createTheme({
     autoContrast: true,
@@ -19,8 +23,10 @@ const root = createRoot(rootElement)
 // Render the App component inside StrictMode
 root.render(
     <StrictMode>
-        <MantineProvider theme={theme} defaultColorScheme="dark" >
-            <App />
+        <MantineProvider theme={theme} defaultColorScheme="dark">
+            <BrowserRouter>
+                <App />
+            </BrowserRouter>
         </MantineProvider>
     </StrictMode>
 )

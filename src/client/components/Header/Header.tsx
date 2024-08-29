@@ -4,31 +4,27 @@ import { useDisclosure } from '@mantine/hooks'
 // import { MantineLogo } from '@mantinex/mantine-logo'
 import classes from './HeaderSimple.module.css'
 import { Logo } from '../Logo/Logo'
+import { Link } from 'react-router-dom'
+import { links } from '../../constants/navigation'
 
-const links = [
-    { link: '/about', label: 'Ranking CR' },
-    { link: '/pricing', label: 'Clans' },
-    { link: '/learn', label: 'Learn' },
-    { link: '/community', label: 'Community' },
-]
+
 
 export const Header = () => {
     const [opened, { toggle }] = useDisclosure(false)
     const [active, setActive] = useState(links[0].link)
 
     const items = links.map(link => (
-        <a
-            key={link.label}
-            href={link.link}
+        <Link
+            to={link.link}
             className={classes.link}
             data-active={active === link.link || undefined}
-            onClick={event => {
-                event.preventDefault()
+            onClick={() => {
                 setActive(link.link)
             }}
+			key={link.label}
         >
-            {link.label}
-        </a>
+           {link.label}
+        </Link>
     ))
 
     return (
