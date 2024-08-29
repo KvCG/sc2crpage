@@ -10,6 +10,7 @@ interface Config {
 let config = {}
 
 switch (window.location.hostname) {
+	case 'sc2cr.vercel.app':
 	case 'sc2cr-latest.onrender.com':
     case 'sc2cr.free.nf':
         config = prod
