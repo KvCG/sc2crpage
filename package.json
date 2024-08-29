@@ -12,23 +12,19 @@
         "preview": "npm run build:server && node dist/webserver/server.cjs",
         "ds": "tsc --project src/server/ && npm run renameFiles && nodemon --env-file=.env src/server/server.cjs",
         "renameFiles": "powershell -Command \"Move-Item -Path 'src/server/server.js' -Destination 'src/server/server.cjs' -Force\"",
-        "buildImg": "docker build --no-cache -t sc2cr .",
+        "buildImg": "docker build -t sc2cr .",
         "localPod": "docker run -dp 127.0.0.1:3000:3000 sc2cr",
         "tagImg": "docker tag sc2cr:latest kerverus/sc2cr:latest",
         "pushImg": "npm run buildImg && npm run tagImg && docker push kerverus/sc2cr:latest"
     },
     "dependencies": {
-        "@emotion/react": "^11.13.3",
-        "@emotion/styled": "^11.13.0",
-        "@mui/material": "^5.16.7",
-        "@mui/styled-engine-sc": "^6.0.0-alpha.18",
-        "@mui/x-data-grid": "^7.14.0",
+        "@mantine/core": "^7.12.1",
+        "@mantine/hooks": "^7.12.1",
+        "@tabler/icons-react": "^3.14.0",
         "axios": "^1.7.5",
-        "dotenv": "^16.4.5",
         "express": "^4.19.2",
         "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "styled-components": "^6.1.12"
+        "react-dom": "^18.3.1"
     },
     "devDependencies": {
         "@eslint/js": "^9.9.0",
@@ -44,6 +40,9 @@
         "eslint-plugin-react-refresh": "^0.4.9",
         "globals": "^15.9.0",
         "nodemon": "^3.1.4",
+        "postcss": "^8.4.41",
+        "postcss-preset-mantine": "^1.17.0",
+        "postcss-simple-vars": "^7.0.1",
         "ts-node": "^10.9.2",
         "typescript": "^5.5.3",
         "typescript-eslint": "^8.0.1",

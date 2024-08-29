@@ -4,3 +4,7 @@ Resourses:
 - https://develop.battle.net/documentation/guides/getting-started
 - https://develop.battle.net/documentation/starcraft-2/community-apis
 - https://sc2pulse.nephest.com/sc2/doc/swagger-ui/index.html
+
+# Mantine as UI library
+- https://mantine.dev/getting-started/
+- Requires serveral other packages

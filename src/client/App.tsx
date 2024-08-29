@@ -1,35 +1,35 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { search } from './services/getPlayerInfo.ts'
 import './App.css'
+import '@mantine/core/styles.css'
 import { AxiosResponse } from 'axios'
-import { DataGrid, GridRowsProp, GridColDef } from '@mui/x-data-grid'
-import pi from '../../mockData/PlayerInfo.json'
+import { Header } from './components/Header/Header.tsx'
+// import pi from '../../mockData/PlayerInfo.json'
 
 // Define functional component using TypeScript
 const App: React.FC = () => {
     // TypeScript infers the type of `count` as number
     const [inputValue, setInputValue] = useState<string>('')
     const [playerInfo, setPlayerInfo] = useState<object[]>([])
-    const [rows, setRows] = useState<GridRowsProp>([])
+
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         const target = e.target as HTMLInputElement
         setInputValue(target.value)
     }
 
-    useEffect(() => {
-        playerInfo.forEach((player, index) => {
-            addRow({
-                id: index,
-                col1: player.members.account.battleTag,
-                col2: String(player.ratingMax),
-            })
-        })
-    }, [playerInfo])
+    // useEffect(() => {
+    //     playerInfo.forEach((player, index) => {
+    //         addRow({
+    //             id: index,
+    //             col1: player.members.account.battleTag,
+    //             col2: String(player.ratingMax),
+    //         })
+    //     })
+    // }, [playerInfo])
 
-    const addRow = (newRow: { id: number; col1: string; col2: string }) => {
-        setRows(prevRows => [...prevRows, newRow])
-    }
-
+    // const addRow = (newRow: { id: number; col1: string; col2: string }) => {
+    //     setRows(prevRows => [...prevRows, newRow])
+    // }
 
     // pi.forEach((player, index)=>{
     // 	addRow({ id: index, col1: player.members.account.battleTag, col2: String(player.ratingMax)})
@@ -44,13 +44,14 @@ const App: React.FC = () => {
     //     { id: 3, col1: 'MUI', col2: 'is Amazing' },
     // ]
 
-    const columns: GridColDef[] = [
-        { field: 'col1', headerName: 'Battletag', width: 150 },
-        { field: 'col2', headerName: 'Highest MMR', width: 150 },
-    ]
+    // const columns: GridColDef[] = [
+    //     { field: 'col1', headerName: 'Battletag', width: 150 },
+    //     { field: 'col2', headerName: 'Highest MMR', width: 150 },
+    // ]
 
     return (
         <>
+		<Header/>
             <h1>SC2 CR </h1>
             <div className="card">
                 <input type="text" onInput={handleInput} />
@@ -65,9 +66,9 @@ const App: React.FC = () => {
             </div>
             <div>
                 <h2>Player Data</h2>
-                {/* {JSON.stringify(playerInfo)} */}
+
                 <div style={{ height: 300, width: '100%' }}>
-                    <DataGrid rows={rows} columns={columns} />
+                    {JSON.stringify(playerInfo)}
                 </div>
             </div>
         </>
