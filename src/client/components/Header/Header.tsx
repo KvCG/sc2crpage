@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Container, Group, Burger, Menu, Stack } from '@mantine/core'
+import { Container, Group, Burger, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-// import { MantineLogo } from '@mantinex/mantine-logo'
 import classes from './HeaderSimple.module.css'
 import { Logo } from '../Logo/Logo'
 import { Link } from 'react-router-dom'

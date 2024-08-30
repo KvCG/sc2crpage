@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express'
-import apiRoutes from './routes/api'
+import apiRoutes from './routes/apiRoutes'
 import path from 'path'
 import cors from 'cors';
 

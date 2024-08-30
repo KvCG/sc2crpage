@@ -1,7 +1,12 @@
 export const formatData = (data, type) => {
-    let formattedData = ''
+    let formattedData = []
     switch (type) {
         case 'search': {
+            formattedData = formatSearchData(data)
+            break
+        }
+
+		case 'ranking': {
             formattedData = formatSearchData(data)
             break
         }

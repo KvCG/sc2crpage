@@ -7,10 +7,11 @@ import { formatData } from '../utils/formatData'
 const router = Router()
 
 // Define your routes here
-router.get('/top', (req: Request, res: Response) => {
-    const rankingData = getTop()
+router.get('/top', async (req: Request, res: Response) => {
+    const rankingData = await getTop()
+	console.log(rankingData)
 	const formattedData = formatData(rankingData, 'ranking')
-    res.send(JSON.stringify(players))
+    res.send(JSON.stringify(formattedData))
 })
 
 router.get('/search', async (req: Request, res: Response) => {

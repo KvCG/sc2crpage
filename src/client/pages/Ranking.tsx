@@ -1,7 +1,12 @@
+import { useEffect } from "react";
 import { useFetch } from "../hooks/useFetch"
 
 export const Ranking = () => {
-	const {data, loading, error} = useFetch('ranking')
+	const {data, loading, error, fetch} = useFetch('ranking')
+
+	useEffect(() => {
+		fetch()
+	}, []);
 	
     const renderResults = () => {
         if (loading) {

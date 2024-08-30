@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { search, getTop } from '../services/api'
 
 export const useFetch = (type) => {
@@ -20,7 +20,7 @@ export const useFetch = (type) => {
         return data
     }
 
-    const fetch = async (params) => {
+    const fetch = async (params?) => {
         setLoading(true)
         try {
             setData(await getData(params) ?? [])
