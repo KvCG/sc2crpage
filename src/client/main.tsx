@@ -10,6 +10,13 @@ import { BrowserRouter } from 'react-router-dom'
 
 const theme: MantineThemeOverride = createTheme({
     autoContrast: true,
+	breakpoints: {
+		xs: '20em',
+		sm: '30em',
+		md: '48em',
+		lg: '74em',
+		xl: '90em',
+	  },
 })
 
 // Ensure that 'root' is not null

@@ -36,3 +36,11 @@
         color: var(--mantine-color-white);
     }
 }
+
+.mobileLinks {
+	position: relative;
+	top: 60px;
+	margin-right: 65px;
+	backdrop-filter: blur(100px);
+	background-color: rgba(47, 25, 168, 0.185);
+}

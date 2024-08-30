@@ -1,13 +1,11 @@
 import { useState } from 'react'
-import { Container, Group, Burger } from '@mantine/core'
+import { Container, Group, Burger, Menu, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 // import { MantineLogo } from '@mantinex/mantine-logo'
 import classes from './HeaderSimple.module.css'
 import { Logo } from '../Logo/Logo'
 import { Link } from 'react-router-dom'
 import { links } from '../../constants/navigation'
-
-
 
 export const Header = () => {
     const [opened, { toggle }] = useDisclosure(false)
@@ -21,24 +19,30 @@ export const Header = () => {
             onClick={() => {
                 setActive(link.link)
             }}
-			key={link.label}
+            key={link.label}
         >
-           {link.label}
+            {link.label}
         </Link>
     ))
 
     return (
         <header className={classes.header}>
-            <Container size="md" className={classes.inner}>
+            <Container size="md" onMouseOut={toggle} className={classes.inner}>
                 <Logo />
-                <Group gap={5} visibleFrom="xs">
+                <Group gap={5} visibleFrom="md">
                     {items}
                 </Group>
+
+                {opened && (
+                    <Stack onClick={toggle} className={classes.mobileLinks} gap={6} hiddenFrom="md">
+                        {items}
+                    </Stack>
+                )}
 
                 <Burger
                     opened={opened}
                     onClick={toggle}
-                    hiddenFrom="xs"
+                    hiddenFrom="md"
                     size="sm"
                 />
             </Container>
