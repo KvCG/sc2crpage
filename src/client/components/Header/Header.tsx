@@ -5,10 +5,13 @@ import classes from './HeaderSimple.module.css'
 import { Logo } from '../Logo/Logo'
 import { Link } from 'react-router-dom'
 import { links } from '../../constants/navigation'
+import { useLocation } from 'react-router-dom'
 
 export const Header = () => {
+    const location = useLocation()
+    const initialTab = links.filter(link => link.link === location.pathname)
+    const [active, setActive] = useState(initialTab[0].link)
     const [opened, { toggle }] = useDisclosure(false)
-    const [active, setActive] = useState(links[0].link)
 
     const items = links.map(link => (
         <Link
@@ -33,7 +36,12 @@ export const Header = () => {
                 </Group>
 
                 {opened && (
-                    <Stack onClick={toggle} className={classes.mobileLinks} gap={6} hiddenFrom="md">
+                    <Stack
+                        onClick={toggle}
+                        className={classes.mobileLinks}
+                        gap={6}
+                        hiddenFrom="md"
+                    >
                         {items}
                     </Stack>
                 )}

@@ -30,8 +30,8 @@ export const getTop = async () => {
 
                 // Make the API call and return the data
                 const result = await api.get(`/character/search?term=${term}`)
-                if (result.data.length) return { ...result.data }
-				return null
+				console.log('data: ', result.data)
+                return  result.data
             })
         )
 

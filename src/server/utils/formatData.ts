@@ -1,3 +1,5 @@
+import { filterEmptyResults } from "./filterResults"
+
 export const formatData = (data, type) => {
     let formattedData = []
     switch (type) {
@@ -15,6 +17,9 @@ export const formatData = (data, type) => {
 }
 
 const formatSearchData = data => {
+	console.log('uunfilterred: ',data)
+	data = filterEmptyResults(data)
+	console.log('filterred: ',data)
     let players = []
     data.forEach((current) => {
         const {
