@@ -20,11 +20,11 @@ export const Search = () => {
         }
         if (data?.length > 0) {
             return data.map(result => {
-                const { btag, clan } = result
+                const { btag, clan, id } = result
                 return (
                     <div key={btag}>
                         <span>
-                            {btag} - [{clan}]
+                            {btag} - [{clan}] - {id}
                         </span>
                         <br />
                     </div>

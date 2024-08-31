@@ -16,6 +16,7 @@ export const Ranking = () => {
             return <p>{error}</p>
         }
         if (data) {
+			console.log(data)
             return JSON.stringify(data)
         }
         return <p>No results found.</p>

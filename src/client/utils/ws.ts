@@ -1,16 +1,10 @@
 let socket
 const wsUrl = 'ws://localhost:4000' // WebSocket server URL
-const reconnectInterval = 1000 // Reconnect every 1 second
+const reconnectInterval = 3000 // Reconnect every 3 second
 
 export const connectWebSocket = () => {
     socket = new WebSocket(wsUrl)
-
-    try {
-		socket = new WebSocket(wsUrl);
-	} catch (error) {
-		// Handle or ignore the error here
-		console.log('WebSocket initialization error:', error.message);
-	}
+	socket = new WebSocket(wsUrl);
 
     socket.onmessage = event => {
         if (event.data === 'reload') {
@@ -19,8 +13,7 @@ export const connectWebSocket = () => {
     }
 
     socket.onclose = () => {
-        console.log('WebSocket connection lost, attempting to reconnect...')
-        setTimeout(connectWebSocket, reconnectInterval) //x Reconnect after 1 second
+        setTimeout(connectWebSocket, reconnectInterval) //Reconnect after 1 second
     }
 }
 

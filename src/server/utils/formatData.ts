@@ -1,4 +1,4 @@
-import { filterEmptyResults } from "./filterResults"
+import { verifyPlayer } from './ranking'
 
 export const formatData = (data, type) => {
     let formattedData = []
@@ -8,20 +8,18 @@ export const formatData = (data, type) => {
             break
         }
 
-		case 'ranking': {
-            formattedData = formatSearchData(data)
+        case 'ranking': {
+            formattedData = formatRankingData(data)
             break
         }
     }
+
     return formattedData
 }
 
-const formatSearchData = data => {
-	console.log('uunfilterred: ',data)
-	data = filterEmptyResults(data)
-	console.log('filterred: ',data)
+const simplifyPlayerData = data => {
     let players = []
-    data.forEach((current) => {
+    data.forEach(current => {
         const {
             leagueMax,
             ratingMax,
@@ -38,7 +36,7 @@ const formatSearchData = data => {
 
         const player = {
             records: { leagueMax, ratingMax, totalGamesPlayed },
-            currentSeason:  currentStats ,
+            currentSeason: currentStats,
             gamesPerRace: {
                 terranGamesPlayed,
                 protossGamesPlayed,
@@ -49,8 +47,35 @@ const formatSearchData = data => {
             clan: clan,
         }
 
-		players.push(player)
+        players.push(player)
     })
 
-	return players
+    return players
+}
+
+const formatSearchData = data => {
+    let players = simplifyPlayerData(data)
+
+    return players
+}
+
+const formatRankingData = async data => {
+    const playerArr = data.flat()
+
+    let simplifiedData = simplifyPlayerData(playerArr)
+    // Filter players using an async function
+    simplifiedData = await Promise.all(
+        simplifiedData.map(async player => {
+            if (await verifyPlayer(player)) {
+                // console.log(player)
+                return player
+            }
+        })
+    )
+
+	// Remove any undefined values from the array (players that did not pass verification)
+    simplifiedData = simplifiedData.filter(player => player !== undefined)
+	// Sort by descending order based on MMR of the current season
+	simplifiedData = simplifiedData.sort((a, b) => b.currentSeason.rating - a.currentSeason.rating)
+	return simplifiedData
 }

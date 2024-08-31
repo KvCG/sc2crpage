@@ -1,7 +1,7 @@
 // services/weatherService.ts
 import axios, { AxiosError } from 'axios'
 import https from 'https'
-import { players } from '../constants/players'
+import { readCsv } from './csvParser'
 
 const agent = new https.Agent({ rejectUnauthorized: false })
 
@@ -22,19 +22,16 @@ export const searchPlayer = async (term: string) => {
 }
 
 export const getTop = async () => {
+    const players = await readCsv()
     try {
         const response = await axios.all(
-            Object.keys(players).map(async key => {
-                const term = players[key]
-                console.log(`/character/search?term=${term}`)
-
+            players.map(async (player) => {
+                const term = player.btag
                 // Make the API call and return the data
                 const result = await api.get(`/character/search?term=${term}`)
-				console.log('data: ', result.data)
-                return  result.data
+                return result.data
             })
         )
-
         return response
     } catch (error) {
         const axiosError = error as AxiosError

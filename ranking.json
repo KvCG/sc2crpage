@@ -1,0 +1,103 @@
+[
+    {
+        "records": {
+            "leagueMax": 5,
+            "ratingMax": 3511,
+            "totalGamesPlayed": 2573
+        },
+        "currentSeason": { "rating": 3448, "gamesPlayed": 177, "rank": 24001 },
+        "gamesPerRace": {
+            "terranGamesPlayed": 2573,
+            "protossGamesPlayed": 0,
+            "zergGamesPlayed": 0
+        },
+        "id": 340752743,
+        "btag": "Kerverus#11258",
+        "clan": "IMCR"
+    },
+    {
+        "records": {
+            "leagueMax": 5,
+            "ratingMax": 2705,
+            "totalGamesPlayed": 535
+        },
+        "currentSeason": { "rating": null, "gamesPlayed": null, "rank": null },
+        "gamesPerRace": {
+            "terranGamesPlayed": 1,
+            "protossGamesPlayed": 535,
+            "zergGamesPlayed": 0
+        },
+        "id": 224270390,
+        "btag": "kerverus#11643"
+    },
+    {
+        "records": {
+            "leagueMax": 5,
+            "ratingMax": 4794,
+            "totalGamesPlayed": 11561
+        },
+        "currentSeason": { "rating": 4455, "gamesPlayed": 324, "rank": 4488 },
+        "gamesPerRace": {
+            "terranGamesPlayed": 11561,
+            "protossGamesPlayed": 0,
+            "zergGamesPlayed": 0
+        },
+        "id": 2741271,
+        "btag": "elwhiter123#1987",
+        "clan": "lnFs"
+    },
+    {
+        "records": { "leagueMax": 3, "ratingMax": 3304, "totalGamesPlayed": 5 },
+        "currentSeason": { "rating": null, "gamesPlayed": null, "rank": null },
+        "gamesPerRace": {
+            "terranGamesPlayed": 5,
+            "protossGamesPlayed": 0,
+            "zergGamesPlayed": 0
+        },
+        "id": 61876034,
+        "btag": "elwhiter123#1987"
+    },
+    {
+        "records": { "leagueMax": 2, "ratingMax": 2942, "totalGamesPlayed": 5 },
+        "currentSeason": { "rating": null, "gamesPlayed": null, "rank": null },
+        "gamesPerRace": {
+            "terranGamesPlayed": 5,
+            "protossGamesPlayed": 0,
+            "zergGamesPlayed": 0
+        },
+        "id": 9000976,
+        "btag": "elwhiter123#1987"
+    },
+    {
+        "records": {
+            "leagueMax": 5,
+            "ratingMax": 3951,
+            "totalGamesPlayed": 3095
+        },
+        "currentSeason": { "rating": 3851, "gamesPlayed": 191, "rank": 12429 },
+        "gamesPerRace": {
+            "terranGamesPlayed": 1,
+            "protossGamesPlayed": 3095,
+            "zergGamesPlayed": 0
+        },
+        "id": 92316,
+        "btag": "Borss#1722",
+        "clan": "IMCR"
+    },
+    {
+        "records": {
+            "leagueMax": 5,
+            "ratingMax": 3449,
+            "totalGamesPlayed": 3540
+        },
+        "currentSeason": { "rating": 3083, "gamesPlayed": 63, "rank": 43810 },
+        "gamesPerRace": {
+            "terranGamesPlayed": 1,
+            "protossGamesPlayed": 3540,
+            "zergGamesPlayed": 0
+        },
+        "id": 9317307,
+        "btag": "DaniCR#2165",
+        "clan": "IMCR"
+    }
+]

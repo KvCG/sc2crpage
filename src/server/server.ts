@@ -10,9 +10,6 @@ const app = express()
 const port = 3000
 const wsPort = 4000 // Port for WebSocket server
 
-// Create the main HTTP server for Express
-const mainServer = createServer(app)
-
 // WebSocket server for development reloads
 if (process.env.NODE_ENV === 'development') {
     const wsServer = createServer() // Separate HTTP server for WebSocket
