@@ -7,17 +7,24 @@ import {
     MantineThemeOverride,
 } from '@mantine/core'
 import { BrowserRouter } from 'react-router-dom'
+import { connectWebSocket } from './utils/ws'
 
+// Mantine main config overrides
 const theme: MantineThemeOverride = createTheme({
     autoContrast: true,
-	breakpoints: {
-		xs: '20em',
-		sm: '30em',
-		md: '48em',
-		lg: '74em',
-		xl: '90em',
-	  },
+    breakpoints: {
+        xs: '20em',
+        sm: '30em',
+        md: '48em',
+        lg: '74em',
+        xl: '90em',
+    },
 })
+
+// Development only, when running npm run dev, this listen to a websocket to refresh the browser on server code changes
+if (import.meta.env.MODE === 'development') {
+    connectWebSocket()
+}
 
 // Ensure that 'root' is not null
 const rootElement = document.getElementById('root')

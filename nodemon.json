@@ -1,6 +1,9 @@
 {
-	"watch": ["src/server"],
-	"ext": "ts",
-	"exec": "esbuild src/server/server.ts --outfile=dist/webserver/server.cjs --bundle --platform=node --sourcemap && node --enable-source-maps dist/webserver/server.cjs",
-	"ignore": ["dist/*"]
-  }
+    "watch": ["src/server"],
+    "ext": "ts",
+    "exec": "esbuild src/server/server.ts --outfile=dist/webserver/server.cjs --bundle --platform=node --sourcemap && node --enable-source-maps dist/webserver/server.cjs",
+    "ignore": ["dist/*"],
+    "env": {
+        "NODE_ENV": "development"
+    }
+}

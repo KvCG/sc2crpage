@@ -23,21 +23,19 @@ export const searchPlayer = async (term: string) => {
 
 export const getTop = async () => {
     try {
-        // const response = await axios.all(
-        //     async () => {
-		// 		let response = []
-        //         for (const [key, value] of Object.entries(players)) {
-        //             console.log(`/character/search?term=${term}`)
-        //             const playerData = await axios.get(
-        //                 `/character/search?term=${term}`
-        //             ).data
-        //             response.push(...playerData)
-        //         }
-		// 		return response
-        //     }
-        // )
-		// console.log(response)
-        return 'response'
+        const response = await axios.all(
+            Object.keys(players).map(async key => {
+                const term = players[key]
+                console.log(`/character/search?term=${term}`)
+
+                // Make the API call and return the data
+                const result = await api.get(`/character/search?term=${term}`)
+                if (result.data.length) return { ...result.data }
+				return null
+            })
+        )
+
+        return response
     } catch (error) {
         const axiosError = error as AxiosError
         console.log(axiosError.message)

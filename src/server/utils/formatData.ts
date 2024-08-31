@@ -27,7 +27,7 @@ const formatSearchData = data => {
         const id = members.character.id
         const btag = members.account.battleTag
         const clan = members?.clan?.tag
-        const terranGamesPlayed = members.terranGamesPlayed ?? 0
+        const terranGamesPlayed = members.terranGamesPlayed ?? 1
         const zergGamesPlayed = members.zergGamesPlayed ?? 0
         const protossGamesPlayed = members.protossGamesPlayed ?? 0
 
