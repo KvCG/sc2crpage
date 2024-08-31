@@ -1,4 +1,6 @@
-on: push
+on: 
+  push:
+    - main
 name: 🚀 Deploy website on push
 
 jobs:
@@ -52,4 +54,12 @@ jobs:
         -t ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr:latest \
         . \
         --push
+
+    - name: Deploy to render
+        # Only run this step if the branch is main
+        if: github.ref == 'refs/heads/main'
+        env:
+          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl "$deploy_url"
 

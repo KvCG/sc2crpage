@@ -61,10 +61,6 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(500).send('Internal Server Error')
 })
 
-app.get('/health', (_req: Request, res: Response) => {
-    res.status(200).json({ status: 'ok' })
-})
-
 // Start the Express server
 app.listen(port, () => {
     console.log(`Express server running at http://localhost:${port}`)
