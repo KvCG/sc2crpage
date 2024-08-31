@@ -29,7 +29,7 @@ export const Header = () => {
 
     return (
         <header className={classes.header}>
-            <Container size="md" onMouseOut={toggle} className={classes.inner}>
+            <Container size="md" className={classes.inner}>
                 <Logo />
                 <Group gap={5} visibleFrom="md">
                     {items}

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useFetch } from "../hooks/useFetch"
+import { RankingTable } from "../components/Table/Table";
 
 export const Ranking = () => {
 	const {data, loading, error, fetch} = useFetch('ranking')
@@ -16,8 +17,7 @@ export const Ranking = () => {
             return <p>{error}</p>
         }
         if (data) {
-			console.log(data)
-            return JSON.stringify(data)
+            return <RankingTable data={data}/>
         }
         return <p>No results found.</p>
     }
