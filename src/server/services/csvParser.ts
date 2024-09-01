@@ -1,3 +1,5 @@
+import { downloadFile } from "../middleware/fileManagement"
+
 const fs = require('fs')
 const path = require('path')
 const csv = require('csv-parser')
@@ -6,7 +8,9 @@ let cache = null
 let cacheTimestamp = null
 const CACHE_EXPIRY_MS = 5 * 60 * 1000 // Cache expiry time (e.g., 5 minutes)
 
-export const readCsv = () => {
+export const readCsv = async () => {
+
+	await downloadFile('ranked_players/ladderCR.csv')
     const filePath = path.join(__dirname, '../data/ladderCR.csv')
 
     return new Promise((resolve, reject) => {

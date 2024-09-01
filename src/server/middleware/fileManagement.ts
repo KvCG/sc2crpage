@@ -1,6 +1,5 @@
 import { bucket } from '../services/firebase'
 import path from 'path'
-
 export async function uploadFile(
     buffer: Buffer,
     destination: string,
@@ -21,14 +20,9 @@ export async function uploadFile(
 // uploadFile('path/to/local/file.csv').catch(console.error)
 
 export async function downloadFile(fileName: string): Promise<void> {
+	const destinationPath = path.join(__dirname, 'dist/data', fileName)
     const file = bucket.file(fileName)
-    try {
-        // Create a read stream for the file
-        const readStream = file.createReadStream()
-        return readStream
-    } catch (err) {
-        console.error('Download failed:', err)
-    }
+    await file.download({ destinationPath })
 }
 
 // Example usage

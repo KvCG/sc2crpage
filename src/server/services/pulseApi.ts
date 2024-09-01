@@ -24,15 +24,9 @@ export const searchPlayer = async (term: string) => {
 export const getTop = async () => {
     const players = await readCsv()
     try {
-        const response = await axios.all(
-            players.map(async (player) => {
-                const term = player.btag
-                // Make the API call and return the data
-                const result = await api.get(`/character/search?term=${term}`)
-                return result.data
-            })
-        )
-        return response
+		const ids = players.map((player) => player.id)
+        const result = await api.get(`character/${ids.join(',')}/summary/1v1/120/`)
+        return result.data
     } catch (error) {
         const axiosError = error as AxiosError
         console.log(axiosError.message)

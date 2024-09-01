@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "concurrently --names \"FE,BE\" -c \"auto,green\" \"vite\" \"nodemon\"",
-        "build": "tsc -b & npm run build:client && npm run build:server && node scripts/copyData.cjs",
+        "build": "tsc -b & npm run build:client && npm run build:server",
         "build:server": "node scripts/build.cjs",
         "build:client": "vite build",
         "lint": "eslint .",
