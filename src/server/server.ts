@@ -5,6 +5,7 @@ import cors from 'cors'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
 import chokidar from 'chokidar'
+import 'dotenv/config'
 
 const app = express()
 const port = 3000

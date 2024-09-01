@@ -4,4 +4,5 @@ export const links = [
     { link: '/clan', label: 'Clan' },
     { link: '/learn', label: 'Learn' },
     { link: '/community', label: 'Community' },
+	{ link: '/replays', label: 'Replays' },
 ]
