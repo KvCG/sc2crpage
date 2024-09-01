@@ -1,35 +1,60 @@
-import { useEffect } from 'react'
-import { useFetch } from '../hooks/useFetch'
-import { RankingTable } from '../components/Table/Table'
+import { useState } from 'react'
+import { usePost } from '../hooks/usePost'
+
+import { Button, Container } from '@mantine/core'
 
 export const Replay = () => {
-    const { data, loading, error, fetch } = useFetch('ranking')
+    const [fileName, setFileName] = useState('')
+    const [fileExtension, setFileExtension] = useState('')
+	const [fileBase64, setFileBase64] = useState('')
+    const { success, error, loading, post } = usePost()
+    const handleSubmit = async event => {
+        event.preventDefault()
+		const payload = {
+            fileBase64,
+            fileName,
+            fileExtension
+        }
 
-    useEffect(() => {
-        fetch()
-    }, [])
+        // Add file metadata to FormData
+        await post(payload)
+    }
 
-    const renderResults = () => {
-        if (loading) {
-            return <p>Loading...</p>
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                const base64String =
+                    reader.result?.toString().split(',')[1] || ''
+                setFileBase64(base64String)
+                setFileName(file.name)
+                setFileExtension(file.name.split('.').pop() || '')
+            }
+            reader.readAsDataURL(file)
         }
-        if (error) {
-            return <p>{error}</p>
-        }
-        if (data) {
-            return <RankingTable data={data} />
-        }
-        return <p>No results found.</p>
     }
 
     return (
-        <div>
-            <h1>Upload a replay</h1>
-            <form action="">
-                <input type="file" />
-            </form>
+        <Container>
+            {success && <div>File Uploaded</div>}
 
-            {/* {renderResults()} */}
-        </div>
+            {error && <div>Error with the upload</div>}
+
+            <h1>Upload a replay</h1>
+            <div>
+                <form onSubmit={handleSubmit} className="form">
+                    <label htmlFor="file">File</label>
+                    <input
+                        name="file"
+                        type="file"
+                        onChange={handleFileChange}
+                    />
+                    <Button type="submit">
+                        {loading ? 'Uploading' : 'Upload'}
+                    </Button>
+                </form>
+            </div>
+        </Container>
     )
 }

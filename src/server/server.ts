@@ -49,6 +49,7 @@ if (process.env.NODE_ENV === 'development') {
 // Middleware and routes
 app.use(cors())
 app.use(express.static(path.join(__dirname, '../')))
+app.use(express.json())
 app.use('/api', apiRoutes)
 
 // Handle SPA routing
