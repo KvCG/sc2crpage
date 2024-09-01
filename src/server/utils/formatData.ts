@@ -1,6 +1,6 @@
 import { verifyPlayer } from './ranking'
 
-export const formatData = (data, type) => {
+export const formatData = async (data, type) => {
     let formattedData = []
     switch (type) {
         case 'search': {
@@ -9,7 +9,7 @@ export const formatData = (data, type) => {
         }
 
         case 'ranking': {
-            formattedData = formatRankingData(data)
+            formattedData = await formatRankingData(data)
             break
         }
     }
@@ -60,22 +60,14 @@ const formatSearchData = data => {
 }
 
 const formatRankingData = async data => {
-    const playerArr = data.flat()
+    let playerData = data.flat()
 
-    let simplifiedData = simplifyPlayerData(playerArr)
-    // Filter players using an async function
-    simplifiedData = await Promise.all(
-        simplifiedData.map(async player => {
-            if (await verifyPlayer(player)) {
-                // console.log(player)
-                return player
-            }
+	playerData =  await Promise.all(
+        playerData.map(async data => {
+            const verifiedPlayerData = await verifyPlayer(data)
+            return verifiedPlayerData
         })
     )
 
-	// Remove any undefined values from the array (players that did not pass verification)
-    simplifiedData = simplifiedData.filter(player => player !== undefined)
-	// Sort by descending order based on MMR of the current season
-	simplifiedData = simplifiedData.sort((a, b) => b.currentSeason.rating - a.currentSeason.rating)
-	return simplifiedData
+    return playerData.sort((a, b) => b.ratingLast - a.ratingLast)
 }

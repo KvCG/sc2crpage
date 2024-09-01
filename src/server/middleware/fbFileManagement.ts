@@ -1,5 +1,7 @@
 import { bucket } from '../services/firebase'
 import path from 'path'
+const fs = require('fs')
+
 export async function uploadFile(
     buffer: Buffer,
     destination: string,
@@ -19,10 +21,29 @@ export async function uploadFile(
 // Example usage
 // uploadFile('path/to/local/file.csv').catch(console.error)
 
-export async function downloadFile(fileName: string): Promise<void> {
-	const destinationPath = path.join(__dirname, 'dist/data', fileName)
-    const file = bucket.file(fileName)
-    await file.download({ destinationPath })
+export async function downloadFile(
+    fbPath: string,
+    fileName: string
+): Promise<void> {
+    try {
+        // Ensure the directory exists
+        const dataDir = path.join(__dirname, '../data')
+        fs.mkdirSync(dataDir, { recursive: true })
+
+        // Construct the destination path
+        const destinationPath = path.join(dataDir, fileName)
+        console.log(`Destination Path: ${destinationPath}`)
+
+        // Get the file reference from Firebase Storage
+        const file = bucket.file(`${fbPath}/${fileName}`)
+
+        // Download the file to the destination
+        await file.download({ destination: destinationPath })
+
+        console.log(`${fileName} has been downloaded to ${destinationPath}`)
+    } catch (error) {
+        console.error(`Failed to download file: ${error.message}`)
+    }
 }
 
 // Example usage

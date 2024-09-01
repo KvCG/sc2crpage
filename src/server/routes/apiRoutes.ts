@@ -2,7 +2,7 @@
 import { Router, Request, Response } from 'express'
 import { getTop, searchPlayer } from '../services/pulseApi'
 import { formatData } from '../utils/formatData'
-import { downloadFile, uploadFile } from '../middleware/fileManagement'
+import { downloadFile, uploadFile } from '../middleware/fbFileManagement'
 
 const router = Router()
 
@@ -51,19 +51,19 @@ router.post('/upload', async (req: Request, res: Response) => {
     }
 })
 
-router.get('/download/:filename', async (req: Request, res: Response) => {
-	console.log(req.params)
-	const fileName = req.params.filename
-	res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
-	res.setHeader('Content-Type', 'application/octet-stream')
-    try {
-        const readStream = await downloadFile(fileName)
-        readStream.pipe(res)
-    } catch (err) {
-        console.error('Download failed:', err)
-        res.status(500).send('Failed to download file')
-    }
-})
+// router.get('/download/:filename', async (req: Request, res: Response) => {
+// 	console.log(req.params)
+// 	const fileName = req.params.filename
+// 	res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
+// 	res.setHeader('Content-Type', 'application/octet-stream')
+//     try {
+//         const readStream = await downloadFile(fileName)
+//         readStream.pipe(res)
+//     } catch (err) {
+//         console.error('Download failed:', err)
+//         res.status(500).send('Failed to download file')
+//     }
+// })
 
 router.get('/health', async (req: Request, res: Response) => {
     res.status(200).json({ status: 'ok' })
