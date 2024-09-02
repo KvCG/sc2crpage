@@ -60,14 +60,12 @@ const formatSearchData = data => {
 }
 
 const formatRankingData = async data => {
-    let playerData = data.flat()
-
-	playerData =  await Promise.all(
-        playerData.map(async data => {
+    data = await Promise.all(
+        data.map(async data => {
             const verifiedPlayerData = await verifyPlayer(data)
             return verifiedPlayerData
         })
     )
 
-    return playerData.sort((a, b) => b.ratingLast - a.ratingLast)
+    return data.sort((a, b) => b.ratingLast - a.ratingLast)
 }
