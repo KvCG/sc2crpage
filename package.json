@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "concurrently --names \"FE,BE\" -c \"auto,green\" \"vite\" \"nodemon\"",
-        "build": "tsc -b & npm run build:client && npm run build:server && node scripts/copyData.cjs",
+        "build": "tsc -b & npm run build:client && npm run build:server",
         "build:server": "node scripts/build.cjs",
         "build:client": "vite build",
         "lint": "eslint .",
@@ -20,7 +20,9 @@
         "@tabler/icons-react": "^3.14.0",
         "axios": "^1.7.5",
         "csv-parser": "^3.0.0",
+        "dotenv": "^16.4.5",
         "express": "^4.19.2",
+        "firebase-admin": "^12.4.0",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "react-router-dom": "^6.26.1"

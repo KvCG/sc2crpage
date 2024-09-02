@@ -5,6 +5,7 @@ import './App.css'
 import '@mantine/core/styles.css'
 import { Ranking } from './pages/Ranking.tsx'
 import { Search } from './pages/Search.tsx'
+import { Replay } from './pages/Replays.tsx'
 // Define functional component using TypeScript
 const App: React.FC = () => {
     return (
@@ -14,6 +15,7 @@ const App: React.FC = () => {
                 <Route path="/" element={<Ranking />} />
                 <Route path="/community" element={<Community />} />
 				<Route path="/search" element={<Search />} />
+				<Route path="/replays" element={<Replay />} />
                 {/* <Route path='/contact' element={<Contact/>} /> */}
             </Routes>
         </>

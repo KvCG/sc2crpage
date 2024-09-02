@@ -5,6 +5,7 @@ import cors from 'cors'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
 import chokidar from 'chokidar'
+import 'dotenv/config'
 
 const app = express()
 const port = 3000
@@ -48,6 +49,7 @@ if (process.env.NODE_ENV === 'development') {
 // Middleware and routes
 app.use(cors())
 app.use(express.static(path.join(__dirname, '../')))
+app.use(express.json())
 app.use('/api', apiRoutes)
 
 // Handle SPA routing

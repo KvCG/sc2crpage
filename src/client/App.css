@@ -8,4 +8,12 @@
   padding: 2em;
 }
 
+.form {
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+	
+	
+}
+
 
