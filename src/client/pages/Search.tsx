@@ -3,7 +3,7 @@ import { useFetch } from '../hooks/useFetch'
 
 export const Search = () => {
     const [inputValue, setInputValue] = useState<string>('')
-	const {data, loading, error, fetch} = useFetch()
+	const {data, loading, error, fetch} = useFetch('search')
 
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value)
