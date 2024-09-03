@@ -11,9 +11,9 @@ const api = axios.create({
 })
 
 export const searchPlayer = async (term: string) => {
-    console.log(`Searching for: ${term}`)
     try {
-        const response = await api.get(`/character/search?term=${term}`)
+		// Node automatically decodes URL params son in order to send the search term to the pulse API we need to encode it again
+        const response = await api.get(`/character/search?term=${encodeURIComponent(term)}`) 
         return response.data
     } catch (error) {
         const axiosError = error as AxiosError

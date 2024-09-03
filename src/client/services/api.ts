@@ -6,7 +6,7 @@ const api: AxiosInstance = axios.create({
 })
 
 export const search = async (searchTerm: string) => {
-    const response = await api.get(`api/search/?term=${searchTerm}`)
+    const response = await api.get(`api/search/?term=${encodeURIComponent(searchTerm)}`)
 
     return response
 }
