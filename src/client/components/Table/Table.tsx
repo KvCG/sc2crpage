@@ -4,7 +4,6 @@ import { Table, ScrollArea, Container } from '@mantine/core'
 import classes from './Table.module.css'
 
 export function RankingTable({ data }) {
-	console.log('data :' , data)
     const [scrolled, setScrolled] = useState(false)
     const rows = data.map((row, index) => {
         if (row.ratingLast) {
@@ -27,7 +26,7 @@ export function RankingTable({ data }) {
                 h={400}
                 onScrollPositionChange={({ y }) => setScrolled(y !== 0)}
             >
-                <Table maw={1000} miw={700}>
+                <Table maw={1000} miw={250}>
                     <Table.Thead
                         className={cx(classes.header, {
                             [classes.scrolled]: scrolled,
