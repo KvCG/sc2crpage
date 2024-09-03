@@ -39,8 +39,9 @@
 
 .mobileLinks {
 	position: relative;
-	top: 60px;
-	margin-right: 65px;
+	top: 65px;
+	margin-right: 50px;
 	backdrop-filter: blur(100px);
 	background-color: rgba(47, 25, 168, 0.185);
+	z-index: 2;
 }

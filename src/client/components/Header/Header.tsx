@@ -39,7 +39,7 @@ export const Header = () => {
                     <Stack
                         onClick={toggle}
                         className={classes.mobileLinks}
-                        gap={6}
+                        gap={1}
                         hiddenFrom="md"
                     >
                         {items}

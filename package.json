@@ -12,7 +12,8 @@
         "buildImg": "docker build -t sc2cr .",
         "localPod": "docker run -dp 127.0.0.1:3000:3000 sc2cr",
         "tagImg": "docker tag sc2cr:latest kerverus/sc2cr:latest",
-        "pushImg": "npm run buildImg && npm run tagImg && docker push kerverus/sc2cr:latest"
+        "pushImg": "npm run buildImg && npm run tagImg && docker push kerverus/sc2cr:latest",
+		"start": "node dist/webserver/server.cjs"
     },
     "dependencies": {
         "@mantine/core": "^7.12.1",
