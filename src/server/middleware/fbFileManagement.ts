@@ -18,9 +18,6 @@ export async function uploadFile(
     console.log(`${destination} uploaded to Firebase Storage.`)
 }
 
-// Example usage
-// uploadFile('path/to/local/file.csv').catch(console.error)
-
 export async function downloadFile(
     fbPath: string,
     fileName: string

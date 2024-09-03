@@ -1,4 +1,4 @@
-import { verifyPlayer } from './ranking'
+import { filterByHighestRatingLast, verifyPlayer } from './ranking'
 
 export const formatData = async (data, type) => {
     let formattedData = []
@@ -67,5 +67,6 @@ const formatRankingData = async data => {
         })
     )
 
+    data = filterByHighestRatingLast(data)
     return data.sort((a, b) => b.ratingLast - a.ratingLast)
 }
