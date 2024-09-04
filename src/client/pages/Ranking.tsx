@@ -10,14 +10,11 @@ export const Ranking = () => {
 	}, []);
 	
     const renderResults = () => {
-        if (loading) {
-            return <p>Loading...</p>
-        }
         if (error) {
             return <p>{error}</p>
         }
-        if (data) {
-            return <RankingTable data={data}/>
+        if (data || loading) {
+            return <RankingTable data={data} loading={loading}/>
         }
         return <p>No results found.</p>
     }
