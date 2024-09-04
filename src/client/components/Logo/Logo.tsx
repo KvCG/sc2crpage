@@ -1,4 +1,5 @@
 import styles from './Logo.module.css'
+import logo from '../../assets/Sc2.png'
 export const Logo = () => {
-    return <img src="./client/assets/sc2.png" className={styles.logo} alt="" />
+    return <img src={logo} className={styles.logo} alt="" />
 }

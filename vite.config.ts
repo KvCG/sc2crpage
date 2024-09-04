@@ -10,6 +10,7 @@ export default defineConfig({
         outDir: '../dist/',
         emptyOutDir: true,
         sourcemap: true,
+		assetsDir: 'client/assets'
     },
     server: {
         proxy: {
