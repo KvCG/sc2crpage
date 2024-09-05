@@ -1,12 +1,11 @@
 import cx from 'clsx'
 import { useState } from 'react'
-import { Table, ScrollArea, Container } from '@mantine/core'
+import { Table, ScrollArea, Skeleton } from '@mantine/core'
 import classes from './Table.module.css'
 
-export function RankingTable({ data }) {
-	console.log('data :' , data)
+export function RankingTable({ data, loading }) {
     const [scrolled, setScrolled] = useState(false)
-    const rows = data.map((row, index) => {
+    const rows = data?.map((row, index) => {
         if (row.ratingLast) {
             return (
                 <Table.Tr key={index + 1}>
@@ -19,21 +18,19 @@ export function RankingTable({ data }) {
         }
     })
 
-    console.log(rows)
-
     return (
-        <Container>
+        <Skeleton visible={loading}>
             <ScrollArea
-                h={400}
+                h={1000}
                 onScrollPositionChange={({ y }) => setScrolled(y !== 0)}
             >
-                <Table maw={1000} miw={700}>
+                <Table striped highlightOnHover maw={1000} miw={250}>
                     <Table.Thead
                         className={cx(classes.header, {
                             [classes.scrolled]: scrolled,
                         })}
                     >
-                        <Table.Tr className="">
+                        <Table.Tr>
                             <Table.Th>Ranking</Table.Th>
                             <Table.Th>Btag</Table.Th>
                             <Table.Th>Current MMR</Table.Th>
@@ -43,6 +40,6 @@ export function RankingTable({ data }) {
                     <Table.Tbody>{rows}</Table.Tbody>
                 </Table>
             </ScrollArea>
-        </Container>
+        </Skeleton>
     )
 }

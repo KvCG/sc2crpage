@@ -34,13 +34,17 @@
     [data-mantine-color-scheme] &[data-active] {
         background-color: var(--mantine-color-blue-filled);
         color: var(--mantine-color-white);
+		font-weight: bolder;
+		font-size: 15px;
     }
 }
 
 .mobileLinks {
 	position: relative;
-	top: 60px;
-	margin-right: 65px;
+	top: 5px;
+	margin-left: 50px;
 	backdrop-filter: blur(100px);
-	background-color: rgba(47, 25, 168, 0.185);
+	background-color: rgb(114, 108, 108);
+	z-index: 2;
+	border-radius: 5px;
 }

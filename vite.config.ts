@@ -11,9 +11,4 @@ export default defineConfig({
         emptyOutDir: true,
         sourcemap: true,
     },
-    server: {
-        proxy: {
-            '/api': 'http://localhost:3000',
-        },
-    },
 })
