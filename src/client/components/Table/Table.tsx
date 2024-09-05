@@ -21,7 +21,7 @@ export function RankingTable({ data, loading }) {
     return (
         <Skeleton visible={loading}>
             <ScrollArea
-                h={450}
+                h={1000}
                 onScrollPositionChange={({ y }) => setScrolled(y !== 0)}
             >
                 <Table striped highlightOnHover maw={1000} miw={250}>
