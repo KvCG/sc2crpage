@@ -1,6 +1,6 @@
 import cx from 'clsx'
 import { useState } from 'react'
-import { Table, ScrollArea, Container, Skeleton } from '@mantine/core'
+import { Table, ScrollArea, Skeleton } from '@mantine/core'
 import classes from './Table.module.css'
 
 export function RankingTable({ data, loading }) {
