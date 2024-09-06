@@ -13,3 +13,7 @@
     justify-content: center;
     flex-direction: column;
 }
+
+.mantine-Table-th {
+	text-align: center;
+}

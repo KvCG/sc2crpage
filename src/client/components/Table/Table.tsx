@@ -19,27 +19,29 @@ export function RankingTable({ data, loading }) {
     })
 
     return (
-        <Skeleton visible={loading}>
-            <ScrollArea
-                h={1000}
-                onScrollPositionChange={({ y }) => setScrolled(y !== 0)}
+        <Skeleton h={1000} visible={loading}>
+            <Table
+                verticalSpacing={'4'}
+                stickyHeader
+                striped
+                highlightOnHover
+                maw={1000}
+                miw={250}
             >
-                <Table striped highlightOnHover maw={1000} miw={250}>
-                    <Table.Thead
-                        className={cx(classes.header, {
-                            [classes.scrolled]: scrolled,
-                        })}
-                    >
-                        <Table.Tr>
-                            <Table.Th>Ranking</Table.Th>
-                            <Table.Th>Btag</Table.Th>
-                            <Table.Th>Current MMR</Table.Th>
-                            <Table.Th>Race</Table.Th>
-                        </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>{rows}</Table.Tbody>
-                </Table>
-            </ScrollArea>
+                <Table.Thead
+                    className={cx(classes.header, {
+                        [classes.scrolled]: scrolled,
+                    })}
+                >
+                    <Table.Tr>
+                        <Table.Th>Ranking</Table.Th>
+                        <Table.Th>Btag</Table.Th>
+                        <Table.Th>Current MMR</Table.Th>
+                        <Table.Th>Race</Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>{rows}</Table.Tbody>
+            </Table>
         </Skeleton>
     )
 }

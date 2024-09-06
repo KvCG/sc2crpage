@@ -35,16 +35,16 @@ const simplifyPlayerData = data => {
         const protossGamesPlayed = members.protossGamesPlayed ?? 0
 
         const player = {
-            records: { leagueMax, ratingMax, totalGamesPlayed },
-            currentSeason: currentStats,
-            gamesPerRace: {
-                terranGamesPlayed,
-                protossGamesPlayed,
-                zergGamesPlayed,
-            },
-            id: id,
-            btag: btag,
-            clan: clan,
+            leagueMax,
+            ratingMax,
+            totalGamesPlayed,
+            ...currentStats,
+            terranGamesPlayed,
+            protossGamesPlayed,
+            zergGamesPlayed,
+            id,
+            btag,
+            clan,
         }
 
         players.push(player)
