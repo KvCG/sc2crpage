@@ -16,7 +16,7 @@ router.get('/top', async (req: Request, res: Response) => {
     }
 	
     console.log('\nGetting live ranking data')
-    console.log('\nINFO: ', details, '\n')
+    console.log('INFO: ', details)
     const rankingData = await getTop()
     const formattedData = await formatData(rankingData, 'ranking')
     res.send(JSON.stringify(formattedData))
@@ -31,7 +31,7 @@ router.get('/search', async (req: Request, res: Response) => {
 		...getClientInfo(userAgent)
     }
     console.error('\nSearching:', term)
-    console.log('INFO:', details, '\n')
+    console.log('INFO:', details)
 
     const playerData = await searchPlayer(term)
     const formattedData = await formatData(playerData, 'search')
