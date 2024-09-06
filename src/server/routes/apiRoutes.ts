@@ -3,36 +3,37 @@ import { Router, Request, Response, query } from 'express'
 import { getTop, searchPlayer } from '../services/pulseApi'
 import { formatData } from '../utils/formatData'
 import { uploadFile } from '../middleware/fbFileManagement'
+import { getClientInfo } from '../utils/getClientInfo'
 
 const router = Router()
 
 // Define your routes here
 router.get('/top', async (req: Request, res: Response) => {
+	const userAgent = req.headers['user-agent']
     const details = {
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
         referer: req.headers.referer,
-        protocol: req.protocol,
+		...getClientInfo(userAgent)
     }
-
-    console.log('\nShowing ranking data to: ', details, '\n')
+	
+    console.log('\nGetting live ranking data')
+    console.log('\nINFO: ', details, '\n')
     const rankingData = await getTop()
     const formattedData = await formatData(rankingData, 'ranking')
     res.send(JSON.stringify(formattedData))
 })
 
 router.get('/search', async (req: Request, res: Response) => {
-	const details = {
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
+    const term = req.query.term
+    const userAgent = req.headers['user-agent']
+    const details = {
         referer: req.headers.referer,
-        protocol: req.protocol,
-		query: req.query.term
+		query: term,
+		...getClientInfo(userAgent)
     }
+    console.error('\nSearching:', term)
+    console.log('INFO:', details, '\n')
 
-    console.log('\nShowing player data to: ', details, '\n')
-
-    const playerData = await searchPlayer(req.query.term)
+    const playerData = await searchPlayer(term)
     const formattedData = await formatData(playerData, 'search')
     res.json(formattedData)
 })
