@@ -39,7 +39,7 @@ export const Search = () => {
             return <p style={{ color: 'red' }}>{error}</p>
         }
         if (data?.length > 0) {
-            return <Table stickyHeader highlightOnHover highlightOnHoverColor='dark' data={tableData} maw={300} miw={250} />
+            return <Table stickyHeader highlightOnHover highlightOnHoverColor='dark' verticalSpacing={''} data={tableData} maw={350} miw={250} />
         }
         return <p>No results found.</p>
     }

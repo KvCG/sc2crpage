@@ -1,19 +1,11 @@
+/* Global css file  */
 #root {
     max-width: 1440px;
     margin: 0 auto;
     text-align: center;
 }
 
-.card {
-    padding: 2em;
-}
-
-.form {
-    display: flex;
-    justify-content: center;
-    flex-direction: column;
-}
-
+/* Mantine overrides */
 .mantine-Table-th {
 	text-align: center;
 }

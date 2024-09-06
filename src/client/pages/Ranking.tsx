@@ -21,7 +21,7 @@ export const Ranking = () => {
 
     return (
         <div>
-            <h1>Top Players CR</h1>
+            <h1>Top Players</h1>
             {renderResults()}
         </div>
     )

@@ -15,8 +15,25 @@
     }	
 }
 
+.zerg {
+	background-color: rgba(103, 0, 129, 0.300);
+}
+
+.terran {
+	background-color: rgba(25, 0, 255, 0.300);
+}
+
+.protoss {
+	background-color: rgba(252, 193, 0, 0.300);
+}
+
 .th {
 	text-align: center;
+}
+
+.rank {
+	max-width: 20px;
+	max-height: 20px;
 }
 
 .scrolled {

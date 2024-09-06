@@ -1,18 +1,33 @@
-import cx from 'clsx'
-import { useState } from 'react'
-import { Table, ScrollArea, Skeleton } from '@mantine/core'
+import { Table, Skeleton } from '@mantine/core'
 import classes from './Table.module.css'
+import cx from 'clsx'
+import { getLeagueSrc } from '../../utils/mappings/leagueType'
 
 export function RankingTable({ data, loading }) {
-    const [scrolled, setScrolled] = useState(false)
     const rows = data?.map((row, index) => {
         if (row.ratingLast) {
+            const { btag, ratingLast, race, leagueTypeLast } = row
             return (
-                <Table.Tr key={index + 1}>
+                <Table.Tr key={btag}>
                     <Table.Td>{index + 1}</Table.Td>
-                    <Table.Td>{row.btag}</Table.Td>
-                    <Table.Td>{row.ratingLast}</Table.Td>
-                    <Table.Td>{row.race}</Table.Td>
+                    <Table.Td>{btag}</Table.Td>
+                    <Table.Td>{ratingLast}</Table.Td>
+                    <Table.Td>
+                        <img
+                            className={classes.rank}
+                            src={getLeagueSrc(leagueTypeLast)}
+                        ></img>
+                    </Table.Td>
+                    <Table.Td
+                        className={cx('', {
+                            [classes.zerg]: race == 'ZERG',
+                            [classes.terran]: race == 'TERRAN',
+                            [classes.protoss]: race == 'PROTOSS',
+                        })}
+                    >
+                        {/* First letter cooler */}
+                        {race[0]}
+                    </Table.Td>
                 </Table.Tr>
             )
         }
@@ -21,22 +36,20 @@ export function RankingTable({ data, loading }) {
     return (
         <Skeleton h={1000} visible={loading}>
             <Table
-                verticalSpacing={'4'}
+                verticalSpacing={'3'}
+				// horizontalSpacing={6}
+				striped
                 stickyHeader
-                striped
                 highlightOnHover
                 maw={1000}
                 miw={250}
             >
-                <Table.Thead
-                    className={cx(classes.header, {
-                        [classes.scrolled]: scrolled,
-                    })}
-                >
+                <Table.Thead className={classes.header}>
                     <Table.Tr>
-                        <Table.Th>Ranking</Table.Th>
+                        <Table.Th>Top</Table.Th>
                         <Table.Th>Btag</Table.Th>
-                        <Table.Th>Current MMR</Table.Th>
+                        <Table.Th>MMR</Table.Th>
+                        <Table.Th>Rank</Table.Th>
                         <Table.Th>Race</Table.Th>
                     </Table.Tr>
                 </Table.Thead>
