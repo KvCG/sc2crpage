@@ -8,7 +8,8 @@ import { getClientInfo } from '../utils/getClientInfo'
 const router = Router()
 
 // Define your routes here
-router.get('/top', async (req: Request, res: Response) => {
+router.get('/top/:daysAgo', async (req: Request, res: Response) => {
+	const daysAgo = req.params.daysAgo
 	const userAgent = req.headers['user-agent']
     const details = {
         referer: req.headers.referer,
@@ -17,7 +18,7 @@ router.get('/top', async (req: Request, res: Response) => {
 	
     console.log('\nGetting live ranking data')
     console.log('INFO: ', details)
-    const rankingData = await getTop()
+    const rankingData = await getTop(daysAgo)
     const formattedData = await formatData(rankingData, 'ranking')
     res.send(JSON.stringify(formattedData))
 })

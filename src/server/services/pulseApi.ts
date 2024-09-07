@@ -21,11 +21,11 @@ export const searchPlayer = async (term: string) => {
     }
 }
 
-export const getTop = async () => {
+export const getTop = async (daysAgo = 120) => {
     const players = await readCsv()
     try {
 		const ids = players.map((player) => player.id)
-        const result = await api.get(`character/${ids.join(',')}/summary/1v1/120/`)
+        const result = await api.get(`character/${ids.join(',')}/summary/1v1/${daysAgo}/`)
         return result.data
     } catch (error) {
         const axiosError = error as AxiosError

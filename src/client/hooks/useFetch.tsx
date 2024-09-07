@@ -13,7 +13,7 @@ export const useFetch = (type) => {
                 data = (await search(params)).data
                 break
             case 'ranking':
-                data = (await getTop()).data
+                data = (await getTop(params)).data
                 break
         }
 
