@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
-import { Box, Checkbox, Slider, Text } from '@mantine/core'
+import { Box, Flex, Popover, Slider, Text } from '@mantine/core'
+import { IconSettings } from '@tabler/icons-react'
 
 export const Ranking = () => {
     const { data, loading, error, fetch } = useFetch('ranking')
     const [depth, setDepth] = useState(120)
-    const [showSlider, setShowSlider] = useState(false)
 
     useEffect(() => {
         fetch(depth)
@@ -31,27 +31,36 @@ export const Ranking = () => {
 
     return (
         <>
-            <h1>Top Players</h1>
-            <Checkbox
-                checked={showSlider}
-                onChange={event => setShowSlider(event.currentTarget.checked)}
-				label="Change depth"
-            />
-            {showSlider && (
-                <Box maw={200} mx="auto">
-                    <Text>Change depth in days:</Text>
-                    <Slider
-                        defaultValue={120}
-                        marks={marks}
-                        onChangeEnd={setDepth}
-                        min={30}
-                        max={120}
-                        step={30}
-                        // styles={{ markLabel: { display: 'none' } }}
-                    />
-                </Box>
-            )}
+            <Flex justify={'center'}>
+                <h1>Top Players</h1>
 
+                <Popover width={300} position="bottom" withArrow shadow="md">
+                    <Popover.Target>
+                        <div>
+                            <IconSettings
+                                style={{ width: '100%', height: '100%' }}
+                                stroke={1.5}
+                                height={18}
+                                width={18}
+                            />
+                        </div>
+                    </Popover.Target>
+                    <Popover.Dropdown top={140}>
+                        <Box maw={250} mih={50} mx="auto">
+                            <Text>Top players in the last {depth} days.</Text>
+                            <Slider
+                                defaultValue={depth}
+                                marks={marks}
+                                onChangeEnd={setDepth}
+                                min={30}
+                                max={120}
+                                step={30}
+								styles={{ markLabel: { display: 'none' } }}
+                            />
+                        </Box>
+                    </Popover.Dropdown>
+                </Popover>
+            </Flex>
             {renderResults()}
         </>
     )
