@@ -11,7 +11,7 @@ import { connectWebSocket } from './utils/ws'
 
 // Mantine main config overrides
 const theme: MantineThemeOverride = createTheme({
-    autoContrast: true,
+    // autoContrast: true,
     breakpoints: {
         xs: '20em',
         sm: '30em',

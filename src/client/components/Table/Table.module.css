@@ -12,32 +12,36 @@
         bottom: 0;
         border-bottom: rem(1px) solid
             light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-3));
-    }	
+    }
 }
 
 .zerg {
-	background-color: rgba(103, 0, 129, 0.300);
+    background-color: rgba(103, 0, 129, 0.3);
 }
 
 .terran {
-	background-color: rgba(25, 0, 255, 0.300);
+    background-color: rgba(25, 0, 255, 0.486);
 }
 
 .protoss {
-	background-color: rgba(252, 193, 0, 0.300);
+    background-color: rgba(34, 182, 42, 0.3);
 }
 
 .th {
-	text-align: center;
+    text-align: center;
 }
 
 .rank {
-	max-width: 20px;
-	max-height: 20px;
+    max-width: 20px;
+    max-height: 20px;
 }
 
 .scrolled {
     box-shadow: var(--mantine-shadow-sm);
 }
 
-
+.skeleton {
+	display: flex;
+	justify-content: center;
+	margin: auto;
+}

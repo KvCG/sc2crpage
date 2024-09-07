@@ -34,14 +34,14 @@ export function RankingTable({ data, loading }) {
     })
 
     return (
-        <Skeleton h={1000} visible={loading}>
+        <Skeleton className={classes.skeleton} h={1000} visible={loading} maw={700} miw={250}>
             <Table
                 verticalSpacing={'3'}
-				// horizontalSpacing={6}
 				striped
                 stickyHeader
                 highlightOnHover
-                maw={1000}
+				stripedColor='dark'
+                maw={700}
                 miw={250}
             >
                 <Table.Thead className={classes.header}>

@@ -4,7 +4,6 @@ const reconnectInterval = 3000 // Reconnect every 3 second
 
 export const connectWebSocket = () => {
     socket = new WebSocket(wsUrl)
-	socket = new WebSocket(wsUrl);
 
     socket.onmessage = event => {
         if (event.data === 'reload') {
@@ -16,4 +15,3 @@ export const connectWebSocket = () => {
         setTimeout(connectWebSocket, reconnectInterval) //Reconnect after 1 second
     }
 }
-
