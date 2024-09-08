@@ -3,7 +3,8 @@ import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { Box, Flex, Popover, Slider, Text } from '@mantine/core'
 import { IconSettings, IconRefresh } from '@tabler/icons-react'
-import { loadData, isValid, saveData } from '../utils/storage/localStorage'
+import { loadData, isValid, saveData } from '../utils/localStorage'
+import { addPositionChangeIndicator } from '../utils/rankingHelper'
 
 export const Ranking = () => {
     const { data, loading, error, fetch } = useFetch('ranking')
@@ -23,16 +24,17 @@ export const Ranking = () => {
     useEffect(() => {
         // This effect saves data in the localStorage and set expiration time
         if (data) {
+            const finalRanking = addPositionChangeIndicator(
+                data,
+                loadData(depth)?.data
+            )
             const ttl = 300000 // 5 min
             const wrapper = {
-                data,
+                data: finalRanking,
                 expiry: new Date().getTime() + ttl,
             }
             saveData(depth, wrapper)
-            // TODO: analize position change
-            // const finalRanking = addPositionChangeIndicator(data)
-            // setCurrentData(finalRanking)
-            setCurrentData(data)
+            setCurrentData(finalRanking)
         }
     }, [data])
 
@@ -59,7 +61,8 @@ export const Ranking = () => {
                 <h1>Top Players</h1>
                 <div>
                     <IconRefresh
-                        onClick={() => { // Just pull data again
+                        onClick={() => {
+                            // Just pull data again
                             fetch(depth)
                         }}
                         height={20}
