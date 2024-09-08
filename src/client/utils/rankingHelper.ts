@@ -26,25 +26,29 @@ export const getLeagueSrc = leagueType => {
 }
 
 export const addPositionChangeIndicator = (currentRanking, previousRanking) => {
-    if (!previousRanking) return currentRanking
     const finalRanking = currentRanking.map(
         (currentPlayer, currentPosition) => {
-            const previousPosition = previousRanking.findIndex(
+            const previousPosition = previousRanking?.findIndex(
                 player => player.btag == currentPlayer.btag
             )
-			if (currentPosition > previousPosition){
-				currentPlayer.positionChangeIndicator = '↓'
-			}
-			if (currentPosition < previousPosition){
-				currentPlayer.positionChangeIndicator = '↑'
-			}
-			if (currentPosition == previousPosition || previousPosition == -1){ // Not found in previous ranking
-				currentPlayer.positionChangeIndicator = '-'
-			}
+            if (currentPosition > previousPosition) {
+                currentPlayer.positionChangeIndicator = '↓'
+            }
+            if (currentPosition < previousPosition) {
+                currentPlayer.positionChangeIndicator = '↑'
+            }
+            if (
+                !previousPosition ||
+                currentPosition == previousPosition ||
+                previousPosition == -1
+            ) {
+                // Not found in previous ranking
+                currentPlayer.positionChangeIndicator = '-'
+            }
 
-			return currentPlayer
+            return currentPlayer
         }
     )
 
-	return finalRanking
+    return finalRanking
 }
