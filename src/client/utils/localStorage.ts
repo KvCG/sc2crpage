@@ -11,7 +11,7 @@ export const isValid = (key, data) => {
     if (!data) return false
     const now = new Date().getTime()
     if (now > data.expiry) {
-        localStorage.removeItem(key)
+        //localStorage.removeItem(key)
         return false
     }
     return true
