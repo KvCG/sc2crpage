@@ -3,36 +3,32 @@ import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { Box, Flex, Popover, Slider, Text } from '@mantine/core'
 import { IconSettings, IconRefresh } from '@tabler/icons-react'
-import {
-    getRankingData,
-    isValid,
-    saveRankingData,
-} from '../utils/storage/localStorage'
+import { loadData, isValid, saveData } from '../utils/storage/localStorage'
 
 export const Ranking = () => {
     const { data, loading, error, fetch } = useFetch('ranking')
-    const [depth, setDepth] = useState(120) // TODO: Read the inital state from the browser storage || 120
+    const [depth, setDepth] = useState(loadData('depth') || 30) // Loads depth from the localStorage if available
     const [currentData, setCurrentData] = useState(data)
-	// TODO: Add refresh button
 
     useEffect(() => {
-        const lastRanking = getRankingData(depth)
+        // This effect loads data from the localStorage if available.
+        const lastRanking = loadData(depth)
         if (isValid(depth, lastRanking)) {
-            // Position
             setCurrentData(lastRanking.data)
         } else {
             fetch(depth)
         }
-    }, [depth]) 
+    }, [depth])
 
     useEffect(() => {
+        // This effect saves data in the localStorage and set expiration time
         if (data) {
-            const ttl = 60000 // 1 min
+            const ttl = 300000 // 5 min
             const wrapper = {
                 data,
                 expiry: new Date().getTime() + ttl,
             }
-            saveRankingData(depth, wrapper)
+            saveData(depth, wrapper)
             // TODO: analize position change
             // const finalRanking = addPositionChangeIndicator(data)
             // setCurrentData(finalRanking)
@@ -61,15 +57,35 @@ export const Ranking = () => {
         <>
             <Flex justify={'center'}>
                 <h1>Top Players</h1>
+                <div>
+                    <IconRefresh
+                        onClick={() => { // Just pull data again
+                            fetch(depth)
+                        }}
+                        height={20}
+                        width={20}
+                        stroke={1.5}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            padding: '5px',
+                            paddingTop: '20px',
+                        }} // Move this to css file
+                    />
+                </div>
 
                 <Popover width={300} position="bottom" withArrow shadow="md">
                     <Popover.Target>
                         <div>
                             <IconSettings
-                                style={{ width: '100%', height: '100%' }}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    paddingTop: '15px',
+                                }} // Move this to css file
                                 stroke={1.5}
-                                height={18}
-                                width={18}
+                                height={20}
+                                width={20}
                             />
                         </div>
                     </Popover.Target>
@@ -79,7 +95,10 @@ export const Ranking = () => {
                             <Slider
                                 defaultValue={depth}
                                 marks={marks}
-                                onChangeEnd={setDepth} // TODO: Add function to save this in the browser
+                                onChangeEnd={value => {
+                                    setDepth(value)
+                                    saveData('depth', value)
+                                }}
                                 min={30}
                                 max={120}
                                 step={30}

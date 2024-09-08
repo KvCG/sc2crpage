@@ -1,8 +1,8 @@
-export const saveRankingData = (key, data) => {
+export const saveData = (key, data) => {
     localStorage.setItem(key, JSON.stringify(data))
 }
 
-export const getRankingData = key => {
+export const loadData = key => {
 	const data = localStorage.getItem(key)
     return JSON.parse(data)
 }
