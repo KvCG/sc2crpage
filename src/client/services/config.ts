@@ -1,17 +1,20 @@
-import prod from '../config/prod.config.json' assert { type: "json" }
-import dev from '../config/dev.config.json' assert { type: "json" }
-
+import prod from '../config/prod.config.json' assert { type: 'json' }
+import dev from '../config/dev.config.json' assert { type: 'json' }
 
 // Define the shape of your config
 interface Config {
-	API_URL: string;
+    API_URL: string
 }
-  
-let config = {}
 
-switch (window.location.hostname) {
-	case 'sc2cr.vercel.app':
-	case 'sc2cr-latest.onrender.com':
+let config = {}
+let hostName = window.location.hostname
+if (hostName.includes('vercel.app')) { // This is to standardize the hostname for Vercel created instances
+    hostName = 'vercel.app'
+}
+
+switch (hostName) {
+    case 'vercel.app':
+    case 'sc2cr-latest.onrender.com':
     case 'sc2cr.free.nf':
         config = prod
         break
@@ -22,6 +25,6 @@ switch (window.location.hostname) {
         config = dev
 }
 
-const typedConfig = config as Config;
+const typedConfig = config as Config
 
 export default typedConfig
