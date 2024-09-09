@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { search, getTop } from '../services/api'
+import { search, getTop, getDailySnapshot } from '../services/api'
 
 export const useFetch = (type) => {
     const [data, setData] = useState<[] | null>(null)
@@ -15,6 +15,9 @@ export const useFetch = (type) => {
             case 'ranking':
                 data = (await getTop(params)).data
                 break
+
+			case 'snapshot':
+				data = (await getDailySnapshot()).data
         }
 
         return data

@@ -17,6 +17,12 @@ export const getTop = async (depth) => {
     return response
 }
 
+export const getDailySnapshot = async () => {
+    const response = await api.get(`api/snapshot/`)
+
+    return response
+}
+
 export const upload = async body => {
 	console.log(JSON.stringify(body))
     const response = await api.post(`api/upload`, body, {

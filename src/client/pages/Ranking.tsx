@@ -26,7 +26,7 @@ export const Ranking = () => {
         if (data) {
             const finalRanking = addPositionChangeIndicator(
                 data,
-                loadData(depth)?.data
+                loadData('snapShot')?.[depth] // Loading ranking from daily snapshot, to compare against
             )
             const ttl = 300000 // 5 min
             const wrapper = {

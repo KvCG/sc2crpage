@@ -13,11 +13,11 @@ if (hostName.includes('vercel.app')) { // This is to standardize the hostname fo
 }
 
 switch (hostName) {
-    case 'vercel.app':
     case 'sc2cr-latest.onrender.com':
     case 'sc2cr.free.nf':
         config = prod
         break
+	case 'vercel.app':
     case 'localhost':
         config = dev
         break
