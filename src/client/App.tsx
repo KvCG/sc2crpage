@@ -19,7 +19,6 @@ const App: React.FC = () => {
         const snapshotData = loadData('snapShot')
         if (!isValid('', snapshotData)) {
             if (!data) {
-				console.log('Fetching snapshot');
                 fetch()
             } else {
                 saveData('snapShot', data)
