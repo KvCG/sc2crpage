@@ -1,5 +1,5 @@
 export const saveData = (key, data) => {
-    if (!data || data?.length) return
+    if (!data || !data.data || data.data?.length) return
     localStorage.setItem(key, JSON.stringify(data))
 }
 
