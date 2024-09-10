@@ -77,16 +77,18 @@ export const getDailySnapshot = async () => {
                 idChunks.map(chunk => fetchDataForChunk(chunk))
             )
 
+const timeUntilNextRefresh = getTimeUntilNextRefresh()
+
             // Combine the results from all chunks
             const response = {
                 '30': allResponses.flatMap(responses => responses[0].data),
                 '60': allResponses.flatMap(responses => responses[1].data),
                 '90': allResponses.flatMap(responses => responses[2].data),
                 '120': allResponses.flatMap(responses => responses[3].data),
-                expiry: Date.now() + 7200000, // 2h in ms
+                expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
             }
 
-            const timeUntilNextRefresh = getTimeUntilNextRefresh()
+            
             cache.set('snapShot', response, timeUntilNextRefresh / 1000)
 
             cache.on('expired', async key => {
