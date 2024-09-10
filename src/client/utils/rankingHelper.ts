@@ -43,7 +43,7 @@ export const addPositionChangeIndicator = (currentRanking, previousRanking) => {
                 previousPosition == -1
             ) {
                 // Not found in previous ranking
-                currentPlayer.positionChangeIndicator = '-'
+                currentPlayer.positionChangeIndicator = ''
             }
 
             return currentPlayer
