@@ -11,4 +11,17 @@ export default defineConfig({
         emptyOutDir: true,
         sourcemap: true,
     },
+	server: {
+		proxy: {
+			// // string shorthand: /foo -> http://localhost:4567/foo
+			// '/foo': 'http://localhost:5173',
+			// with options
+			'/api': {
+			  target: 'http://localhost:3000',
+			  changeOrigin: true,
+			  rewrite: path => path.replace(/^\/api/, '')
+			}
+		  }
+	}
+	
 })

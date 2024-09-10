@@ -31,7 +31,6 @@ router.get('/search', async (req: Request, res: Response) => {
         query: term,
         ...getClientInfo(userAgent),
     }
-    console.error('\nSearching:', term)
     console.log('INFO:', details)
 
     const playerData = await searchPlayer(term)
@@ -43,11 +42,11 @@ router.get('/snapshot', async (req: Request, res: Response) => {
     const snapshotRanking = await getDailySnapshot()
     const formattedData = {}
     for (const [key, value] of Object.entries(snapshotRanking)) {
-		if (key != 'expiry') {
-			formattedData[key] = await formatData(value, 'ranking')
-		} else {
-			formattedData[key] = value
-		}
+        if (key != 'expiry') {
+            formattedData[key] = await formatData(value, 'ranking')
+        } else {
+            formattedData[key] = value
+        }
     }
 
     res.json(formattedData)
@@ -100,6 +99,7 @@ router.post('/upload', async (req: Request, res: Response) => {
 // })
 
 router.get('/health', async (req: Request, res: Response) => {
+	console.log('-------------------Health ping------------------------')
     res.status(200).json({ status: 'ok' })
 })
 

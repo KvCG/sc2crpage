@@ -20,11 +20,15 @@
 }
 
 .terran {
-    background-color: rgba(25, 0, 255, 0.486);
+    background-color: rgba(25, 0, 255, 0.3);
 }
 
 .protoss {
     background-color: rgba(34, 182, 42, 0.3);
+}
+
+.random {
+    background-color: rgba(239, 240, 226, 0.288) 
 }
 
 .th {
@@ -47,7 +51,7 @@
 }
 .posIndicator {
     width: 10px;
-	padding-right: 0;
+    padding-right: 0;
 }
 
 .posIndicator[data-content='▲'] {
@@ -60,5 +64,5 @@
 
 .top {
     width: 10px;
-	padding-left: 0;
+    padding-left: 0;
 }

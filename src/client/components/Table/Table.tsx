@@ -35,6 +35,7 @@ export function RankingTable({ data, loading }) {
                             [classes.zerg]: race == 'ZERG',
                             [classes.terran]: race == 'TERRAN',
                             [classes.protoss]: race == 'PROTOSS',
+							[classes.random]: race == 'RANDOM',
                         })}
                     >
                         {/* First letter cooler */}
