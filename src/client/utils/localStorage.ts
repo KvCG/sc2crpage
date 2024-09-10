@@ -9,10 +9,8 @@ export const loadData = key => {
 
 export const isValid = (key, data) => {
     if (!data) return false
-	if (!data?.length) return false
     const now = new Date().getTime()
     if (now > data.expiry) {
-
         return false
     }
     return true
