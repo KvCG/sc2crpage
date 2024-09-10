@@ -15,7 +15,6 @@ export const useFetch = (type) => {
             case 'ranking':
                 data = (await getTop(params)).data
                 break
-
 			case 'snapshot':
 				data = (await getDailySnapshot()).data
         }

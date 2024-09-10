@@ -14,7 +14,7 @@ export const Ranking = () => {
     useEffect(() => {
         // This effect loads data from the localStorage if available.
         const lastRanking = loadData(depth)
-        if (isValid(depth, lastRanking)) {
+        if (isValid('', lastRanking)) {
             setCurrentData(lastRanking.data)
         } else {
             fetch(depth)
