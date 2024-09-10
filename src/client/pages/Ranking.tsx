@@ -3,7 +3,7 @@ import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { Box, Flex, Popover, Slider, Text } from '@mantine/core'
 import { IconSettings, IconRefresh } from '@tabler/icons-react'
-import { loadData, isValid, saveData } from '../utils/localStorage'
+import { loadData, isValid, saveData, saveDepth } from '../utils/localStorage'
 import { addPositionChangeIndicator } from '../utils/rankingHelper'
 
 export const Ranking = () => {
@@ -100,7 +100,7 @@ export const Ranking = () => {
                                 marks={marks}
                                 onChangeEnd={value => {
                                     setDepth(value)
-                                    saveData('depth', value)
+                                    saveDepth('depth', value)
                                 }}
                                 min={30}
                                 max={120}
