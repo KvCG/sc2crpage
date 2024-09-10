@@ -28,12 +28,21 @@ export const searchPlayer = async (term: string) => {
 
 export const getTop = async (daysAgo = 120) => {
     const players = await readCsv()
-    try {
-        const ids = players.map(player => player.id)
-        const result = await api.get(
-            `character/${ids.join(',')}/summary/1v1/${daysAgo}/`
+    const ids = players.map(player => player.id)
+    let chunkSize = 10
+    const reqArray = []
+
+    for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize)
+        reqArray.push(
+            api.get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)
         )
-        return result.data
+    }
+
+    try {
+        const rankingData = await Promise.all(reqArray)
+        const finalRank = rankingData.flatMap(data => data.data)
+        return finalRank
     } catch (error) {
         const axiosError = error as AxiosError
         console.log(axiosError.message)
@@ -63,14 +72,14 @@ export const getDailySnapshot = async () => {
                 '60': response60.data,
                 '90': response90.data,
                 '120': response120.data,
-                expiry: Date.now() + ttl, 
+                expiry: Date.now() + ttl,
             }
 
-			const timeUntilNextRefresh = getTimeUntilNextRefresh()
-            cache.set('snapShot', response, timeUntilNextRefresh/1000) 
+            const timeUntilNextRefresh = getTimeUntilNextRefresh()
+            cache.set('snapShot', response, timeUntilNextRefresh / 1000)
             cache.on('expired', async key => {
-				const now = new Date();
-				const hours = now.getHours();
+                const now = new Date()
+                const hours = now.getHours()
                 console.log('The key: ', key, 'has expired at ', hours)
             })
 
