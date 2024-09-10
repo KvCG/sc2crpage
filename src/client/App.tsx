@@ -9,7 +9,7 @@ import { Replay } from './pages/Replays.tsx'
 import { Container } from '@mantine/core'
 import { useFetch } from './hooks/useFetch.tsx'
 import { useEffect } from 'react'
-import { isValid, loadData, saveData } from './utils/localStorage.ts'
+import { isValid, loadData, saveSnapShot } from './utils/localStorage.ts'
 
 // Define functional component using TypeScript
 const App: React.FC = () => {
@@ -21,7 +21,7 @@ const App: React.FC = () => {
             if (!data) {
                 fetch()
             } else {
-                saveData('snapShot', data)
+                saveSnapShot('snapShot', data)
             }
         }
     }, [data])
