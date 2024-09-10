@@ -7,7 +7,7 @@ export const useFetch = (type) => {
     const [error, setError] = useState<string | null>(null)
 
 	const getData = async (params) => {
-        let data = []
+        let data = null
         switch (type) {
             case 'search':
                 data = (await search(params)).data
@@ -15,7 +15,6 @@ export const useFetch = (type) => {
             case 'ranking':
                 data = (await getTop(params)).data
                 break
-
 			case 'snapshot':
 				data = (await getDailySnapshot()).data
         }

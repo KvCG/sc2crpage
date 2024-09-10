@@ -60,8 +60,9 @@ const formatSearchData = data => {
 }
 
 const formatRankingData = async data => {
+	if(!data) return null
     data = await Promise.all(
-        data.map(async data => {
+        data?.map(async data => {
             const verifiedPlayerData = await verifyPlayer(data)
             return verifiedPlayerData
         })

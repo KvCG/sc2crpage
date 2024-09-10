@@ -17,7 +17,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         const snapshotData = loadData('snapShot')
-        if (!isValid('', snapshotData)) {
+        if (!isValid('snapShot', snapshotData)) {
             if (!data) {
                 fetch()
             } else {
