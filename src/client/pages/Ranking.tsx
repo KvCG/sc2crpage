@@ -2,22 +2,48 @@ import { useEffect, useState } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { Box, Flex, Popover, Slider, Text } from '@mantine/core'
-import { IconSettings } from '@tabler/icons-react'
+import { IconSettings, IconRefresh } from '@tabler/icons-react'
+import { loadData, isValid, saveData } from '../utils/localStorage'
+import { addPositionChangeIndicator } from '../utils/rankingHelper'
 
 export const Ranking = () => {
     const { data, loading, error, fetch } = useFetch('ranking')
-    const [depth, setDepth] = useState(120)
+    const [depth, setDepth] = useState(loadData('depth') || 30) // Loads depth from the localStorage if available
+    const [currentData, setCurrentData] = useState(data)
 
     useEffect(() => {
-        fetch(depth)
+        // This effect loads data from the localStorage if available.
+        const lastRanking = loadData(depth)
+        if (isValid(depth, lastRanking)) {
+            setCurrentData(lastRanking.data)
+        } else {
+            fetch(depth)
+        }
     }, [depth])
+
+    useEffect(() => {
+        // This effect saves data in the localStorage and set expiration time
+        if (data) {
+            const finalRanking = addPositionChangeIndicator(
+                data,
+                loadData('snapShot')?.[depth] // Loading ranking from daily snapshot, to compare against
+            )
+            const ttl = 300000 // 5 min
+            const wrapper = {
+                data: finalRanking,
+                expiry: new Date().getTime() + ttl,
+            }
+            saveData(depth, wrapper)
+            setCurrentData(finalRanking)
+        }
+    }, [data])
 
     const renderResults = () => {
         if (error) {
             return <p>{error}</p>
         }
-        if (data || loading) {
-            return <RankingTable data={data} loading={loading} />
+        if (currentData || loading) {
+            return <RankingTable data={currentData} loading={loading} />
         }
         return <p>No results found.</p>
     }
@@ -33,15 +59,36 @@ export const Ranking = () => {
         <>
             <Flex justify={'center'}>
                 <h1>Top Players</h1>
+                <div>
+                    <IconRefresh
+                        onClick={() => {
+                            // Just pull data again
+                            fetch(depth)
+                        }}
+                        height={20}
+                        width={20}
+                        stroke={1.5}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            padding: '5px',
+                            paddingTop: '20px',
+                        }} // Move this to css file
+                    />
+                </div>
 
                 <Popover width={300} position="bottom" withArrow shadow="md">
                     <Popover.Target>
                         <div>
                             <IconSettings
-                                style={{ width: '100%', height: '100%' }}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    paddingTop: '15px',
+                                }} // Move this to css file
                                 stroke={1.5}
-                                height={18}
-                                width={18}
+                                height={20}
+                                width={20}
                             />
                         </div>
                     </Popover.Target>
@@ -51,11 +98,14 @@ export const Ranking = () => {
                             <Slider
                                 defaultValue={depth}
                                 marks={marks}
-                                onChangeEnd={setDepth}
+                                onChangeEnd={value => {
+                                    setDepth(value)
+                                    saveData('depth', value)
+                                }}
                                 min={30}
                                 max={120}
                                 step={30}
-								styles={{ markLabel: { display: 'none' } }}
+                                styles={{ markLabel: { display: 'none' } }}
                             />
                         </Box>
                     </Popover.Dropdown>

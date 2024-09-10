@@ -1,6 +1,6 @@
 // routes/userRoutes.ts
 import { Router, Request, Response, query } from 'express'
-import { getTop, searchPlayer } from '../services/pulseApi'
+import { getDailySnapshot, getTop, searchPlayer } from '../services/pulseApi'
 import { formatData } from '../utils/formatData'
 import { uploadFile } from '../middleware/fbFileManagement'
 import { getClientInfo } from '../utils/getClientInfo'
@@ -9,13 +9,13 @@ const router = Router()
 
 // Define your routes here
 router.get('/top/:daysAgo', async (req: Request, res: Response) => {
-	const daysAgo = req.params.daysAgo
-	const userAgent = req.headers['user-agent']
+    const daysAgo = req.params.daysAgo
+    const userAgent = req.headers['user-agent']
     const details = {
         referer: req.headers.referer,
-		...getClientInfo(userAgent)
+        ...getClientInfo(userAgent),
     }
-	
+
     console.log('\nGetting live ranking data')
     console.log('INFO: ', details)
     const rankingData = await getTop(daysAgo)
@@ -28,14 +28,28 @@ router.get('/search', async (req: Request, res: Response) => {
     const userAgent = req.headers['user-agent']
     const details = {
         referer: req.headers.referer,
-		query: term,
-		...getClientInfo(userAgent)
+        query: term,
+        ...getClientInfo(userAgent),
     }
     console.error('\nSearching:', term)
     console.log('INFO:', details)
 
     const playerData = await searchPlayer(term)
     const formattedData = await formatData(playerData, 'search')
+    res.json(formattedData)
+})
+
+router.get('/snapshot', async (req: Request, res: Response) => {
+    const snapshotRanking = await getDailySnapshot()
+    const formattedData = {}
+    for (const [key, value] of Object.entries(snapshotRanking)) {
+		if (key != 'expiry') {
+			formattedData[key] = await formatData(value, 'ranking')
+		} else {
+			formattedData[key] = value
+		}
+    }
+
     res.json(formattedData)
 })
 

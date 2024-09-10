@@ -1,7 +1,7 @@
 import { Table, Skeleton } from '@mantine/core'
 import classes from './Table.module.css'
 import cx from 'clsx'
-import { getLeagueSrc } from '../../utils/mappings/leagueType'
+import { getLeagueSrc } from '../../utils/rankingHelper'
 
 export function RankingTable({ data, loading }) {
     const rows = data?.map((row, index) => {
@@ -9,7 +9,9 @@ export function RankingTable({ data, loading }) {
             const { btag, ratingLast, race, leagueTypeLast } = row
             return (
                 <Table.Tr key={btag}>
-                    <Table.Td>{index + 1}</Table.Td>
+                    <Table.Td>
+                        {row?.positionChangeIndicator + ' ' + (index + 1)}
+                    </Table.Td>
                     <Table.Td>{btag}</Table.Td>
                     <Table.Td>{ratingLast}</Table.Td>
                     <Table.Td>
@@ -34,13 +36,19 @@ export function RankingTable({ data, loading }) {
     })
 
     return (
-        <Skeleton className={classes.skeleton} h={1000} visible={loading} maw={700} miw={250}>
+        <Skeleton
+            className={classes.skeleton}
+            h={1000}
+            visible={loading}
+            maw={700}
+            miw={250}
+        >
             <Table
                 verticalSpacing={'3'}
-				striped
+                striped
                 stickyHeader
                 highlightOnHover
-				stripedColor='dark'
+                stripedColor="dark"
                 maw={700}
                 miw={250}
             >
