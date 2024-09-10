@@ -32,10 +32,10 @@ export const addPositionChangeIndicator = (currentRanking, previousRanking) => {
                 player => player.btag == currentPlayer.btag
             )
             if (currentPosition > previousPosition) {
-                currentPlayer.positionChangeIndicator = '↓'
+                currentPlayer.positionChangeIndicator = '\u25BC'
             }
             if (currentPosition < previousPosition) {
-                currentPlayer.positionChangeIndicator = '↑'
+                currentPlayer.positionChangeIndicator = '\u25B2'
             }
             if (
                 !previousPosition ||

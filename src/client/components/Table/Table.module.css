@@ -41,7 +41,24 @@
 }
 
 .skeleton {
-	display: flex;
-	justify-content: center;
-	margin: auto;
+    display: flex;
+    justify-content: center;
+    margin: auto;
+}
+.posIndicator {
+    width: 10px;
+	padding-right: 0;
+}
+
+.posIndicator[data-content='▲'] {
+    color: green;
+}
+
+.posIndicator[data-content='▼'] {
+    color: red;
+}
+
+.top {
+    width: 10px;
+	padding-left: 0;
 }

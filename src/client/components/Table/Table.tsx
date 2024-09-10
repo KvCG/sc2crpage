@@ -6,13 +6,23 @@ import { getLeagueSrc } from '../../utils/rankingHelper'
 export function RankingTable({ data, loading }) {
     const rows = data?.map((row, index) => {
         if (row.ratingLast) {
-            const { btag, ratingLast, race, leagueTypeLast } = row
+            const {
+                btag,
+                ratingLast,
+                race,
+                leagueTypeLast,
+                positionChangeIndicator,
+            } = row
             return (
                 <Table.Tr key={btag}>
-                    <Table.Td>
-                        {row?.positionChangeIndicator + ' ' + (index + 1)}
+                    <Table.Td
+                        className={classes.posIndicator}
+                        data-content={positionChangeIndicator}
+                    >
+                        {positionChangeIndicator}
                     </Table.Td>
-                    <Table.Td>{btag}</Table.Td>
+                    <Table.Td className={classes.top}>{index + 1}</Table.Td>
+                    <Table.Td title={btag}>{btag.split('#')[0]}</Table.Td>
                     <Table.Td>{ratingLast}</Table.Td>
                     <Table.Td>
                         <img
@@ -54,8 +64,9 @@ export function RankingTable({ data, loading }) {
             >
                 <Table.Thead className={classes.header}>
                     <Table.Tr>
+                        <Table.Th></Table.Th>
                         <Table.Th>Top</Table.Th>
-                        <Table.Th>Btag</Table.Th>
+                        <Table.Th>Name</Table.Th>
                         <Table.Th>MMR</Table.Th>
                         <Table.Th>Rank</Table.Th>
                         <Table.Th>Race</Table.Th>
