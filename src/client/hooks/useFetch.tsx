@@ -7,7 +7,7 @@ export const useFetch = (type) => {
     const [error, setError] = useState<string | null>(null)
 
 	const getData = async (params) => {
-        let data = []
+        let data = null
         switch (type) {
             case 'search':
                 data = (await search(params)).data
