@@ -20,8 +20,13 @@ export const loadData = key => {
 
 export const isValid = (key, data) => {
     if (!data) return false
-    const now = new Date().getTime()
+    const now = Date.now()
     if (now > data.expiry) {
+        if (key) {
+            localStorage.removeItem(key)
+			console.log('Removing:', key)
+        }
+
         return false
     }
     return true

@@ -7,7 +7,12 @@ import { getTimeUntilNextRefresh } from '../utils/cache'
 import { chunkArray } from '../utils/pulseApiHelper'
 
 const cache = new NodeCache({ deleteOnExpire: true })
-const agent = new https.Agent({ rejectUnauthorized: false })
+const agent = new https.Agent({
+    rejectUnauthorized: false,
+    keepAlive: true,
+    keepAliveMsecs: 15000,
+    timeout: 30000,
+})
 
 const api = axios.create({
     baseURL: 'https://sc2pulse.nephest.com/sc2/api',
@@ -30,7 +35,7 @@ export const searchPlayer = async (term: string) => {
 export const getTop = async (daysAgo = 120) => {
     const players = await readCsv()
     const ids = players.map(player => player.id)
-    let chunkSize = 10
+    let chunkSize = 5
     const reqArray = []
 
     for (let i = 0; i < ids.length; i += chunkSize) {
@@ -45,13 +50,19 @@ export const getTop = async (daysAgo = 120) => {
         const finalRank = rankingData.flatMap(data => data.data)
         return finalRank
     } catch (error) {
-        const axiosError = error as AxiosError
-        console.log(axiosError.message)
+        if (error instanceof AggregateError) {
+            // Handle multiple errors
+            console.error('Multiple errors occurred:', error.errors)
+            error.errors.forEach(err => console.error(err.message)) // Logging each error
+        } else {
+            const axiosError = error as AxiosError
+            console.log(axiosError.message)
+        }
     }
 }
 
 export const getDailySnapshot = async () => {
-	const players = await readCsv()
+    const players = await readCsv()
     const ids = players.map(player => player.id)
     const cachedData = cache.get('snapShot')
 
@@ -76,9 +87,7 @@ export const getDailySnapshot = async () => {
             const allResponses = await Promise.all(
                 idChunks.map(chunk => fetchDataForChunk(chunk))
             )
-
-const timeUntilNextRefresh = getTimeUntilNextRefresh()
-
+            const timeUntilNextRefresh = getTimeUntilNextRefresh()
             // Combine the results from all chunks
             const response = {
                 '30': allResponses.flatMap(responses => responses[0].data),
@@ -88,7 +97,6 @@ const timeUntilNextRefresh = getTimeUntilNextRefresh()
                 expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
             }
 
-            
             cache.set('snapShot', response, timeUntilNextRefresh / 1000)
 
             cache.on('expired', async key => {
@@ -99,7 +107,14 @@ const timeUntilNextRefresh = getTimeUntilNextRefresh()
 
             return response
         } catch (error) {
-            console.error('Error fetching data:', error)
+            if (error instanceof AggregateError) {
+                // Handle multiple errors
+                console.error('Multiple errors occurred:', error.errors)
+                error.errors.forEach(err => console.error(err.message)) // Logging each error
+            } else {
+                const axiosError = error as AxiosError
+                console.log(axiosError.message)
+            }
         }
     }
 }
