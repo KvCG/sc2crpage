@@ -35,7 +35,7 @@ export const searchPlayer = async (term: string) => {
 export const getTop = async (daysAgo = 120) => {
     const players = await readCsv()
     const ids = players.map(player => player.id)
-    let chunkSize = 5
+    let chunkSize = 10
     const reqArray = []
 
     for (let i = 0; i < ids.length; i += chunkSize) {
