@@ -47,6 +47,7 @@ export const getTop = async (daysAgo = 120) => {
 
     try {
         const rankingData = await Promise.all(reqArray)
+		console.log('rankingData', rankingData);
         const finalRank = rankingData.flatMap(data => data.data)
         return finalRank
     } catch (error) {
