@@ -41,24 +41,38 @@ export const getTop = async (daysAgo = 120) => {
     for (let i = 0; i < ids.length; i += chunkSize) {
         const chunk = ids.slice(i, i + chunkSize)
         reqArray.push(
-            api.get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)
+            api
+                .get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)
+                .catch(error => {
+                    console.error(
+                        `Failed to fetch for chunk: ${chunk}`,
+                        error.message
+                    )
+                    return null // Returning null to avoid Promise.all rejection
+                })
         )
     }
 
     try {
         const rankingData = await Promise.all(reqArray)
-		console.log('rankingData', rankingData);
-        const finalRank = rankingData.flatMap(data => data.data)
+        const validData = rankingData.filter(data => data !== null) // Filter out null responses
+        const finalRank = validData.flatMap(data => data.data)
         return finalRank
     } catch (error) {
         if (error instanceof AggregateError) {
             // Handle multiple errors
             console.error('Multiple errors occurred:', error.errors)
             error.errors.forEach(err => console.error(err.message)) // Logging each error
-        } else {
-            const axiosError = error as AxiosError
-            console.log(axiosError.message)
         }
+        if (error.code === 'ECONNABORTED') {
+            console.error('Request timed out:', error.message)
+        } else {
+            console.error('Error occurred:', error.message)
+        }
+
+        const axiosError = error as AxiosError
+        console.log(axiosError.message)
+        return [] // Returning an empty array or a fallback response
     }
 }
 
@@ -117,10 +131,16 @@ export const getDailySnapshot = async () => {
                 // Handle multiple errors
                 console.error('Multiple errors occurred:', error.errors)
                 error.errors.forEach(err => console.error(err.message)) // Logging each error
-            } else {
-                const axiosError = error as AxiosError
-                console.log(axiosError.message)
             }
+            if (error.code === 'ECONNABORTED') {
+                console.error('Request timed out:', error.message)
+            } else {
+                console.error('Error occurred:', error.message)
+            }
+
+            const axiosError = error as AxiosError
+            console.log(axiosError.message)
+            return [] // Returning an empty array or a fallback response
         }
     }
 }
