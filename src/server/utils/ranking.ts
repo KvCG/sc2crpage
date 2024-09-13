@@ -5,6 +5,9 @@ export const verifyPlayer = async player => {
     reankedPlayers.forEach(rankedPlayer => {
         if (rankedPlayer.id == player.playerCharacterId) {
             player.btag = rankedPlayer.btag
+            if (rankedPlayer.name) {
+				player.name = rankedPlayer.name
+            }
         }
     })
     return player

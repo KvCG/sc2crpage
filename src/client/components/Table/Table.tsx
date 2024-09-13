@@ -12,6 +12,7 @@ export function RankingTable({ data, loading }) {
                 race,
                 leagueTypeLast,
                 positionChangeIndicator,
+                name,
             } = row
             return (
                 <Table.Tr key={btag}>
@@ -22,7 +23,9 @@ export function RankingTable({ data, loading }) {
                         {positionChangeIndicator}
                     </Table.Td>
                     <Table.Td className={classes.top}>{index + 1}</Table.Td>
-                    <Table.Td title={btag}>{btag.split('#')[0]}</Table.Td>
+                    <Table.Td title={btag}>
+                        {name ? name : btag.split('#')[0]}
+                    </Table.Td>
                     <Table.Td>{ratingLast}</Table.Td>
                     <Table.Td>
                         <img
@@ -35,7 +38,7 @@ export function RankingTable({ data, loading }) {
                             [classes.zerg]: race == 'ZERG',
                             [classes.terran]: race == 'TERRAN',
                             [classes.protoss]: race == 'PROTOSS',
-							[classes.random]: race == 'RANDOM',
+                            [classes.random]: race == 'RANDOM',
                         })}
                     >
                         {/* First letter cooler */}
@@ -46,7 +49,8 @@ export function RankingTable({ data, loading }) {
         }
     })
 
-	if(!loading && !data?.length) return <p>Slow network, please refresh the page.</p>
+    if (!loading && !data?.length)
+        return <p>Slow network, please refresh the page.</p>
 
     return (
         <Skeleton
