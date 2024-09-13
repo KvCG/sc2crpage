@@ -41,18 +41,13 @@ export const getTop = async (daysAgo = 120) => {
     for (let i = 0; i < ids.length; i += chunkSize) {
         const chunk = ids.slice(i, i + chunkSize)
         reqArray.push(
-            api
-                .get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)
-                .catch(() => {
-                    return null // Returning null to avoid Promise.all rejection
-                })
+            api.get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)
         )
     }
 
     try {
         const rankingData = await Promise.all(reqArray)
-        const validData = rankingData.filter(data => data !== null) // Filter out null responses
-        const finalRank = validData.flatMap(data => data.data)
+        const finalRank = rankingData.flatMap(data => data.data)
         return finalRank
     } catch (error) {
         if (error instanceof AggregateError) {
@@ -107,7 +102,7 @@ export const getDailySnapshot = async () => {
                 '120': allResponses.flatMap(responses => responses[3].data),
                 expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
             }
-			
+
             cache.set('snapShot', response, timeUntilNextRefresh / 1000)
 
             cache.on('expired', async key => {
