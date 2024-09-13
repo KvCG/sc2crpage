@@ -42,6 +42,9 @@ export const Ranking = () => {
         if (error) {
             return <p>{error}</p>
         }
+		if (!currentData?.length) {
+			return <p>Slow network, please refresh the page</p>
+		}
         if (currentData || loading) {
             return <RankingTable data={currentData} loading={loading} />
         }
