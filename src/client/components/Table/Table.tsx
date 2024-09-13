@@ -46,6 +46,8 @@ export function RankingTable({ data, loading }) {
         }
     })
 
+	if(!loading && !data?.length) return <p>Slow network, please refresh the page.</p>
+
     return (
         <Skeleton
             className={classes.skeleton}
