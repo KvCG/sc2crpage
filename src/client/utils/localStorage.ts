@@ -4,7 +4,7 @@ export const saveData = (key, data) => {
 }
 
 export const saveSnapShot = (key, data) => {
-    if (!data) return
+    if (!data || !data?.expiry) return
     localStorage.setItem(key, JSON.stringify(data))
 }
 
@@ -26,7 +26,6 @@ export const isValid = (key, data) => {
             localStorage.removeItem(key)
 			console.log('Removing:', key)
         }
-
         return false
     }
     return true

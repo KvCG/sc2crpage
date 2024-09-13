@@ -8,6 +8,8 @@ import {
 } from '@mantine/core'
 import { BrowserRouter } from 'react-router-dom'
 import { connectWebSocket } from './utils/ws'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 
 // Mantine main config overrides
 const theme: MantineThemeOverride = createTheme({
@@ -40,6 +42,8 @@ root.render(
         <MantineProvider theme={theme} defaultColorScheme="dark">
             <BrowserRouter>
                 <App />
+                <Analytics />
+                <SpeedInsights />
             </BrowserRouter>
         </MantineProvider>
     </StrictMode>

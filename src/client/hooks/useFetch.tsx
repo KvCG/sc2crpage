@@ -17,7 +17,7 @@ export const useFetch = (type) => {
                 break
 			case 'snapshot':
 				data = (await getDailySnapshot()).data
-        }Failed to fetch
+        }
 
         return data
     }
@@ -27,7 +27,7 @@ export const useFetch = (type) => {
         try {
             setData(await getData(params) ?? [])
         } catch (error) {
-            console.error('Error fetching ranking data: ', error)
+            console.error('Error fetching ranking data:', error)
             setError('Failed to fetch data. Please try again later.')
             setData([])
         } finally {
