@@ -40,6 +40,7 @@ router.get('/search', async (req: Request, res: Response) => {
 
 router.get('/snapshot', async (req: Request, res: Response) => {
     const snapshotRanking = await getDailySnapshot()
+	console.log('snapshotRanking' ,snapshotRanking)
     if (!snapshotRanking) res.json(null)
     const formattedData = {}
     for (const [key, value] of Object.entries(snapshotRanking)) {
@@ -100,7 +101,11 @@ router.post('/upload', async (req: Request, res: Response) => {
 // })
 
 router.get('/health', async (req: Request, res: Response) => {
-    console.log(`----${new Date().toISOString()}----`)
+    console.log(
+        `----${new Date().toLocaleString('en-US', {
+            timeZone: 'America/Costa_Rica',
+        }).split(',')[1]} ----`
+    )
     res.status(200).json({ status: 'ok' })
 })
 
