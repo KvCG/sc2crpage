@@ -107,7 +107,7 @@ export const getDailySnapshot = async () => {
                 '120': allResponses.flatMap(responses => responses[3].data),
                 expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
             }
-            console.log(timeUntilNextRefresh / 1000)
+			
             cache.set('snapShot', response, timeUntilNextRefresh / 1000)
 
             cache.on('expired', async key => {
