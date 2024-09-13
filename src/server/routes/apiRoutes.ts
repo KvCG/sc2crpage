@@ -100,7 +100,7 @@ router.post('/upload', async (req: Request, res: Response) => {
 // })
 
 router.get('/health', async (req: Request, res: Response) => {
-    console.log(`----${Date.now()}----`)
+    console.log(`----${new Date().toISOString()}----`)
     res.status(200).json({ status: 'ok' })
 })
 
