@@ -17,7 +17,7 @@ export const useFetch = (type) => {
                 break
 			case 'snapshot':
 				data = (await getDailySnapshot()).data
-        }
+        }Failed to fetch
 
         return data
     }

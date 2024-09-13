@@ -43,11 +43,7 @@ export const getTop = async (daysAgo = 120) => {
         reqArray.push(
             api
                 .get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)
-                .catch(error => {
-                    console.error(
-                        `Failed to fetch for chunk: ${chunk}`,
-                        error.message
-                    )
+                .catch(() => {
                     return null // Returning null to avoid Promise.all rejection
                 })
         )
