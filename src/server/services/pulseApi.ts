@@ -55,14 +55,11 @@ export const getTop = async (daysAgo = 120) => {
             console.error('Multiple errors occurred:', error.errors)
             error.errors.forEach(err => console.error(err.message)) // Logging each error
         }
-        if (error.code === 'ECONNABORTED') {
-            console.error('Request timed out:', error.message)
-        } else {
-            console.error('Error occurred:', error.message)
+		const axiosError = error as AxiosError
+        if (axiosError.code === 'ECONNABORTED') {
+            console.error('Request timed out:', axiosError.message)
         }
-
-        const axiosError = error as AxiosError
-        console.log(axiosError.message)
+        console.error('Error occurred:', axiosError.message)
         return [] // Returning an empty array or a fallback response
     }
 }
@@ -118,20 +115,17 @@ export const getDailySnapshot = async () => {
 
             return response
         } catch (error) {
-            if (error instanceof AggregateError) {
-                // Handle multiple errors
-                console.error('Multiple errors occurred:', error.errors)
-                error.errors.forEach(err => console.error(err.message)) // Logging each error
-            }
-            if (error.code === 'ECONNABORTED') {
-                console.error('Request timed out:', error.message)
-            } else {
-                console.error('Error occurred:', error.message)
-            }
-
-            const axiosError = error as AxiosError
-            console.log(axiosError.message)
-            return [] // Returning an empty array or a fallback response
+			if (error instanceof AggregateError) {
+				// Handle multiple errors
+				console.error('Multiple errors occurred:', error.errors)
+				error.errors.forEach(err => console.error(err.message)) // Logging each error
+			}
+			const axiosError = error as AxiosError
+			if (axiosError.code === 'ECONNABORTED') {
+				console.error('Request timed out:', axiosError.message)
+			}
+			console.error('Error occurred:', axiosError.message)
+			return [] // Returning an empty array or a fallback response
         }
     }
 }
