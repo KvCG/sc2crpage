@@ -19,6 +19,7 @@ router.get('/top/:daysAgo', async (req: Request, res: Response) => {
     console.log('\nGetting live ranking data')
     console.log('INFO: ', details)
     const rankingData = await getTop(daysAgo)
+	console.info('rankingData', rankingData)
     const formattedData = await formatData(rankingData, 'ranking')
     res.send(JSON.stringify(formattedData))
 })
@@ -40,7 +41,6 @@ router.get('/search', async (req: Request, res: Response) => {
 
 router.get('/snapshot', async (req: Request, res: Response) => {
     const snapshotRanking = await getDailySnapshot()
-	console.log('snapshotRanking' ,snapshotRanking)
     if (!snapshotRanking) res.json(null)
     const formattedData = {}
     for (const [key, value] of Object.entries(snapshotRanking)) {
