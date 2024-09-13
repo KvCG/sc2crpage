@@ -40,6 +40,7 @@ router.get('/search', async (req: Request, res: Response) => {
 
 router.get('/snapshot', async (req: Request, res: Response) => {
     const snapshotRanking = await getDailySnapshot()
+    if (!snapshotRanking) res.json(null)
     const formattedData = {}
     for (const [key, value] of Object.entries(snapshotRanking)) {
         if (key != 'expiry') {
@@ -99,7 +100,7 @@ router.post('/upload', async (req: Request, res: Response) => {
 // })
 
 router.get('/health', async (req: Request, res: Response) => {
-	console.log('-------------------Health ping------------------------')
+    console.log(`----${Date.now()}----`)
     res.status(200).json({ status: 'ok' })
 })
 
