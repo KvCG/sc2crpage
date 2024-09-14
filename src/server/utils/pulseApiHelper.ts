@@ -6,3 +6,5 @@ export const chunkArray = (array: any[], chunkSize: number) => {
     }
     return result
 }
+
+export const retryDelay = (attempt: number) => Math.pow(2, attempt) * 1000;

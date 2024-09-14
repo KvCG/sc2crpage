@@ -4,7 +4,7 @@ import https from 'https'
 import { readCsv } from './csvParser'
 import NodeCache from 'node-cache'
 import { getTimeUntilNextRefresh } from '../utils/cache'
-import { chunkArray } from '../utils/pulseApiHelper'
+import { chunkArray, retryDelay } from '../utils/pulseApiHelper'
 
 const cache = new NodeCache({ deleteOnExpire: true })
 const agent = new https.Agent({
@@ -32,7 +32,7 @@ export const searchPlayer = async (term: string) => {
     }
 }
 
-export const getTop = async (daysAgo = 120) => {
+export const getTop = async (daysAgo = 120, retries = 0, maxRetries = 3) => {
     const players = await readCsv()
     const ids = players.map(player => player.id)
     let chunkSize = 10
@@ -55,12 +55,22 @@ export const getTop = async (daysAgo = 120) => {
             console.error('Multiple errors occurred:', error.errors)
             error.errors.forEach(err => console.error(err.message)) // Logging each error
         }
-		const axiosError = error as AxiosError
+        const axiosError = error as AxiosError
         if (axiosError.code === 'ECONNABORTED') {
             console.error('Request timed out:', axiosError.message)
         }
-        console.error('Error occurred:', axiosError.message)
-        return [] // Returning an empty array or a fallback response
+
+        if (retries < maxRetries) {
+            const delay = retryDelay(retries)
+            console.log(`Retrying in ${delay / 1000} seconds...`)
+            await new Promise(resolve => setTimeout(resolve, delay)) // Exponential backoff to avoid flooding the pulse api
+            return getTop(daysAgo, retries + 1, maxRetries)
+        } else {
+            console.error('Max retries reached. Aborting.')
+        }
+
+        console.error('Error occurred:', axiosError)
+        return [] //fallback response
     }
 }
 
@@ -115,17 +125,17 @@ export const getDailySnapshot = async () => {
 
             return response
         } catch (error) {
-			if (error instanceof AggregateError) {
-				// Handle multiple errors
-				console.error('Multiple errors occurred:', error.errors)
-				error.errors.forEach(err => console.error(err.message)) // Logging each error
-			}
-			const axiosError = error as AxiosError
-			if (axiosError.code === 'ECONNABORTED') {
-				console.error('Request timed out:', axiosError.message)
-			}
-			console.error('Error occurred:', axiosError.message)
-			return [] // Returning an empty array or a fallback response
+            if (error instanceof AggregateError) {
+                // Handle multiple errors
+                console.error('Multiple errors occurred:', error.errors)
+                error.errors.forEach(err => console.error(err.message)) // Logging each error
+            }
+            const axiosError = error as AxiosError
+            if (axiosError.code === 'ECONNABORTED') {
+                console.error('Request timed out:', axiosError.message)
+            }
+            console.error('Error occurred:', axiosError)
+            return [] // Returning an empty array or a fallback response
         }
     }
 }
