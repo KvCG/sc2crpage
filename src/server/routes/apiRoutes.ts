@@ -1,5 +1,5 @@
 // routes/userRoutes.ts
-import { Router, Request, Response, query } from 'express'
+import { Router, Request, Response } from 'express'
 import { getDailySnapshot, getTop, searchPlayer } from '../services/pulseApi'
 import { formatData } from '../utils/formatData'
 import { uploadFile } from '../middleware/fbFileManagement'
@@ -11,9 +11,12 @@ const router = Router()
 router.get('/top/:daysAgo', async (req: Request, res: Response) => {
     const daysAgo = req.params.daysAgo
     const userAgent = req.headers['user-agent']
+	const { device, os } = getClientInfo(userAgent)
     const details = {
         referer: req.headers.referer,
-        ...getClientInfo(userAgent),
+        device,
+		os,
+		ip: req.headers['x-forwarded-for'] || req.ip
     }
 
     console.log('\nGetting live ranking data')
@@ -26,10 +29,13 @@ router.get('/top/:daysAgo', async (req: Request, res: Response) => {
 router.get('/search', async (req: Request, res: Response) => {
     const term = req.query.term
     const userAgent = req.headers['user-agent']
+    const { device, os } = getClientInfo(userAgent)
     const details = {
         referer: req.headers.referer,
         query: term,
-        ...getClientInfo(userAgent),
+        device,
+		os,
+		ip: req.headers['x-forwarded-for'] || req.ip
     }
     console.log('INFO:', details)
 
@@ -101,9 +107,13 @@ router.post('/upload', async (req: Request, res: Response) => {
 
 router.get('/health', async (req: Request, res: Response) => {
     console.log(
-        `----${new Date().toLocaleString('en-US', {
-            timeZone: 'America/Costa_Rica',
-        }).split(',')[1]} ----`
+        `----${
+            new Date()
+                .toLocaleString('en-US', {
+                    timeZone: 'America/Costa_Rica',
+                })
+                .split(',')[1]
+        } ----`
     )
     res.status(200).json({ status: 'ok' })
 })

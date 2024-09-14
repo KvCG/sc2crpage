@@ -50,11 +50,6 @@ export const getTop = async (daysAgo = 120, retries = 0, maxRetries = 3) => {
         const finalRank = rankingData.flatMap(data => data.data)
         return finalRank
     } catch (error) {
-        if (error instanceof AggregateError) {
-            // Handle multiple errors
-            console.error('Multiple errors occurred:', error.errors)
-            error.errors.forEach(err => console.error(err.message)) // Logging each error
-        }
         const axiosError = error as AxiosError
         if (axiosError.code === 'ECONNABORTED') {
             console.error('Request timed out:', axiosError.message)
@@ -62,19 +57,19 @@ export const getTop = async (daysAgo = 120, retries = 0, maxRetries = 3) => {
 
         if (retries < maxRetries) {
             const delay = retryDelay(retries)
-            console.log(`Retrying in ${delay / 1000} seconds...`)
+            console.log(`Retrying ranking in ${delay / 1000} seconds...`)
             await new Promise(resolve => setTimeout(resolve, delay)) // Exponential backoff to avoid flooding the pulse api
             return getTop(daysAgo, retries + 1, maxRetries)
         } else {
             console.error('Max retries reached. Aborting.')
         }
 
-        console.error('Error occurred:', axiosError)
+        console.error('Error occurred:', axiosError.code)
         return [] //fallback response
     }
 }
 
-export const getDailySnapshot = async () => {
+export const getDailySnapshot = async (retries = 0, maxRetries = 3) => {
     const players = await readCsv()
     const ids = players.map(player => player.id)
     const cachedData = cache.get('snapShot')
@@ -125,16 +120,21 @@ export const getDailySnapshot = async () => {
 
             return response
         } catch (error) {
-            if (error instanceof AggregateError) {
-                // Handle multiple errors
-                console.error('Multiple errors occurred:', error.errors)
-                error.errors.forEach(err => console.error(err.message)) // Logging each error
-            }
             const axiosError = error as AxiosError
             if (axiosError.code === 'ECONNABORTED') {
                 console.error('Request timed out:', axiosError.message)
             }
-            console.error('Error occurred:', axiosError)
+
+            if (retries < maxRetries) {
+                const delay = retryDelay(retries)
+                console.log(`Retrying Snapshot in ${delay / 1000} seconds...`)
+                await new Promise(resolve => setTimeout(resolve, delay)) // Exponential backoff to avoid flooding the pulse api
+                return getDailySnapshot(retries + 1, maxRetries)
+            } else {
+                console.error('Max retries reached. Aborting.')
+            }
+
+            console.error('Error occurred:', axiosError.code)
             return [] // Returning an empty array or a fallback response
         }
     }
