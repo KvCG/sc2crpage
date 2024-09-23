@@ -1,15 +1,22 @@
 import admin from 'firebase-admin'
 import 'dotenv/config'
 
-const serviceAccount = JSON.parse(
-    process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
-)
+let bucket = null
 
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: 'sc2cr-bc7bf.appspot.com',
-})
+try {
+    const serviceAccount = JSON.parse(
+        process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
+    )
 
-const bucket = admin.storage().bucket()
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: 'sc2cr-bc7bf.appspot.com',
+    })
+
+	bucket = admin.storage().bucket()
+} catch (error) {
+	console.log('Firebase init error. Ignore if you have ladder.csv')
+}
+
 
 export { bucket }
