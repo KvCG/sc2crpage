@@ -1,9 +1,21 @@
 import { Table, Skeleton } from '@mantine/core'
 import classes from './Table.module.css'
 import cx from 'clsx'
+import z from '../../assets/zerg.svg'
+import t from '../../assets/terran.svg'
+import p from '../../assets/protoss.svg'
+import r from '../../assets/random.svg'
 import { getLeagueSrc } from '../../utils/rankingHelper'
 
 export function RankingTable({ data, loading }) {
+
+    const raceAssets = {
+        ZERG: { className: classes.zerg, assetPath: z },
+        TERRAN: { className: classes.terran, assetPath: t },
+        PROTOSS: { className: classes.protoss, assetPath: p },
+        RANDOM: { className: classes.random, assetPath: r },
+    };
+
     const rows = data?.map((row, index) => {
         if (row.ratingLast) {
             const {
@@ -35,14 +47,11 @@ export function RankingTable({ data, loading }) {
                     </Table.Td>
                     <Table.Td
                         className={cx('', {
-                            [classes.zerg]: race == 'ZERG',
-                            [classes.terran]: race == 'TERRAN',
-                            [classes.protoss]: race == 'PROTOSS',
-                            [classes.random]: race == 'RANDOM',
+                            [raceAssets[race]?.className]: raceAssets[race],
                         })}
                     >
-                        {/* First letter cooler */}
-                        {race[0]}
+                        {/* Iterate each image in their respective player */}
+                        <img src={raceAssets[race]?.assetPath} alt={race} />
                     </Table.Td>
                 </Table.Tr>
             )
