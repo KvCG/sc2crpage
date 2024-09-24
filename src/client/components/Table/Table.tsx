@@ -36,7 +36,7 @@ export function RankingTable({ data, loading }) {
                         ></img>
                     </Table.Td>
                     <Table.Td
-                        className={cx(classes.race, {
+                        className={cx('', {
                             [raceAssets[race]?.className]: true,
                         })}
                     >
