@@ -49,7 +49,7 @@ export function RankingTable({ data, loading }) {
     })
 
     if (!loading && !data?.length)
-        return <p>Slow network, please refresh the page.</p>
+        return <p>Sc2Pulse is failing to respond, please refresh the page.</p>
 
     return (
         <Skeleton
