@@ -2,8 +2,10 @@ import { Table, Skeleton } from '@mantine/core'
 import classes from './Table.module.css'
 import cx from 'clsx'
 import { getLeagueSrc } from '../../utils/rankingHelper'
+import { raceAssets } from '../../constants/races'
 
 export function RankingTable({ data, loading }) {
+
     const rows = data?.map((row, index) => {
         if (row.ratingLast) {
             const {
@@ -35,14 +37,11 @@ export function RankingTable({ data, loading }) {
                     </Table.Td>
                     <Table.Td
                         className={cx('', {
-                            [classes.zerg]: race == 'ZERG',
-                            [classes.terran]: race == 'TERRAN',
-                            [classes.protoss]: race == 'PROTOSS',
-                            [classes.random]: race == 'RANDOM',
+                            [raceAssets[race]?.className]: true,
                         })}
                     >
-                        {/* First letter cooler */}
-                        {race[0]}
+                        {/* Iterate each image in their respective player */}
+                        <img src={raceAssets[race]?.assetPath} alt={race} />
                     </Table.Td>
                 </Table.Tr>
             )
