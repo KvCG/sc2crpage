@@ -28,7 +28,7 @@
 }
 
 .random {
-    background-color: rgba(239, 240, 226, 0.288) 
+    background-color: rgba(239, 240, 226, 0.288);
 }
 
 .th {
@@ -38,6 +38,11 @@
 .rank {
     max-width: 20px;
     max-height: 20px;
+    vertical-align: text-top;
+}
+
+.rank {
+    vertical-align: text-top;
 }
 
 .scrolled {

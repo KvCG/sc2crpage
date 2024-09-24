@@ -5,7 +5,6 @@ import { getLeagueSrc } from '../../utils/rankingHelper'
 import { raceAssets } from '../../constants/races'
 
 export function RankingTable({ data, loading }) {
-
     const rows = data?.map((row, index) => {
         if (row.ratingLast) {
             const {
@@ -41,7 +40,11 @@ export function RankingTable({ data, loading }) {
                         })}
                     >
                         {/* Iterate each image in their respective player */}
-                        <img src={raceAssets[race]?.assetPath} alt={race} />
+                        <img
+                            className={classes.rank}
+                            src={raceAssets[race]?.assetPath}
+                            alt={race}
+                        />
                     </Table.Td>
                 </Table.Tr>
             )
