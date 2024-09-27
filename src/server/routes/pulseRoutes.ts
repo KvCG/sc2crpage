@@ -1,4 +1,3 @@
-// routes/userRoutes.ts
 import { Router, Request, Response } from 'express'
 import { getDailySnapshot, getTop, searchPlayer } from '../services/pulseApi'
 import { formatData } from '../utils/formatData'
@@ -7,7 +6,6 @@ import { getClientInfo } from '../utils/getClientInfo'
 
 const router = Router()
 
-// Define your routes here
 router.get('/top/:daysAgo', async (req: Request, res: Response) => {
     const daysAgo = req.params.daysAgo
     const userAgent = req.headers['user-agent']

@@ -20,7 +20,6 @@ export const getParticipants = async () => {
     try {
 		if(!tournament) throw new AxiosError('No CURRENT_TOURNAMENT')
 		if(!apiKey) throw new AxiosError('CHALLONGE_API_KEY needed')
-        // Node automatically decodes URL params son in order to send the search term to the pulse API we need to encode it again
         const response = await api.get(
             `/tournaments/${tournament}/participants.json?api_key=${apiKey}`
         )
