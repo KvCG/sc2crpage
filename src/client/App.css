@@ -9,3 +9,8 @@
 .mantine-Table-th {
 	text-align: center;
 }
+
+.mantine-Tabs-tabLabel {
+	font-size: var(--mantine-font-size-sm);
+	font-weight: 500;
+}

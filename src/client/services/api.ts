@@ -23,6 +23,12 @@ export const getDailySnapshot = async () => {
     return response
 }
 
+export const getLeagueParticipants = async () => {
+    const response = await api.get(`api/participants/`)
+
+    return response
+}
+
 export const upload = async body => {
 	console.log(JSON.stringify(body))
     const response = await api.post(`api/upload`, body, {
