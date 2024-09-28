@@ -1,3 +1,18 @@
 .participants {
-	text-align: left;
+	list-style-type: none; /* Remove default bullet points */
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Adjust the size and number of columns */
+	gap: 10px; /* Space between grid items */
+
+	li {
+		background-color: #202a2b;
+		padding: 10px;
+		border-radius: 5px;
+		text-align: left;
+
+		img {
+			vertical-align: text-bottom;
+		}
+	}
 }

@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useFetch } from '../../hooks/useFetch'
-import { Container, List, rem } from '@mantine/core'
+import { List, rem } from '@mantine/core'
 import classes from './Participants.module.css'
+import { getStandardName } from '../../utils/common'
 
 export const Participants = () => {
     const { data, loading, error, fetch } = useFetch('participants')
@@ -22,29 +23,29 @@ export const Participants = () => {
         }
         if (data?.length) {
             return (
-                <Container maw={'150px'}>
-                    <List className={classes.participants} spacing="2" size="md">
-                        {data.map(({ participant }) => {
-                            return (
-                                <List.Item
-                                    icon={
-                                        <img
-                                            style={{
-                                                width: rem(18),
-                                                height: rem(18),
-                                            }}
-                                            src={
-                                                participant.attached_participatable_portrait_url
-                                            }
-                                        />
-                                    }
-                                >
-                                    <span>{participant.name}</span>
-                                </List.Item>
-                            )
-                        })}
-                    </List>
-                </Container>
+                <List className={classes.participants} size="md">
+                    {data.map(participant => {
+                        return (
+                            <List.Item
+                                id={participant.id}
+                                key={participant.id}
+                                icon={
+                                    <img
+                                        style={{
+                                            width: rem(18),
+                                            height: rem(18),
+                                        }}
+                                        src={
+                                            participant.attached_participatable_portrait_url
+                                        }
+                                    />
+                                }
+                            >
+                                <span>{getStandardName(participant)}</span>
+                            </List.Item>
+                        )
+                    })}
+                </List>
             )
         }
 

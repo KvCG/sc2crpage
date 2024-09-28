@@ -3,6 +3,7 @@ import classes from './Table.module.css'
 import cx from 'clsx'
 import { getLeagueSrc } from '../../utils/rankingHelper'
 import { raceAssets } from '../../constants/races'
+import { getStandardName } from '../../utils/common'
 
 export function RankingTable({ data, loading }) {
     const rows = data?.map((row, index) => {
@@ -25,7 +26,7 @@ export function RankingTable({ data, loading }) {
                     </Table.Td>
                     <Table.Td className={classes.top}>{index + 1}</Table.Td>
                     <Table.Td title={btag}>
-                        {name ? name : btag.split('#')[0]}
+                        {getStandardName(row)}
                     </Table.Td>
                     <Table.Td>{ratingLast}</Table.Td>
                     <Table.Td>

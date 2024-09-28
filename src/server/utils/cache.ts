@@ -1,10 +1,18 @@
+import NodeCache from 'node-cache'
+
+// Create a cache instance
+const cache = new NodeCache({ deleteOnExpire: true })
+
+export default cache
+
 export const getTimeUntilNextRefresh = () => {
     const now = new Date()
     const nextRefresh = new Date()
 
-    nextRefresh.setUTCHours(6, 0, 0, 0); // 6 AM UTC = 12 AM UTC-6 (Costa Rica time)
+    // Set the refresh time for 6 AM UTC (which is 12 AM Costa Rica time, UTC-6)
+    nextRefresh.setUTCHours(6, 0, 0, 0) // 6 AM UTC = 12 AM UTC-6 (Costa Rica)
 
-    // If the current time is past 12 AM local time, set the next refresh for the next day
+    // If the current time is exactly or past 12 AM Costa Rica time, set the next refresh for tomorrow
     if (now.getTime() >= nextRefresh.getTime()) {
         nextRefresh.setDate(nextRefresh.getDate() + 1)
     }

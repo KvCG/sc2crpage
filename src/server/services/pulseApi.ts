@@ -2,11 +2,11 @@
 import axios, { AxiosError } from 'axios'
 import https from 'https'
 import { readCsv } from './csvParser'
-import NodeCache from 'node-cache'
+import cache from '../utils/cache'
 import { getTimeUntilNextRefresh } from '../utils/cache'
 import { chunkArray, retryDelay } from '../utils/pulseApiHelper'
 
-const cache = new NodeCache({ deleteOnExpire: true })
+
 const agent = new https.Agent({
     rejectUnauthorized: false,
     keepAlive: true,
@@ -116,6 +116,11 @@ export const getDailySnapshot = async (retries = 0, maxRetries = 3) => {
                         timeZone: 'America/Costa_Rica',
                     })}`
                 )
+
+				if (key === 'snapShot') {
+                    console.log('Fetching new snapshot after cache expiration...')
+                    await getDailySnapshot() // Trigger snapshot retrieval again
+                }
             })
 
             return response

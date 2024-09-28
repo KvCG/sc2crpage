@@ -4,7 +4,7 @@ import { LeagueTabs } from '../components/TabList/LeagueTabs'
 export const League = () => {
     return (
         <>
-            <Container size={'xs'}>
+            <Container size={'md'}>
                 <LeagueTabs />
             </Container>
         </>
