@@ -1,4 +1,8 @@
-import { filterByHighestRatingLast, verifyPlayer } from './ranking'
+import {
+    filterByHighestRatingLast,
+    verifyChallongeParticipant,
+    verifyPlayer,
+} from './userDataHelper'
 
 export const formatData = async (data, type) => {
     let formattedData = []
@@ -7,9 +11,12 @@ export const formatData = async (data, type) => {
             formattedData = formatSearchData(data)
             break
         }
-
         case 'ranking': {
             formattedData = await formatRankingData(data)
+            break
+        }
+        case 'participants': {
+            formattedData = await formatChallongePlayerData(data)
             break
         }
     }
@@ -60,7 +67,7 @@ const formatSearchData = data => {
 }
 
 const formatRankingData = async data => {
-	if(!data) return null
+    if (!data) return null
     data = await Promise.all(
         data?.map(async data => {
             const verifiedPlayerData = await verifyPlayer(data)
@@ -70,4 +77,19 @@ const formatRankingData = async data => {
 
     data = filterByHighestRatingLast(data)
     return data.sort((a, b) => b.ratingLast - a.ratingLast)
+}
+
+const formatChallongePlayerData = async data => {
+    if (!data) return null
+
+    const crossReferenceData = await Promise.all(
+        data?.map(async ({ participant }) => {
+            const verifiedPlayerData = await verifyChallongeParticipant(
+                participant
+            )
+            return verifiedPlayerData
+        })
+    )
+
+    return crossReferenceData
 }
