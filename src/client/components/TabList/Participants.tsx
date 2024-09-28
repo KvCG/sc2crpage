@@ -3,6 +3,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { List, rem } from '@mantine/core'
 import classes from './Participants.module.css'
 import { getStandardName } from '../../utils/common'
+import { getLeagueSrc } from '../../utils/rankingHelper'
 
 export const Participants = () => {
     const { data, loading, error, fetch } = useFetch('participants')
@@ -29,19 +30,25 @@ export const Participants = () => {
                             <List.Item
                                 id={participant.id}
                                 key={participant.id}
-                                icon={
-                                    <img
-                                        style={{
-                                            width: rem(18),
-                                            height: rem(18),
-                                        }}
-                                        src={
-                                            participant.attached_participatable_portrait_url
-                                        }
-                                    />
-                                }
+                                classNames={{
+									itemWrapper: classes.wrapper,
+                                    item: classes.participant,
+                                    itemLabel: classes.label,
+                                }}
                             >
+                                <img
+                                    className={classes.avatar}
+                                    src={
+                                        participant.attached_participatable_portrait_url
+                                    }
+                                />
                                 <span>{getStandardName(participant)}</span>
+                                <img
+                                    className={classes.rank}
+                                    src={getLeagueSrc(
+                                        participant.leagueTypeLast
+                                    )}
+                                />
                             </List.Item>
                         )
                     })}
