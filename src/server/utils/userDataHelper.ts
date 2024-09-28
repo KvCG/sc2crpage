@@ -19,14 +19,14 @@ export const verifyChallongeParticipant = async challongeParticipant => {
     const snapshot = cache.get('snapShot')
     const reankedPlayers = await readCsv()
     for (const rankedPlayer of reankedPlayers) {
-        if (rankedPlayer?.challongeId == challongeParticipant.id) {
+        if (rankedPlayer?.challongeId == challongeParticipant.challonge_user_id) {
             challongeParticipant.btag = rankedPlayer.btag
             challongeParticipant.name = null
             if (rankedPlayer.name) {
                 challongeParticipant.name = rankedPlayer.name
             }
-            if (snapshot && snapshot['30']) {
-                const formattedData = await formatData(snapshot['30'], 'ranking')
+            if (snapshot && snapshot['120']) {
+                const formattedData = await formatData(snapshot['120'], 'ranking')
                 const match = formattedData.find(
                     player => player.playerCharacterId == rankedPlayer.id
                 )
