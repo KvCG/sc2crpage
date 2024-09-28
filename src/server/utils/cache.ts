@@ -16,7 +16,6 @@ export const getTimeUntilNextRefresh = () => {
     if (now.getTime() >= nextRefresh.getTime()) {
         nextRefresh.setDate(nextRefresh.getDate() + 1)
     }
-
     const timeUntilRefresh = nextRefresh.getTime() - now.getTime() // in ms
     return timeUntilRefresh
 }

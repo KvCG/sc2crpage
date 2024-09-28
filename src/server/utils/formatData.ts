@@ -11,12 +11,10 @@ export const formatData = async (data, type) => {
             formattedData = formatSearchData(data)
             break
         }
-
         case 'ranking': {
             formattedData = await formatRankingData(data)
             break
         }
-
         case 'participants': {
             formattedData = await formatChallongePlayerData(data)
             break

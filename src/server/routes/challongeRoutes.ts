@@ -4,7 +4,6 @@ import { formatData } from '../utils/formatData'
 
 const router = Router()
 
-
 router.get('/participants', async (req: Request, res: Response) => {
 	let participantsData = await getParticipants()
 	participantsData = await formatData(participantsData, 'participants')
