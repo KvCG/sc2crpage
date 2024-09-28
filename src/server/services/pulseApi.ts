@@ -1,7 +1,7 @@
 // services/weatherService.ts
 import axios, { AxiosError } from 'axios'
 import https from 'https'
-import { readCsv } from './csvParser'
+import { readCsv } from '../utils/csvParser'
 import cache from '../utils/cache'
 import { getTimeUntilNextRefresh } from '../utils/cache'
 import { chunkArray, retryDelay } from '../utils/pulseApiHelper'
