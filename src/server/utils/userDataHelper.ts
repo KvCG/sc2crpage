@@ -1,5 +1,5 @@
 import cache from './cache'
-import { readCsv } from '../services/csvParser'
+import { readCsv } from './csvParser'
 import { formatData } from './formatData'
 
 export const verifyPlayer = async player => {
