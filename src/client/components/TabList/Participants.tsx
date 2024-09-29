@@ -26,22 +26,12 @@ export const Participants = ({ participants }) => {
                                 }
                             />
                             <Text>{getStandardName(participant)}</Text>
-                            <Flex>
-                                <img
-                                    className={classes.rank}
-                                    src={getLeagueSrc(
-                                        participant.leagueTypeLast
-                                    )}
-                                />
 
-                                <img
-                                    className={classes.race}
-                                    src={
-                                        raceAssets[participant.race]?.assetPath
-                                    }
-                                    alt={participant.race}
-                                />
-                            </Flex>
+                            <img
+                                className={classes.race}
+                                src={raceAssets[participant.race]?.assetPath}
+                                alt={participant.race}
+                            />
                         </List.Item>
                     )
                 })}
