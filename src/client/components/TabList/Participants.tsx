@@ -4,8 +4,6 @@ import { getStandardName } from '../../utils/common'
 import { getLeagueSrc } from '../../utils/rankingHelper'
 
 export const Participants = ({ participants }) => {
-	console.log(participants.length);
-	
     if (participants?.length) {
         return (
             <List className={classes.participants} size="md">

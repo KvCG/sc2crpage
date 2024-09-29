@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { Tabs } from '@mantine/core'
 import { Participants } from './Participants'
 
-export const LeagueTabs = ({ matches, participants }) => {
-	console.log(participants.length);
-	
+export const TournamentTabs = ({ matches, participants }) => {
     const [activeTab, setActiveTab] = useState<string | null>('participants')
 
     return (
