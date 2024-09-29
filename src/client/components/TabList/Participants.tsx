@@ -1,7 +1,8 @@
-import { List } from '@mantine/core'
+import { Flex, List, Text } from '@mantine/core'
 import classes from './Participants.module.css'
 import { getStandardName } from '../../utils/common'
 import { getLeagueSrc } from '../../utils/rankingHelper'
+import { raceAssets } from '../../constants/races'
 
 export const Participants = ({ participants }) => {
     if (participants?.length) {
@@ -24,11 +25,23 @@ export const Participants = ({ participants }) => {
                                     participant.attached_participatable_portrait_url
                                 }
                             />
-                            <span>{getStandardName(participant)}</span>
-                            <img
-                                className={classes.rank}
-                                src={getLeagueSrc(participant.leagueTypeLast)}
-                            />
+                            <Text>{getStandardName(participant)}</Text>
+                            <Flex>
+                                <img
+                                    className={classes.rank}
+                                    src={getLeagueSrc(
+                                        participant.leagueTypeLast
+                                    )}
+                                />
+
+                                <img
+                                    className={classes.race}
+                                    src={
+                                        raceAssets[participant.race]?.assetPath
+                                    }
+                                    alt={participant.race}
+                                />
+                            </Flex>
                         </List.Item>
                     )
                 })}

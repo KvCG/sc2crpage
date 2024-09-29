@@ -31,11 +31,15 @@ export const Tournament = () => {
                 <strong>Start time: </strong>
                 {toCRtime(tournament.start_at)}
             </Text>
-			<br />
+            <br />
             <Description descriptionHtml={tournament.description} />
             <Container size={'md'}>
                 <br />
-                <TournamentTabs matches={matches} participants={participants} />
+                <TournamentTabs
+                    matches={matches}
+                    participants={participants}
+                    participantCount={tournament.participants_count}
+                />
             </Container>
         </>
     )

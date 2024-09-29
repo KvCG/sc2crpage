@@ -4,7 +4,7 @@
     display: grid;
     grid-template-columns: repeat(
         auto-fill,
-        minmax(150px, 1fr)
+        minmax(160px, 1fr)
     ); /* Adjust the size and number of columns */
     gap: 10px; /* Space between grid items */
     position: relative;
@@ -17,17 +17,17 @@
 }
 
 .wrapper {
-	display: flex;
-	width: 100%;
-	align-items: center;
-	flex-direction: row; 
+    display: flex;
+    width: 100%;
+    align-items: center;
+    flex-direction: row;
 }
 
 .label {
     display: flex;
     justify-content: space-between;
     align-items: center;
-	flex-grow: 1;
+    flex-grow: 1;
 }
 
 .avatar {
@@ -41,5 +41,11 @@
     max-width: 18px;
     max-height: 18px;
     margin-left: 10px;
-    vertical-align: middle;
+
+}
+
+.race {
+    max-width: 18px;
+    max-height: 18px;
+    margin-left: 10px;
 }
