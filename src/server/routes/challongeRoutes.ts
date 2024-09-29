@@ -6,7 +6,7 @@ const router = Router()
 
 router.get('/tournament', async (req: Request, res: Response) => {
     let { tournament } = await getTournamentDetails()
-    tournament.participants = await formatData( tournament.participants, 'participants')
+    tournament = await formatData( tournament, 'tournament')
     res.json(tournament)
 })
 
