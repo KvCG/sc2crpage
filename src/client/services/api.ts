@@ -23,8 +23,8 @@ export const getDailySnapshot = async () => {
     return response
 }
 
-export const getLeagueParticipants = async () => {
-    const response = await api.get(`api/participants/`)
+export const getTournament = async () => {
+    const response = await api.get(`api/tournament/`)
 
     return response
 }

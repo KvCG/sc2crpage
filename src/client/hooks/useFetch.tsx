@@ -3,7 +3,7 @@ import {
     search,
     getTop,
     getDailySnapshot,
-    getLeagueParticipants,
+	getTournament,
 } from '../services/api'
 
 export const useFetch = type => {
@@ -23,8 +23,8 @@ export const useFetch = type => {
             case 'snapshot':
                 data = (await getDailySnapshot()).data
                 break
-            case 'participants':
-                data = (await getLeagueParticipants()).data
+            case 'tournament':
+                data = (await getTournament()).data
                 break
         }
 
