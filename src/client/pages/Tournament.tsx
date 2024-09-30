@@ -4,6 +4,7 @@ import { useFetch } from '../hooks/useFetch'
 import { useEffect } from 'react'
 import { Description } from '../components/Description/Description'
 import { toCRtime } from '../utils/common'
+import { save } from '../utils/localStorage'
 
 export const Tournament = () => {
     const { data, loading, error, fetch } = useFetch('tournament')
@@ -23,6 +24,8 @@ export const Tournament = () => {
     const tournament = data?.info
     const participants = data?.participants
     const matches = data?.matches
+
+	save('participants', participants)
 
     return (
         <>

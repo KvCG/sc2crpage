@@ -1,3 +1,5 @@
+import { loadData } from './localStorage'
+
 export const getStandardName = player => {
     if (player.name) return player.name
     if (player.btag) return player.btag.split('#')[0]
@@ -37,3 +39,10 @@ export const filterMatches = (matches, round, state) => {
         return roundMatches && stateMatches // Return true if either round or state matches
     })
 }
+
+export const getParticipant = id => {
+    const participants = loadData('participants')
+
+    return participants.find(participant => participant.id == id)
+}
+
