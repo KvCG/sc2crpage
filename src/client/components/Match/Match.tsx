@@ -27,7 +27,7 @@ export const Match = ({ match }) => {
                 <div
                     title={state}
                     className={cx(classes.status, {
-                        [classes.pending]: state == 'pending',
+                        [classes.open]: state == 'open',
                     })}
                 ></div>
                 <div className={classes.title}>Match</div>
@@ -44,7 +44,9 @@ export const Match = ({ match }) => {
                     </span>
                 </div>
                 <div className={classes.colunm}>
-                    <div className={classes.scores}>{scores_csv}</div>
+                    <div className={classes.scores}>
+                        {scores_csv ? scores_csv : 'vs'}
+                    </div>
                 </div>
                 <div className={classes.colunm}>
                     <div className={classes.race}>

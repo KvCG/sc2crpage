@@ -2,7 +2,7 @@
     background-color: #2d2d31; /* Slightly off-black for better contrast */
     display: flex;
     flex-direction: column;
-    min-width: 180px;
+    min-width: 160px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2); /* Stronger shadow for depth */
 	justify-content: center;
@@ -24,7 +24,7 @@
     margin-right: auto;
 }
 
-.pending {
+.open {
     background-color: #fbff00af; /* Brighter, high-contrast alert color */
     color: white;
 }

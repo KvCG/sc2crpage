@@ -11,7 +11,7 @@ export const FilteredMatches = ({ matches, participantCount }) => {
 
     const rounds = calculateRounds(participantCount) // Debe devolver 24 para 25 jugadores
     const actualRounds = Array.from({ length: rounds }, (_, index) => index + 1)
-    const matchStates = ['pending', 'ongoing', 'complete']
+    const matchStates = ['open', 'complete']
 
     // Filtrar partidos según la ronda y el estado
     const filterMatches = matches => {
@@ -34,7 +34,7 @@ export const FilteredMatches = ({ matches, participantCount }) => {
                 onRoundChange={setSelectedRound}
                 onStateChange={setSelectedState}
             />
-
+			<br />
             <Flex direction="row" justify="center" wrap="wrap" gap="xs">
                 {actualRounds.map(round => {
                     // Filtrar partidos para la ronda actual
