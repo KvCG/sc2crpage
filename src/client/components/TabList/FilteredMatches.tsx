@@ -27,7 +27,7 @@ export const FilteredMatches = ({ matches, participantCount }) => {
     let actualRound = 1
 
     return (
-        <Flex direction="column" gap="sm">
+        <Flex direction="column" gap="sm" rowGap={1}>
             <MatchFilters
                 rounds={actualRounds}
                 matchStates={matchStates}
@@ -35,7 +35,7 @@ export const FilteredMatches = ({ matches, participantCount }) => {
                 onStateChange={setSelectedState}
             />
 
-            <Flex direction="row" wrap="wrap" gap="xs">
+            <Flex direction="row" justify={'center'} wrap="wrap" gap="xs">
                 {filteredMatches.map((match, index) => {
                     match.number = index + 1
                     let render = <Match key={match.id} match={match} />
