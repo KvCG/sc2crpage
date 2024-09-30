@@ -1,12 +1,17 @@
 import { useState } from 'react'
-import { search, getTop, getDailySnapshot } from '../services/api'
+import {
+    search,
+    getTop,
+    getDailySnapshot,
+	getTournament,
+} from '../services/api'
 
-export const useFetch = (type) => {
+export const useFetch = type => {
     const [data, setData] = useState<[] | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-	const getData = async (params) => {
+    const getData = async params => {
         let data = null
         switch (type) {
             case 'search':
@@ -15,8 +20,12 @@ export const useFetch = (type) => {
             case 'ranking':
                 data = (await getTop(params)).data
                 break
-			case 'snapshot':
-				data = (await getDailySnapshot()).data
+            case 'snapshot':
+                data = (await getDailySnapshot()).data
+                break
+            case 'tournament':
+                data = (await getTournament()).data
+                break
         }
 
         return data
@@ -25,7 +34,7 @@ export const useFetch = (type) => {
     const fetch = async (params?) => {
         setLoading(true)
         try {
-            setData(await getData(params) ?? [])
+            setData((await getData(params)) ?? [])
         } catch (error) {
             console.error('Error fetching ranking data:', error)
             setError('Failed to fetch data. Please try again later.')
@@ -35,5 +44,5 @@ export const useFetch = (type) => {
         }
     }
 
-    return { data, loading, error, fetch}
+    return { data, loading, error, fetch }
 }

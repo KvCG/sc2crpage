@@ -10,4 +10,4 @@ export const raceAssets = {
     TERRAN: { className: classes.terran, assetPath: t },
     PROTOSS: { className: classes.protoss, assetPath: p },
     RANDOM: { className: classes.random, assetPath: r },
-};
+}

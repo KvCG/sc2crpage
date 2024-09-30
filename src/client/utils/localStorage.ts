@@ -8,7 +8,7 @@ export const saveSnapShot = (key, data) => {
     localStorage.setItem(key, JSON.stringify(data))
 }
 
-export const saveDepth = (key, data) => {
+export const save = (key, data) => {
     if (!data) return
     localStorage.setItem(key, JSON.stringify(data))
 }

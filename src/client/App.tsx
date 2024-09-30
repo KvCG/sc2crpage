@@ -6,6 +6,7 @@ import './App.css'
 import { Ranking } from './pages/Ranking.tsx'
 import { Search } from './pages/Search.tsx'
 import { Replay } from './pages/Replays.tsx'
+import { Tournament } from './pages/Tournament.tsx'
 import { Container } from '@mantine/core'
 import { useFetch } from './hooks/useFetch.tsx'
 import { useEffect } from 'react'
@@ -32,10 +33,11 @@ const App: React.FC = () => {
             <Container>
                 <Routes>
                     <Route path="/" element={<Ranking />} />
-                    <Route path="/community" element={<Community />} />
+                    <Route path="/tournament" element={<Tournament />} />
                     <Route path="/search" element={<Search />} />
-                    <Route path="/replays" element={<Replay />} />
-                    {/* <Route path='/contact' element={<Contact/>} /> */}
+                    {/* <Route path="/replays" element={<Replay />} />
+                    <Route path="/community" element={<Community />} />
+                    <Route path='/contact' element={<Contact/>} /> */}
                 </Routes>
             </Container>
         </>

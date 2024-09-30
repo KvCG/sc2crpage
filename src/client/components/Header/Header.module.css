@@ -41,7 +41,7 @@
 
 .mobileLinks {
 	position: relative;
-	top: 5px;
+	top: 20px;
 	margin-left: 50px;
 	backdrop-filter: blur(100px);
 	background-color: rgb(114, 108, 108);

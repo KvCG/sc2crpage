@@ -1,0 +1,51 @@
+.participants {
+    list-style-type: none; /* Remove default bullet points */
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(160px, 1fr)
+    ); /* Adjust the size and number of columns */
+    gap: 10px; /* Space between grid items */
+    position: relative;
+}
+
+.participant {
+    background-color: #202a2b;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.wrapper {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    flex-direction: row;
+}
+
+.label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.avatar {
+    vertical-align: middle;
+    max-width: 18px;
+    max-height: 18px;
+    margin-right: 10px;
+}
+
+.rank {
+    max-width: 18px;
+    max-height: 18px;
+    margin-left: 10px;
+
+}
+
+.race {
+    max-width: 18px;
+    max-height: 18px;
+    margin-left: 10px;
+}

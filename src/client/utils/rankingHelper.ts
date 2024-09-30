@@ -5,6 +5,7 @@ import plat from '../assets/Platinum.png'
 import diamond from '../assets/Diamond.png'
 import master from '../assets/Master.png'
 import gm from '../assets/Grandmaster.png'
+import unknownRank from '../assets/unknownRank.svg'
 
 export const getLeagueSrc = leagueType => {
     switch (leagueType) {
@@ -22,6 +23,8 @@ export const getLeagueSrc = leagueType => {
             return master
         case 6:
             return gm
+        default:
+            return unknownRank
     }
 }
 

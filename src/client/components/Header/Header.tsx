@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Container, Group, Burger, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import classes from './HeaderSimple.module.css'
+import classes from './Header.module.css'
 import { Logo } from '../Logo/Logo'
 import { Link } from 'react-router-dom'
 import { links } from '../../constants/navigation'

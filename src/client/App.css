@@ -9,3 +9,22 @@
 .mantine-Table-th {
 	text-align: center;
 }
+
+.mantine-Tabs-tabLabel {
+	font-size: var(--mantine-font-size-sm);
+	font-weight: 500;
+}
+
+html {
+    overflow-y: scroll; /* Always show vertical scrollbar */
+}
+
+/* Custom scrollbar styling */
+body::-webkit-scrollbar {
+    width: 5px;                
+}
+
+body::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1); 
+    border-radius: 10px;
+}
