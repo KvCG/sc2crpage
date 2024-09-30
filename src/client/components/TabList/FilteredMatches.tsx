@@ -9,10 +9,11 @@ export const FilteredMatches = ({ matches, participantCount }) => {
     const [selectedRound, setSelectedRound] = useState<number | null>(null)
     const [selectedState, setSelectedState] = useState<string | null>(null)
 
-    const rounds = calculateRounds(participantCount)
+    const rounds = calculateRounds(participantCount) // Debe devolver 24 para 25 jugadores
     const actualRounds = Array.from({ length: rounds }, (_, index) => index + 1)
     const matchStates = ['pending', 'ongoing', 'complete']
 
+    // Filtrar partidos según la ronda y el estado
     const filterMatches = matches => {
         return matches.filter(match => {
             const roundMatches =
@@ -24,7 +25,6 @@ export const FilteredMatches = ({ matches, participantCount }) => {
     }
 
     const filteredMatches = filterMatches(matches)
-    let actualRound = 1
 
     return (
         <Flex direction="column" gap="sm" rowGap={1}>
@@ -35,24 +35,25 @@ export const FilteredMatches = ({ matches, participantCount }) => {
                 onStateChange={setSelectedState}
             />
 
-            <Flex direction="row" justify={'center'} wrap="wrap" gap="xs">
-                {filteredMatches.map((match, index) => {
-                    match.number = index + 1
-                    let render = <Match key={match.id} match={match} />
+            <Flex direction="row" justify="center" wrap="wrap" gap="xs">
+                {actualRounds.map(round => {
+                    // Filtrar partidos para la ronda actual
+                    const roundMatches = filteredMatches.filter(
+                        match => match.round === round
+                    )
 
-                    if (index % rounds === 0) {
-                        render = (
+                    // Solo renderizar si hay partidos para la ronda
+                    if (roundMatches.length > 0) {
+                        return (
                             <>
-                                <RoundHeader key={`h-${actualRound}`}
-                                    round={selectedRound || actualRound}
-                                />
-                                <Match key={`m-${actualRound}`} match={match} />
+                                <RoundHeader round={round} />
+                                {roundMatches.map(match => (
+                                    <Match key={match.id} match={match} />
+                                ))}
                             </>
                         )
-                        actualRound += 1
                     }
-
-                    return render
+                    return null // No renderizar si no hay partidos para esta ronda
                 })}
             </Flex>
         </Flex>

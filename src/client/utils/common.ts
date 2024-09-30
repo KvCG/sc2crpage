@@ -24,12 +24,7 @@ export const toCRtime = dateStr => {
 }
 
 export const calculateRounds = numberOfPlayers => {
-    // If the number of participants is even
-    if (numberOfPlayers % 2 === 0) {
-        return numberOfPlayers / 2 // Each match consists of two participants
-    } else {
-        return (numberOfPlayers - 1) / 2 // One player has a rest
-    }
+	return numberOfPlayers 
 }
 
 export const filterMatches = (matches, round, state) => {
