@@ -146,7 +146,8 @@ const getSlimInfo = data => {
 
 const formatMatchData = (matches, participants) => {
     if (!matches || !participants) return null
-    return matches?.map(({ match }) => {
+    return matches?.map(({ match }, index) => {
+		match.number = index + 1
         const slimMatch = getSlimMatch(match)
         return slimMatch
     })
@@ -156,6 +157,7 @@ const getSlimMatch = match => {
     if (!match) return null
     const slimMatch = {
         id: match.id,
+		number: match.number,
         tournament_id: match.tournament_id,
         state: match.state,
         player1_id: match.player1_id,
