@@ -15,7 +15,7 @@ export const TournamentTabs = ({ matches, participants, participantCount }) => {
                 <Tabs.Tab value="matches">
                     Mejengas {`(${matches.length})`}
                 </Tabs.Tab>
-                <Tabs.Tab value="standings">Standings</Tabs.Tab>
+                {/* <Tabs.Tab value="standings">Standings</Tabs.Tab> */}
             </Tabs.List>
 
             <br />
@@ -31,7 +31,7 @@ export const TournamentTabs = ({ matches, participants, participantCount }) => {
                 />
             </Tabs.Panel>
 
-            <Tabs.Panel value="standings">WIP</Tabs.Panel>
+            {/* <Tabs.Panel value="standings">WIP</Tabs.Panel> */}
         </Tabs>
     )
 }
