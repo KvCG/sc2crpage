@@ -21,7 +21,7 @@ export const Description = ({ descriptionHtml }) => {
                 />
             </Modal>
 
-            <Button onClick={open}>Read description</Button>
+            <Button onClick={open}>Descripción</Button>
         </>
     )
 }

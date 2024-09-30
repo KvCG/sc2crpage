@@ -1,0 +1,100 @@
+.match {
+    background-color: #1c1c1e; /* Slightly off-black for better contrast */
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2); /* Stronger shadow for depth */
+}
+
+.header {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Light contrast border */
+    padding: 6px;
+}
+
+.status {
+    background-color: #5dbb4a79; /* Brighter, high-contrast alert color */
+    color: white;
+    padding: 3px 6px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    margin-right: auto;
+}
+
+.pending {
+    background-color: #fbff00af; /* Brighter, high-contrast alert color */
+    color: white;
+}
+
+.status:before {
+    content: "";
+    display: block;
+    width: 6px;
+    height: 6px;
+    background-color: currentColor;
+    border-radius: 50%;
+}
+
+.title {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: #ffffff; /* White for contrast against dark background */
+    font-size: 12px;
+}
+
+.number {
+    display: flex;
+    margin-left: auto;
+    color: #ffffff; /* White text */
+    font-size: 12px;
+}
+
+.content {
+    display: flex;
+    position: relative;
+}
+
+.colunm {
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: calc(100% / 3);
+    flex-direction: column;
+}
+
+.race {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(
+        255,
+        255,
+        255,
+        0.15
+    ); /* Lighter background for race icons */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2),
+        0 0 0 3px rgba(255, 255, 255, 0.05); /* More refined shadow */
+}
+
+.playerName {
+    text-align: center;
+    margin-top: 6px;
+    font-size: 9px;
+    color: #ffffff; /* White text */
+    font-weight: 600;
+}
+
+.score {
+    margin-top: 6px;
+    font-size: 10px;
+    color: #ffffff; /* White text */
+    display: flex;
+    align-items: center;
+}

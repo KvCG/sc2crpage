@@ -28,7 +28,7 @@ export const Tournament = () => {
         <>
             <h1>{tournament.name}</h1>
             <Text>
-                <strong>Start time: </strong>
+                <strong>Inicio: </strong>
                 {toCRtime(tournament.start_at)}
             </Text>
             <br />
@@ -41,6 +41,7 @@ export const Tournament = () => {
                     participantCount={tournament.participants_count}
                 />
             </Container>
+			<br />
         </>
     )
 }
