@@ -5,7 +5,7 @@
     min-width: 160px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2); /* Stronger shadow for depth */
-	justify-content: center;
+    justify-content: center;
 }
 
 .header {
@@ -30,7 +30,7 @@
 }
 
 .status:before {
-    content: "";
+    content: '';
     display: block;
     width: 6px;
     height: 6px;
@@ -74,27 +74,27 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background-color: rgb(0, 0, 0); /* Lighter background for race icons */
+    background-color: rgb(0, 0, 0);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2),
-        0 0 0 3px rgba(255, 255, 255, 0.05); /* More refined shadow */
+        0 0 0 3px rgba(255, 255, 255, 0.05);
 }
 
 .playerName {
     text-align: center;
     margin-top: 6px;
     font-size: 10px;
-    color: #ffffff; /* White text */
+    color: #ffffff;
     font-weight: 500;
-	white-space: nowrap;      /* Prevents the text from wrapping to the next line */
-    overflow: hidden;         /* Ensures content that overflows the container is hidden */
-    text-overflow: clip;  /* Adds an ellipsis (...) when text is too long */
-    max-width: 100%;     
+    white-space: nowrap;
+    overflow: hidden;
+    /* text-overflow: clip; */
+    /* max-width: 100%; */
 }
 
 .score {
     margin-top: 6px;
     font-size: 10px;
-    color: #ffffff; /* White text */
+    color: #ffffff;
     display: flex;
     align-items: center;
 }
