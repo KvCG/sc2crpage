@@ -1,4 +1,4 @@
-import { Select, Flex } from '@mantine/core'
+import { Select, Flex, Checkbox} from '@mantine/core'
 import { getStandardName } from '../../utils/common'
 
 export const MatchFilters = ({
@@ -8,12 +8,13 @@ export const MatchFilters = ({
     onRoundChange,
     onStateChange,
     onPlayerChange,
+    onCategoryChange,
 }) => {
     const alphaSortedParticipants = participants.sort((a, b) =>
         getStandardName(a).localeCompare(getStandardName(b))
     )
     return (
-        <Flex gap="sm" justify="center">
+        <Flex gap="sm" justify="space-evenly" align={'center'} wrap={'wrap'}>
             <Select
                 label="Select Player"
                 placeholder="Select a player"
@@ -23,6 +24,7 @@ export const MatchFilters = ({
                 }))}
                 onChange={id => onPlayerChange(id ? id : null)}
                 clearable
+                searchable
             />
 
             <Select
@@ -47,6 +49,13 @@ export const MatchFilters = ({
                 }))}
                 onChange={onStateChange}
                 clearable
+            />
+
+            <Checkbox
+                onChange={event =>
+                    onCategoryChange(event.currentTarget.checked)
+                }
+                label="Premier Matches Only"
             />
         </Flex>
     )
