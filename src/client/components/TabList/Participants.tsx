@@ -28,48 +28,55 @@ export const Participants = ({ participants }) => {
 
     if (participants?.length) {
         return (
-            <List className={classes.participants} size="md">
-                {participants.map(participant => {
-                    return (
-                        <List.Item
-                            id={participant.id}
-                            key={participant.id}
-                            classNames={{
-                                itemWrapper: classes.wrapper,
-                                item: classes.participant,
-                                itemLabel: classes.label,
-                            }}
-                        >
-                            <img
-                                className={classes.avatar}
-                                src={
-                                    participant.attached_participatable_portrait_url
-                                }
-                                alt="avatar"
-                            />
-                            <Text onClick={() => toggleName(participant.id)}>
-                                {getDisplayName(participant)}
-                            </Text>
-
-                            {participant.race ? (
+            <>
+			<Text size='lg'>Click on a participant to see btag!</Text>
+			<br />
+                <List className={classes.participants} size="md">
+                    {participants.map(participant => {
+                        return (
+                            <List.Item
+                                id={participant.id}
+                                key={participant.id}
+                                classNames={{
+                                    itemWrapper: classes.wrapper,
+                                    item: classes.participant,
+                                    itemLabel: classes.label,
+                                }}
+                            >
                                 <img
-                                    className={classes.race}
+                                    className={classes.avatar}
                                     src={
-                                        raceAssets[participant.race]?.assetPath
+                                        participant.attached_participatable_portrait_url
                                     }
-                                    alt={participant.race}
+                                    alt="avatar"
                                 />
-                            ) : (
-                                <img
-                                    className={classes.race}
-                                    src={unknowRace}
-                                    alt="unknown race"
-                                />
-                            )}
-                        </List.Item>
-                    )
-                })}
-            </List>
+                                <Text
+                                    onClick={() => toggleName(participant.id)}
+                                >
+                                    {getDisplayName(participant)}
+                                </Text>
+
+                                {participant.race ? (
+                                    <img
+                                        className={classes.race}
+                                        src={
+                                            raceAssets[participant.race]
+                                                ?.assetPath
+                                        }
+                                        alt={participant.race}
+                                    />
+                                ) : (
+                                    <img
+                                        className={classes.race}
+                                        src={unknowRace}
+                                        alt="unknown race"
+                                    />
+                                )}
+                            </List.Item>
+                        )
+                    })}
+                </List>
+            </>
         )
     }
 
