@@ -1,3 +1,4 @@
+import { addMatchCategory } from './matchHelper'
 import {
     filterByHighestRatingLast,
     verifyChallongeParticipant,
@@ -148,7 +149,8 @@ const formatMatchData = (matches, participants) => {
     if (!matches || !participants) return null
     return matches?.map(({ match }, index) => {
 		match.number = index + 1
-        const slimMatch = getSlimMatch(match)
+        let slimMatch = getSlimMatch(match)
+		slimMatch = addMatchCategory(slimMatch, participants)
         return slimMatch
     })
 }
