@@ -28,6 +28,7 @@ export const TournamentTabs = ({ matches, participants, participantCount }) => {
                 <FilteredMatches
                     matches={matches}
                     participantCount={participantCount}
+					participants={participants}
                 />
             </Tabs.Panel>
 

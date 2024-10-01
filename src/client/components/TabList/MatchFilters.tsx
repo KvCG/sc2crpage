@@ -1,13 +1,30 @@
 import { Select, Flex } from '@mantine/core'
+import { getStandardName } from '../../utils/common'
 
 export const MatchFilters = ({
     rounds,
     matchStates,
+    participants,
     onRoundChange,
     onStateChange,
+    onPlayerChange,
 }) => {
+    const alphaSortedParticipants = participants.sort((a, b) =>
+        getStandardName(a).localeCompare(getStandardName(b))
+    )
     return (
         <Flex gap="sm" justify="center">
+            <Select
+                label="Select Player"
+                placeholder="Select a player"
+                data={alphaSortedParticipants.map(participant => ({
+                    value: participant.id.toString(),
+                    label: getStandardName(participant),
+                }))}
+                onChange={id => onPlayerChange(id ? id : null)}
+                clearable
+            />
+
             <Select
                 label="Select Round"
                 placeholder="Select a round"
@@ -22,7 +39,7 @@ export const MatchFilters = ({
             />
 
             <Select
-                label="Select Match State"
+                label="Select State"
                 placeholder="Select a state"
                 data={matchStates.map(state => ({
                     value: state,

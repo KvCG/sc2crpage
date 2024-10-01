@@ -58,7 +58,7 @@ export const Ranking = () => {
     return (
         <>
             <Flex justify={'center'}>
-                <h1>Top Players</h1>
+                <h1>StarCraft II Costa Rica's Top Players</h1>
                 <div>
                     <IconRefresh
                         onClick={() => {
