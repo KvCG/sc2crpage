@@ -3,8 +3,9 @@ import cx from 'clsx'
 import { raceAssets } from '../../constants/races'
 import { getParticipant, getStandardName } from '../../utils/common'
 import unknowRace from '../../assets/unknownRank.svg'
+import { forwardRef } from 'react'
 
-export const Match = ({ match }) => {
+export const Match = forwardRef(({ match }, ref) => {
     const {
         state,
         player1_id,
@@ -14,6 +15,8 @@ export const Match = ({ match }) => {
         round,
         scores_csv,
         number,
+        isClose,
+        isPremier,
     } = match
 
     const player1 = getParticipant(player1_id)
@@ -22,7 +25,12 @@ export const Match = ({ match }) => {
     const player2race = raceAssets[player2.race]?.assetPath
 
     return (
-        <div className={classes.match}>
+        <div ref={ref}
+            className={cx(classes.match, {
+                [classes.premier]: isPremier,
+                [classes.closeMatch]: isClose,
+            })}
+        >
             <div className={classes.header}>
                 <div
                     title={state}
@@ -30,7 +38,9 @@ export const Match = ({ match }) => {
                         [classes.open]: state == 'open',
                     })}
                 ></div>
-                <div className={classes.title}>Match</div>
+                <div className={classes.title}>
+                    {isPremier || isClose ? 'Premier ' : 'Match'}
+                </div>
                 <div className={classes.number}>{number}</div>
             </div>
 
@@ -59,4 +69,4 @@ export const Match = ({ match }) => {
             </div>
         </div>
     )
-}
+})

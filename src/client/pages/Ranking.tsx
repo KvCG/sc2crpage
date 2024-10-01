@@ -57,59 +57,63 @@ export const Ranking = () => {
 
     return (
         <>
-            <Flex justify={'center'}>
-                <h1>Top Players</h1>
-                <div>
-                    <IconRefresh
-                        onClick={() => {
-                            // Just pull data again
-                            fetch(depth)
-                        }}
-                        height={20}
-                        width={20}
-                        stroke={1.5}
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            padding: '5px',
-                            paddingTop: '20px',
-                        }} // Move this to css file
-                    />
-                </div>
+            <Flex justify={'center'} direction={'column'}>
+                <h1>StarCraft II Costa Rica's Top Players</h1>
+                <Flex justify={'center'} style={{paddingBottom: '10px'}}>
+                    <div>
+                        <IconRefresh
+                            onClick={() => {
+                                // Just pull data again
+                                fetch(depth)
+                            }}
+                            stroke={1.5}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                padding: '5px',
+                            }} // Move this to css file
+                        />
+                    </div>
 
-                <Popover width={300} position="bottom" withArrow shadow="md">
-                    <Popover.Target>
-                        <div>
-                            <IconSettings
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    paddingTop: '15px',
-                                }} // Move this to css file
-                                stroke={1.5}
-                                height={20}
-                                width={20}
-                            />
-                        </div>
-                    </Popover.Target>
-                    <Popover.Dropdown top={140}>
-                        <Box maw={250} mih={50} mx="auto">
-                            <Text>Top players in the last {depth} days.</Text>
-                            <Slider
-                                defaultValue={depth}
-                                marks={marks}
-                                onChangeEnd={value => {
-                                    setDepth(value)
-                                    save('depth', value)
-                                }}
-                                min={30}
-                                max={120}
-                                step={30}
-                                styles={{ markLabel: { display: 'none' } }}
-                            />
-                        </Box>
-                    </Popover.Dropdown>
-                </Popover>
+                    <Popover
+                        width={300}
+                        position="bottom"
+                        withArrow
+                        shadow="md"
+                    >
+                        <Popover.Target>
+                            <div>
+                                <IconSettings
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        padding: '5px',
+                                    }} // Move this to css file
+                                    stroke={1.5}
+                                />
+                            </div>
+                        </Popover.Target>
+                        <Popover.Dropdown top={200}>
+                            <Box maw={250} mih={50} mx="auto">
+                                <Text>
+                                    Top players in the last {depth} days.
+                                </Text>
+                                <Slider
+                                    defaultValue={depth}
+                                    marks={marks}
+                                    onChangeEnd={value => {
+                                        setDepth(value)
+                                        save('depth', value)
+                                    }}
+                                    min={30}
+                                    max={120}
+                                    step={30}
+                                    styles={{ markLabel: { display: 'none' } }}
+                                />
+                            </Box>
+                        </Popover.Dropdown>
+                    </Popover>
+                </Flex>
             </Flex>
             {renderResults()}
         </>

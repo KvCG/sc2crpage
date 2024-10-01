@@ -1,13 +1,19 @@
 import { useState } from 'react'
-import { Flex } from '@mantine/core'
+import { Flex, Tooltip } from '@mantine/core'
 import { MatchFilters } from './MatchFilters'
 import { RoundHeader } from './RoundHeader'
 import { Match } from '../Match/Match'
 import { calculateRounds } from '../../utils/common'
 
-export const FilteredMatches = ({ matches, participantCount }) => {
+export const FilteredMatches = ({
+    matches,
+    participantCount,
+    participants,
+}) => {
     const [selectedRound, setSelectedRound] = useState<number | null>(null)
     const [selectedState, setSelectedState] = useState<string | null>(null)
+    const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null)
+    const [premierOnly, setPremierOnly] = useState<boolean>(false)
 
     const rounds = calculateRounds(participantCount) // Debe devolver 24 para 25 jugadores
     const actualRounds = Array.from({ length: rounds }, (_, index) => index + 1)
@@ -16,11 +22,21 @@ export const FilteredMatches = ({ matches, participantCount }) => {
     // Filtrar partidos según la ronda y el estado
     const filterMatches = matches => {
         return matches.filter(match => {
+            const playerMatches =
+                selectedPlayer !== null
+                    ? match.player1_id.toString() === selectedPlayer ||
+                      match.player2_id.toString() === selectedPlayer
+                    : true
             const roundMatches =
                 selectedRound !== null ? match.round === selectedRound : true
             const stateMatches =
                 selectedState !== null ? match.state === selectedState : true
-            return roundMatches && stateMatches
+            const premierMatches = premierOnly
+                ? match.isClose || match.isPremier
+                : true
+            return (
+                roundMatches && stateMatches && playerMatches && premierMatches
+            )
         })
     }
 
@@ -29,12 +45,15 @@ export const FilteredMatches = ({ matches, participantCount }) => {
     return (
         <Flex direction="column" gap="sm" rowGap={1}>
             <MatchFilters
+                participants={participants}
                 rounds={actualRounds}
                 matchStates={matchStates}
                 onRoundChange={setSelectedRound}
                 onStateChange={setSelectedState}
+                onPlayerChange={setSelectedPlayer}
+                onCategoryChange={setPremierOnly}
             />
-			<br />
+            <br />
             <Flex direction="row" justify="center" wrap="wrap" gap="xs">
                 {actualRounds.map(round => {
                     // Filtrar partidos para la ronda actual
@@ -47,9 +66,18 @@ export const FilteredMatches = ({ matches, participantCount }) => {
                         return (
                             <>
                                 <RoundHeader round={round} />
-                                {roundMatches.map(match => (
-                                    <Match key={match.id} match={match} />
-                                ))}
+                                {roundMatches.map(match =>
+                                    match.isClose || match.isPremier ? (
+                                        <Tooltip label = 'Buenos pichazos!'>
+                                            <Match
+                                                key={match.id}
+                                                match={match}
+                                            />
+                                        </Tooltip>
+                                    ) : (
+                                        <Match key={match.id} match={match} />
+                                    )
+                                )}
                             </>
                         )
                     }
