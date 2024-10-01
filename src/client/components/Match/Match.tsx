@@ -3,6 +3,9 @@ import cx from 'clsx'
 import { raceAssets } from '../../constants/races'
 import { getParticipant, getStandardName } from '../../utils/common'
 import unknowRace from '../../assets/unknownRank.svg'
+import { useRef } from 'react'
+import { Tooltip } from '@mantine/core'
+import { forwardRef } from 'react'
 
 export const Match = ({ match }) => {
     const {
@@ -20,43 +23,68 @@ export const Match = ({ match }) => {
     const player2 = getParticipant(player2_id)
     const player1race = raceAssets[player1.race]?.assetPath
     const player2race = raceAssets[player2.race]?.assetPath
+    let highlightMatch = false
 
-    return (
-        <div className={classes.match}>
-            <div className={classes.header}>
-                <div
-                    title={state}
-                    className={cx(classes.status, {
-                        [classes.open]: state == 'open',
-                    })}
-                ></div>
-                <div className={classes.title}>Match</div>
-                <div className={classes.number}>{number}</div>
-            </div>
+    if (Math.abs(player1.ratingLast - player2.ratingLast) <= 200) {
+        highlightMatch = true
+    }
 
-            <div className={classes.content}>
-                <div className={classes.colunm}>
-                    <div className={classes.race}>
-                        <img src={player1race ?? unknowRace} alt="" />
+    const MatchComponent = forwardRef((_, ref) => {
+        return (
+            <div
+                ref={ref}
+                className={cx(classes.match, {
+                    [classes.highlight]: highlightMatch,
+                })}
+            >
+                <div className={classes.header}>
+                    <div
+                        title={state}
+                        className={cx(classes.status, {
+                            [classes.open]: state == 'open',
+                        })}
+                    ></div>
+                    <div className={classes.title}>
+                        {highlightMatch ? 'Premier ' : 'Match'}
                     </div>
-                    <span className={classes.playerName}>
-                        {getStandardName(player1)}
-                    </span>
+                    <div className={classes.number}>{number}</div>
                 </div>
-                <div className={classes.colunm}>
-                    <div className={classes.scores}>
-                        {scores_csv ? scores_csv : 'vs'}
+
+                <div className={classes.content}>
+                    <div className={classes.colunm}>
+                        <div className={classes.race}>
+                            <img src={player1race ?? unknowRace} alt="" />
+                        </div>
+                        <span className={classes.playerName}>
+                            {getStandardName(player1)}
+                        </span>
                     </div>
-                </div>
-                <div className={classes.colunm}>
-                    <div className={classes.race}>
-                        <img src={player2race ?? unknowRace} alt="" />
+                    <div className={classes.colunm}>
+                        <div className={classes.scores}>
+                            {scores_csv ? scores_csv : 'vs'}
+                        </div>
                     </div>
-                    <span className={classes.playerName}>
-                        {getStandardName(player2)}
-                    </span>
+                    <div className={classes.colunm}>
+                        <div className={classes.race}>
+                            <img src={player2race ?? unknowRace} alt="" />
+                        </div>
+                        <span className={classes.playerName}>
+                            {getStandardName(player2)}
+                        </span>
+                    </div>
                 </div>
             </div>
-        </div>
+        )
+    })
+    // <Tooltip>
+
+    // </Tooltip>
+
+    return highlightMatch ? (
+        <Tooltip label={'Buenos pichazos'}>
+            <MatchComponent />
+        </Tooltip>
+    ) : (
+        <MatchComponent />
     )
 }
