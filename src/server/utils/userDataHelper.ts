@@ -35,6 +35,7 @@ export const verifyChallongeParticipant = async challongeParticipant => {
                     challongeParticipant.race = match.race
                     challongeParticipant.ratingLast = match.ratingLast
                     challongeParticipant.leagueTypeLast = match.leagueTypeLast
+					challongeParticipant.ratingAvg = match.ratingAvg
                 }
             }
         }
