@@ -4,7 +4,7 @@ import { Participants } from './Participants'
 import { FilteredMatches } from './FilteredMatches'
 
 export const TournamentTabs = ({ matches, participants, participantCount }) => {
-    const [activeTab, setActiveTab] = useState<string>('participants')
+    const [activeTab, setActiveTab] = useState<string>('matches')
 
     return (
         <Tabs value={activeTab} onChange={setActiveTab} keepMounted>
