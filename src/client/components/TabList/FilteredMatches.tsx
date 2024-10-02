@@ -15,7 +15,7 @@ export const FilteredMatches = ({
     const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null)
     const [premierOnly, setPremierOnly] = useState<boolean>(false)
 
-    const rounds = calculateRounds(participantCount) // Debe devolver 24 para 25 jugadores
+    const rounds = calculateRounds(participantCount)
     const actualRounds = Array.from({ length: rounds }, (_, index) => index + 1)
     const matchStates = ['open', 'complete']
 

@@ -1,6 +1,6 @@
 import classes from './Participants.module.css'
 import { getStandardName } from '../../utils/common'
-import { Flex, List, Text } from '@mantine/core'
+import { Text } from '@mantine/core'
 import { raceAssets } from '../../constants/races'
 import unknowRace from '../../assets/unknownRank.svg'
 import { useState } from 'react'
@@ -26,22 +26,32 @@ export const Participants = ({ participants }) => {
             : getStandardName(participant)
     }
 
-    if (participants?.length) {
+    const raceOrder = ['TERRAN', 'ZERG', 'PROTOSS', 'RANDOM']
+    const raceSortedParticipants = [...participants].sort((a, b) => {
+        const raceComparison =
+            raceOrder.indexOf(a.race) - raceOrder.indexOf(b.race)
+
+        // If races are the same, sort alphabetically by name
+        if (raceComparison === 0) {
+            return getStandardName(a).localeCompare(getStandardName(b)) // Alphabetical order by name
+        }
+
+        return raceComparison
+    })
+
+    if (raceSortedParticipants?.length) {
         return (
             <>
-			<Text size='lg'>Click on a participant to see btag!</Text>
-			<br />
-                <List className={classes.participants} size="md">
-                    {participants.map(participant => {
+                <Text size="lg">Click on a participant to see btag!</Text>
+                <br />
+                <div className={classes.participants}>
+                    {raceSortedParticipants.map(participant => {
                         return (
-                            <List.Item
+                            <div
                                 id={participant.id}
                                 key={participant.id}
-                                classNames={{
-                                    itemWrapper: classes.wrapper,
-                                    item: classes.participant,
-                                    itemLabel: classes.label,
-                                }}
+                                className={classes.participant}
+                                onClick={() => toggleName(participant.id)}
                             >
                                 <img
                                     className={classes.avatar}
@@ -50,11 +60,7 @@ export const Participants = ({ participants }) => {
                                     }
                                     alt="avatar"
                                 />
-                                <Text
-                                    onClick={() => toggleName(participant.id)}
-                                >
-                                    {getDisplayName(participant)}
-                                </Text>
+                                <Text>{getDisplayName(participant)}</Text>
 
                                 {participant.race ? (
                                     <img
@@ -72,10 +78,10 @@ export const Participants = ({ participants }) => {
                                         alt="unknown race"
                                     />
                                 )}
-                            </List.Item>
+                            </div>
                         )
                     })}
-                </List>
+                </div>
             </>
         )
     }

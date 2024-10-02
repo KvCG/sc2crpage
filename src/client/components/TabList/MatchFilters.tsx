@@ -10,7 +10,7 @@ export const MatchFilters = ({
     onPlayerChange,
     onCategoryChange,
 }) => {
-    const alphaSortedParticipants = participants.sort((a, b) =>
+    const alphaSortedParticipants = [...participants].sort((a, b) =>
         getStandardName(a).localeCompare(getStandardName(b))
     )
     return (
