@@ -68,7 +68,7 @@ export const FilteredMatches = ({
                                 <RoundHeader round={round} />
                                 {roundMatches.map(match =>
                                     match.isClose || match.isPremier ? (
-                                        <Tooltip label = 'Buenos pichazos!'>
+                                        <Tooltip label = 'Mejenga pareja'>
                                             <Match
                                                 key={match.id}
                                                 match={match}
