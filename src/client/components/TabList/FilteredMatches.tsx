@@ -41,6 +41,21 @@ export const FilteredMatches = ({
     }
 
     const filteredMatches = filterMatches(matches)
+    const playerMatches = filteredMatches => {
+        return (
+            <>
+                {filteredMatches.map(match =>
+                    match.isClose || match.isPremier ? (
+                        <Tooltip label="Buenos pichazos!">
+                            <Match key={match.id} match={match} />
+                        </Tooltip>
+                    ) : (
+                        <Match key={match.id} match={match} />
+                    )
+                )}
+            </>
+        )
+    }
 
     return (
         <Flex direction="column" gap="sm" rowGap={1}>
@@ -55,34 +70,39 @@ export const FilteredMatches = ({
             />
             <br />
             <Flex direction="row" justify="center" wrap="wrap" gap="xs">
-                {actualRounds.map(round => {
-                    // Filtrar partidos para la ronda actual
-                    const roundMatches = filteredMatches.filter(
-                        match => match.round === round
-                    )
+                {selectedPlayer
+                    ? playerMatches(filteredMatches)
+                    : actualRounds.map(round => {
+                          // Filtrar partidos para la ronda actual
+                          const roundMatches = filteredMatches.filter(
+                              match => match.round === round
+                          )
 
-                    // Solo renderizar si hay partidos para la ronda
-                    if (roundMatches.length > 0) {
-                        return (
-                            <>
-                                <RoundHeader round={round} />
-                                {roundMatches.map(match =>
-                                    match.isClose || match.isPremier ? (
-                                        <Tooltip label = 'Showmatch'>
-                                            <Match
-                                                key={match.id}
-                                                match={match}
-                                            />
-                                        </Tooltip>
-                                    ) : (
-                                        <Match key={match.id} match={match} />
-                                    )
-                                )}
-                            </>
-                        )
-                    }
-                    return null // No renderizar si no hay partidos para esta ronda
-                })}
+                          // Solo renderizar si hay partidos para la ronda
+                          if (roundMatches.length > 0) {
+                              return (
+                                  <>
+                                      <RoundHeader round={round} />
+                                      {roundMatches.map(match =>
+                                          match.isClose || match.isPremier ? (
+                                              <Tooltip label="Showmatch">
+                                                  <Match
+                                                      key={match.id}
+                                                      match={match}
+                                                  />
+                                              </Tooltip>
+                                          ) : (
+                                              <Match
+                                                  key={match.id}
+                                                  match={match}
+                                              />
+                                          )
+                                      )}
+                                  </>
+                              )
+                          }
+                          return null // No renderizar si no hay partidos para esta ronda
+                      })}
             </Flex>
         </Flex>
     )
