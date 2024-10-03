@@ -55,7 +55,8 @@
     display: flex;
     margin-left: auto;
     color: #ffffff; 
-    font-size: 12px;
+    font-size: 9px;
+	flex-direction: column;
 }
 
 .content {

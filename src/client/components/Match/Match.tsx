@@ -25,7 +25,8 @@ export const Match = forwardRef(({ match }, ref) => {
     const player2race = raceAssets[player2.race]?.assetPath
 
     return (
-        <div ref={ref}
+        <div
+            ref={ref}
             className={cx(classes.match, {
                 [classes.premier]: isPremier,
                 [classes.closeMatch]: isClose,
@@ -41,7 +42,10 @@ export const Match = forwardRef(({ match }, ref) => {
                 <div className={classes.title}>
                     {isPremier || isClose ? 'Premier ' : 'Match'}
                 </div>
-                <div className={classes.number}>{number}</div>
+                <div className={classes.number}>
+                    <div>{`R${round}`}</div>
+                    <div>{`#${number}`}</div>
+                </div>
             </div>
 
             <div className={classes.content}>
