@@ -32,7 +32,7 @@ export const Tournament = () => {
             <h1>{tournament.name}</h1>
             <Text>
                 <strong>Inicio: </strong>
-                {toCRtime(tournament.start_at)}
+                {toCRtime(tournament.startAt)}
             </Text>
             <br />
             <Description descriptionHtml={tournament.description} />
@@ -41,7 +41,7 @@ export const Tournament = () => {
                 <TournamentTabs
                     matches={matches}
                     participants={participants}
-                    participantCount={tournament.participants_count}
+                    participantCount={tournament.participantsCount}
                 />
             </Container>
 			<br />

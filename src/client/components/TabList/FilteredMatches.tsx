@@ -24,8 +24,8 @@ export const FilteredMatches = ({
         return matches.filter(match => {
             const playerMatches =
                 selectedPlayer !== null
-                    ? match.player1_id.toString() === selectedPlayer ||
-                      match.player2_id.toString() === selectedPlayer
+                    ? match.player1Id.toString() === selectedPlayer ||
+                      match.player2Id.toString() === selectedPlayer
                     : true
             const roundMatches =
                 selectedRound !== null ? match.round === selectedRound : true

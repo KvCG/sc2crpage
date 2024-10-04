@@ -19,7 +19,7 @@ export const verifyChallongeParticipant = async challongeParticipant => {
     const snapshot = cache.get('snapShot')
     const reankedPlayers = await readCsv()
     for (const rankedPlayer of reankedPlayers) {
-        if (rankedPlayer?.challongeId == challongeParticipant.challonge_user_id) {
+        if (rankedPlayer?.challongeId == challongeParticipant.challongeUserId) {
             challongeParticipant.btag = rankedPlayer.btag
             challongeParticipant.name = null
             if (rankedPlayer.name) {

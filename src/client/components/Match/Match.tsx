@@ -8,19 +8,19 @@ import { forwardRef } from 'react'
 export const Match = forwardRef(({ match }, ref) => {
     const {
         state,
-        player1_id,
-        player2_id,
-        winner_id,
-        loser_id,
+        player1Id,
+        player2Id,
+        winnerId,
+        loserId,
         round,
-        scores_csv,
+        scoresCsv,
         number,
         isClose,
         isPremier,
     } = match
 
-    const player1 = getParticipant(player1_id)
-    const player2 = getParticipant(player2_id)
+    const player1 = getParticipant(player1Id)
+    const player2 = getParticipant(player2Id)
     const player1race = raceAssets[player1.race]?.assetPath
     const player2race = raceAssets[player2.race]?.assetPath
 
@@ -59,7 +59,7 @@ export const Match = forwardRef(({ match }, ref) => {
                 </div>
                 <div className={classes.colunm}>
                     <div className={classes.scores}>
-                        {scores_csv ? scores_csv : 'vs'}
+                        {scoresCsv ? scoresCsv : 'vs'}
                     </div>
                 </div>
                 <div className={classes.colunm}>

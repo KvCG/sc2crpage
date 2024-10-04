@@ -1,4 +1,4 @@
-import { addMatchCategory } from './matchHelper'
+import { addMatchCategory, getStandingsData } from './challongeHelper'
 import {
     filterByHighestRatingLast,
     verifyChallongeParticipant,
@@ -100,16 +100,16 @@ const getSlimParticipant = participant => {
 
     const slimParticipant = {
         id: participant.id,
-        tournament_id: participant.tournament_id,
+        tournamentId: participant.tournament_id,
         name: participant.name,
         seed: participant.seed,
         active: participant.active,
-        final_rank: participant.final_rank,
-        challonge_username: participant.challonge_username,
-        challonge_user_id: participant.challonge_user_id,
-        attached_participatable_portrait_url:
+        finalRank: participant.final_rank,
+        challongeUsername: participant.challonge_username,
+        challongeUserId: participant.challonge_user_id,
+        attachedParticipatablePortraitUrl:
             participant.attached_participatable_portrait_url,
-        ordinal_seed: participant.ordinal_seed,
+        ordinalSeed: participant.ordinal_seed,
     }
 
     return slimParticipant
@@ -121,8 +121,9 @@ const formatTournamentData = async data => {
     info = getSlimInfo(info)
     participants = await formatParticipantData(participants)
     matches = formatMatchData(matches, participants)
+    const standings = getStandingsData(info, participants, matches) // We need to calculate standings based on the data the comes from challonge
 
-    return { info, participants, matches }
+    return { info, participants, matches, standings }
 }
 
 const getSlimInfo = data => {
@@ -133,13 +134,16 @@ const getSlimInfo = data => {
         url: data.url,
         description: data.description,
         state: data.state,
-        progress_meter: data.progress_meter,
-        game_id: data.game_id,
-        participants_count: data.participants_count,
-        start_at: data.start_at,
-        full_challonge_url: data.full_challonge_url,
-        live_image_url: data.live_image_url,
-        sign_up_url: data.sign_up_url,
+        progressMeter: data.progress_meter,
+        gameId: data.game_id,
+        participantsCount: data.participants_count,
+        startAt: data.start_at,
+        fullChallongeUrl: data.full_challonge_url,
+        liveImageUrl: data.live_image_url,
+        signUpUrl: data.sign_up_url,
+        ptsForMatchWin: data.pts_for_match_win,
+        ptsForMatchTie: data.pts_for_match_tie,
+        ptsForBye: data.pts_for_bye,
     }
 
     return slimInfo
@@ -148,9 +152,9 @@ const getSlimInfo = data => {
 const formatMatchData = (matches, participants) => {
     if (!matches || !participants) return null
     return matches?.map(({ match }, index) => {
-		match.number = index + 1
+        match.number = index + 1
         let slimMatch = getSlimMatch(match)
-		slimMatch = addMatchCategory(slimMatch, participants)
+        slimMatch = addMatchCategory(slimMatch, participants)
         return slimMatch
     })
 }
@@ -159,18 +163,18 @@ const getSlimMatch = match => {
     if (!match) return null
     const slimMatch = {
         id: match.id,
-		number: match.number,
-        tournament_id: match.tournament_id,
+        number: match.number,
+        tournamentId: match.tournament_id,
         state: match.state,
-        player1_id: match.player1_id,
-        player2_id: match.player2_id,
-        winner_id: match.winner_id,
-        loser_id: match.loser_id,
+        player1Id: match.player1_id,
+        player2Id: match.player2_id,
+        winnerId: match.winner_id,
+        loserId: match.loser_id,
         identifier: match.identifier,
         round: match.round,
-        player1_votes: match.player1_votes,
-        player2_votes: match.player2_votes,
-        scores_csv: match.scores_csv,
+        player1Votes: match.player1_votes,
+        player2Votes: match.player2_votes,
+        scoresCsv: match.scores_csv,
     }
     return slimMatch
 }

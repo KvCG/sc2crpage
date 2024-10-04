@@ -56,7 +56,7 @@ export const Participants = ({ participants }) => {
                                 <img
                                     className={classes.avatar}
                                     src={
-                                        participant.attached_participatable_portrait_url
+                                        participant.attachedParticipatablePortraitUrl
                                     }
                                     alt="avatar"
                                 />
