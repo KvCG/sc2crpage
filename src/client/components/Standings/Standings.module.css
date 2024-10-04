@@ -1,0 +1,42 @@
+.header {
+    position: sticky;
+    top: 0;
+    background-color: var(--mantine-color-body);
+    transition: box-shadow 150ms ease;
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-bottom: rem(1px) solid
+            light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-3));
+    }
+}
+
+.race {
+    max-width: 20px;
+    max-height: 20px;
+    vertical-align: text-top;
+}
+
+.rank {
+    vertical-align: text-top;
+}
+
+.scrolled {
+    box-shadow: var(--mantine-shadow-sm);
+}
+
+.skeleton {
+    display: flex;
+    justify-content: center;
+    margin: auto;
+}
+
+.jugador {
+	display: flex;
+	justify-content: center;
+
+}

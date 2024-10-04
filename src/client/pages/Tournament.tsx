@@ -24,6 +24,7 @@ export const Tournament = () => {
     const tournament = data?.info
     const participants = data?.participants
     const matches = data?.matches
+	const standings = data?.standings
 
 	save('participants', participants)
 
@@ -42,6 +43,7 @@ export const Tournament = () => {
                     matches={matches}
                     participants={participants}
                     participantCount={tournament.participantsCount}
+					standings={standings}
                 />
             </Container>
 			<br />

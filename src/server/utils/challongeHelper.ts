@@ -3,10 +3,10 @@ export const addMatchCategory = (match, participants) => {
     const mmrRangeClose = Number(process.env.MMR_RANGE_FOR_CLOSE_MATCH)
     if (!mmrRangePremier && !mmrRangeClose) return match
     const player1 = participants.find(
-        participant => participant.id == match.player1_id
+        participant => participant.id == match.player1Id
     )
     const player2 = participants.find(
-        participant => participant.id == match.player2_id
+        participant => participant.id == match.player2Id
     )
 
     const mmrDiff = Math.abs(player1?.ratingAvg - player2?.ratingAvg)
@@ -30,6 +30,8 @@ export const getStandingsData = (info, participants, matches) => {
         id: participant.id,
         name: participant.name,
 		challongeUsername: participant.challongeUsername,
+		btag: participant.btag,
+		race: participant.race,
         wins: 0,
         losses: 0,
         gamesPlayed: 0,
@@ -43,7 +45,7 @@ export const getStandingsData = (info, participants, matches) => {
         if (winner) {
             winner.wins++
             winner.gamesPlayed++
-            winner.points += info.ptsForMatchWin
+            winner.points += Number(info.ptsForMatchWin)
         }
 
         if (loser) {

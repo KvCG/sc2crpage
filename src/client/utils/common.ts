@@ -3,6 +3,7 @@ import { loadData } from './localStorage'
 export const getStandardName = player => {
     if (player.name) return player.name
     if (player.btag) return player.btag.split('#')[0]
+	if (player.challongeUsername) return player.challongeUsername
 }
 
 export const toCRtime = dateStr => {
