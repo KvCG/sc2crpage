@@ -37,7 +37,6 @@ export const getStandingsData = (info, participants, matches) => {
         gamesPlayed: 0,
         points: 0,
         pointsDifference: 0,
-        mapWins: 0,
         gamesLeft: participants.length - 1,
     }))
 
@@ -59,7 +58,6 @@ export const getStandingsData = (info, participants, matches) => {
             winner.gamesPlayed++
             winner.points += winnerGamesWon
             winner.pointsDifference += winnerGamesWon - loserGamesWon
-            winner.mapWins += winnerGamesWon
             winner.gamesLeft--
 
             // Update loser
@@ -67,7 +65,6 @@ export const getStandingsData = (info, participants, matches) => {
             loser.gamesPlayed++
             loser.points += loserGamesWon
             loser.pointsDifference += loserGamesWon - winnerGamesWon
-            loser.mapWins += loserGamesWon
             loser.gamesLeft--
         }
     })

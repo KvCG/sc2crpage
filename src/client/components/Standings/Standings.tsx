@@ -12,7 +12,6 @@ export const StandingsTable = ({ standings }) => {
             losses,
             points,
             race,
-            mapWins,
             gamesLeft,
         } = row
 
@@ -33,7 +32,6 @@ export const StandingsTable = ({ standings }) => {
                 <Table.Td>
                     {wins} - {losses}
                 </Table.Td>
-				<Table.Td>{mapWins}</Table.Td>
                 <Table.Td>{points}</Table.Td>
             </Table.Tr>
         )
@@ -54,7 +52,6 @@ export const StandingsTable = ({ standings }) => {
                     <Table.Th>Mejengas</Table.Th>
                     <Table.Th>Restantes</Table.Th>
                     <Table.Th>W - L</Table.Th>
-					<Table.Th>Map Wins</Table.Th>
                     <Table.Th>Pts</Table.Th>
                 </Table.Tr>
             </Table.Thead>
