@@ -28,7 +28,6 @@ export const StandingsTable = ({ standings }) => {
                     />
                 </Table.Td>
                 <Table.Td>{gamesPlayed}</Table.Td>
-                <Table.Td>{gamesLeft}</Table.Td>
                 <Table.Td>
                     {wins} - {losses}
                 </Table.Td>
@@ -47,10 +46,9 @@ export const StandingsTable = ({ standings }) => {
         >
             <Table.Thead className={classes.header}>
                 <Table.Tr>
-                    <Table.Th>Rank</Table.Th>
+                    <Table.Th>#</Table.Th>
                     <Table.Th>Jugador</Table.Th>
-                    <Table.Th>Mejengas</Table.Th>
-                    <Table.Th>Restantes</Table.Th>
+                    <Table.Th>Jugado</Table.Th>
                     <Table.Th>W - L</Table.Th>
                     <Table.Th>Pts</Table.Th>
                 </Table.Tr>
