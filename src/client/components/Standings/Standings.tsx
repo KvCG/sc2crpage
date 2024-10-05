@@ -1,12 +1,20 @@
 import { Table } from '@mantine/core'
 import { getStandardName } from '../../utils/common'
 import classes from './Standings.module.css'
-import cx from 'clsx'
 import { raceAssets } from '../../constants/races'
 
 export const StandingsTable = ({ standings }) => {
     const rows = standings.map((row, index) => {
-        const { id, gamesPlayed, wins, losses, points, race } = row
+        const {
+            id,
+            gamesPlayed,
+            wins,
+            losses,
+            points,
+            race,
+            mapWins,
+            gamesLeft,
+        } = row
 
         return (
             <Table.Tr key={id}>
@@ -21,8 +29,11 @@ export const StandingsTable = ({ standings }) => {
                     />
                 </Table.Td>
                 <Table.Td>{gamesPlayed}</Table.Td>
-                <Table.Td>{wins}</Table.Td>
-                <Table.Td>{losses}</Table.Td>
+                <Table.Td>{gamesLeft}</Table.Td>
+                <Table.Td>
+                    {wins} - {losses}
+                </Table.Td>
+				<Table.Td>{mapWins}</Table.Td>
                 <Table.Td>{points}</Table.Td>
             </Table.Tr>
         )
@@ -41,8 +52,9 @@ export const StandingsTable = ({ standings }) => {
                     <Table.Th>Rank</Table.Th>
                     <Table.Th>Jugador</Table.Th>
                     <Table.Th>Mejengas</Table.Th>
-                    <Table.Th>W</Table.Th>
-                    <Table.Th>L</Table.Th>
+                    <Table.Th>Restantes</Table.Th>
+                    <Table.Th>W - L</Table.Th>
+					<Table.Th>Map Wins</Table.Th>
                     <Table.Th>Pts</Table.Th>
                 </Table.Tr>
             </Table.Thead>

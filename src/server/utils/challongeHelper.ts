@@ -29,33 +29,59 @@ export const getStandingsData = (info, participants, matches) => {
     let standings = participants.map(participant => ({
         id: participant.id,
         name: participant.name,
-		challongeUsername: participant.challongeUsername,
-		btag: participant.btag,
-		race: participant.race,
+        challongeUsername: participant.challongeUsername,
+        btag: participant.btag,
+        race: participant.race,
         wins: 0,
         losses: 0,
         gamesPlayed: 0,
         points: 0,
+        pointsDifference: 0,
+        mapWins: 0,
+        gamesLeft: participants.length - 1,
     }))
 
     matches.forEach(match => {
         const winner = standings.find(p => p.id === match.winnerId)
         const loser = standings.find(p => p.id === match.loserId)
 
-        if (winner) {
+        // Get the game scores from scores_csv
+        const [player1Score, player2Score] = match.scoresCsv
+            .split('-')
+            .map(Number)
+
+        if (match.state == 'complete') {
+            const winnerGamesWon = Math.max(player1Score, player2Score)
+            const loserGamesWon = Math.min(player1Score, player2Score)
+
+            // Update winner
             winner.wins++
             winner.gamesPlayed++
-            winner.points += Number(info.ptsForMatchWin)
-        }
+            winner.points += winnerGamesWon
+            winner.pointsDifference += winnerGamesWon - loserGamesWon
+            winner.mapWins += winnerGamesWon
+            winner.gamesLeft--
 
-        if (loser) {
+            // Update loser
             loser.losses++
             loser.gamesPlayed++
+            loser.points += loserGamesWon
+            loser.pointsDifference += loserGamesWon - winnerGamesWon
+            loser.mapWins += loserGamesWon
+            loser.gamesLeft--
         }
     })
 
-    // Sort standings based on points or wins
-    standings.sort((a, b) => b.points - a.points)
+    // Sort standings based on points, with tie-breakers being pointsDifference and wins
+    standings.sort((a, b) => {
+        if (b.points === a.points) {
+            if (b.pointsDifference === a.pointsDifference) {
+                return b.wins - a.wins // Further tie-breaker by match wins
+            }
+            return b.pointsDifference - a.pointsDifference // Sort by point difference
+        }
+        return b.points - a.points // Sort by total points
+    })
 
-	return standings
+    return standings
 }
