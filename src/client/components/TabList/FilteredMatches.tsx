@@ -46,7 +46,7 @@ export const FilteredMatches = ({
             <>
                 {filteredMatches.map(match =>
                     match.isClose || match.isPremier ? (
-                        <Tooltip label="Buenos pichazos!">
+                        <Tooltip label="Showmatch">
                             <Match key={match.id} match={match} />
                         </Tooltip>
                     ) : (
