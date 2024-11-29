@@ -1,11 +1,13 @@
-import { Table, Skeleton } from '@mantine/core'
+import { Table, Skeleton, Grid } from '@mantine/core'
 import classes from './Table.module.css'
 import cx from 'clsx'
 import { getLeagueSrc } from '../../utils/rankingHelper'
 import { raceAssets } from '../../constants/races'
 import { getStandardName } from '../../utils/common'
+import { RacesTable } from '../RaceTable/RacesTable'
 
 export function RankingTable({ data, loading }) {
+
     const rows = data?.map((row, index) => {
         if (row.ratingLast) {
             const {
@@ -56,6 +58,13 @@ export function RankingTable({ data, loading }) {
         return <p>Sc2Pulse is failing to respond, please refresh the page.</p>
 
     return (
+    <Grid 
+        gutter='md'
+    >
+        <Grid.Col span={12}>
+            <RacesTable data={data} loading={loading}/>
+        </Grid.Col>
+
         <Skeleton
             className={classes.skeleton}
             h={1000}
@@ -85,5 +94,6 @@ export function RankingTable({ data, loading }) {
                 <Table.Tbody>{rows}</Table.Tbody>
             </Table>
         </Skeleton>
+    </Grid>
     )
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
-import { Box, Flex, Popover, Slider, Text } from '@mantine/core'
+import { Box, Flex, Popover, Slider, Text} from '@mantine/core'
 import { IconSettings, IconRefresh } from '@tabler/icons-react'
 import { loadData, isValid, saveData, save } from '../utils/localStorage'
 import { addPositionChangeIndicator } from '../utils/rankingHelper'
