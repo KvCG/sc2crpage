@@ -1,4 +1,5 @@
 import { Box, Flex, Text } from '@mantine/core';
+import { raceAssets } from '../../constants/races'
 
 export function RacesTable({ data, loading }) {
 
@@ -39,7 +40,7 @@ export function RacesTable({ data, loading }) {
                 gap="0.5rem"
             >
               <img
-                src={`../../client/assets/${race.toLocaleLowerCase()}.svg`}
+                src={raceAssets[race.toUpperCase()].assetPath}
                 alt={`${race.toLocaleLowerCase()}`} 
                 style={{ width: '36px', height: '36px' }}
               />
