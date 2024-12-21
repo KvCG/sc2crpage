@@ -1,60 +1,41 @@
-import { useState } from 'react'
-import { usePost } from '../hooks/usePost'
-
-import { Button, Container } from '@mantine/core'
+import { useState, useEffect } from 'react';
+import { useDisclosure } from '@mantine/hooks';
+import { Container, Button } from '@mantine/core';
+import { UploadReplayModal } from '../components/Replays/UploadReplayModal';
+import { DeleteReplayModal } from '../components/Replays/DeleteReplayModal';
+import { ReplayList } from '../components/Replays/ReplayList';
+import { useFetch } from '../hooks/useFetch';
 
 export const Replay = () => {
-    const [fileName, setFileName] = useState('')
-    const [fileExtension, setFileExtension] = useState('')
-	const [fileBase64, setFileBase64] = useState('')
-    const { success, error, loading, post } = usePost()
-    const handleSubmit = async event => {
-        event.preventDefault()
-		const payload = {
-            fileBase64,
-            fileName,
-            fileExtension
-        }
+    const [opened, { open, close }] = useDisclosure(false);
+    const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
+    const [fileIdToDelete, setFileIdToDelete] = useState<string | null>(null);
+    const { data: fetchData, loading: fetchLoading, error: fetchError, fetch } = useFetch('replays');
 
-        // Add file metadata to FormData
-        await post(payload)
-    }
+    const fetchReplays = async () => {
+        await fetch();
+    };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
-        if (file) {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                const base64String =
-                    reader.result?.toString().split(',')[1] || ''
-                setFileBase64(base64String)
-                setFileName(file.name)
-                setFileExtension(file.name.split('.').pop() || '')
-            }
-            reader.readAsDataURL(file)
-        }
-    }
+    useEffect(() => {
+        fetchReplays();
+    }, []);
+
+    const confirmDelete = (fileId: string) => {
+        setFileIdToDelete(fileId);
+        openDeleteModal();
+    };
 
     return (
         <Container>
-            {success && <div>File Uploaded</div>}
+            <Button variant="default" onClick={open}>
+                Upload a replay
+            </Button>
 
-            {error && <div>Error with the upload</div>}
-
-            <h1>Upload a replay</h1>
-            <div>
-                <form onSubmit={handleSubmit} className="form">
-                    <label htmlFor="file">File</label>
-                    <input
-                        name="file"
-                        type="file"
-                        onChange={handleFileChange}
-                    />
-                    <Button type="submit">
-                        {loading ? 'Uploading' : 'Upload'}
-                    </Button>
-                </form>
-            </div>
+            <UploadReplayModal opened={opened} close={close} fetchReplays={fetchReplays} />
+            
+            <h1>Replays</h1>
+            <ReplayList confirmDelete={confirmDelete} fetchData={fetchData} fetchLoading={fetchLoading} fetchError={fetchError} />
+            <DeleteReplayModal opened={deleteModalOpened} close={closeDeleteModal} fileIdToDelete={fileIdToDelete} fetchReplays={fetchReplays} />
         </Container>
-    )
-}
+    );
+};

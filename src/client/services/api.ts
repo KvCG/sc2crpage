@@ -30,9 +30,24 @@ export const getTournament = async () => {
 }
 
 export const upload = async body => {
-	console.log(JSON.stringify(body))
+    console.log(JSON.stringify(body))
     const response = await api.post(`api/upload`, body, {
         headers: { 'Content-Type': 'application/json' },
     })
+    return response
+}
+
+export const getReplays = async () => {
+    const response = await api.get(`api/getReplays`)
+    return response
+}
+
+export const uploadReplay = async body => {
+    const response = await api.post(`api/uploadReplay`, body)
+    return response
+}
+
+export const deleteReplay = async body => {
+    const response = await api.post(`api/deleteReplay`, body)
     return response
 }
