@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import { Modal, Button, Text, Space, Flex, Loader } from '@mantine/core';
-import { usePost } from '../../hooks/usePost';
+import { useState } from 'react'
+import { Modal, Button, Text, Space, Flex, Loader } from '@mantine/core'
+import { usePost } from '../../hooks/usePost'
 
 export const DeleteReplayModal = ({ opened, close, fileIdToDelete, fetchReplays }) => {
-  const { loading: postLoading, post } = usePost('deleteReplay');
+  const { loading: postLoading, post } = usePost('deleteReplay')
 
   const handleDelete = async () => {
     if (fileIdToDelete) {
-      await post({ fileId: fileIdToDelete });
-      fetchReplays();
-      close();
+      await post({ fileId: fileIdToDelete })
+      fetchReplays()
+      close()
     }
-  };
+  }
 
   return (
     <Modal opened={opened} onClose={close} title="Confirm Deletion" centered>
@@ -26,5 +26,5 @@ export const DeleteReplayModal = ({ opened, close, fileIdToDelete, fetchReplays 
         </Button>
       </Flex>
     </Modal>
-  );
-};
+  )
+}

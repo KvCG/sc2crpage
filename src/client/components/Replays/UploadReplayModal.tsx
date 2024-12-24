@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { Modal, Button, NativeSelect, Textarea, Space, Notification, Flex } from '@mantine/core';
-import { usePost } from '../../hooks/usePost';
+import { useState } from 'react'
+import { Modal, Button, NativeSelect, Textarea, Space, Notification, Flex } from '@mantine/core'
+import { usePost } from '../../hooks/usePost'
 
 export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
-  const [fileName, setFileName] = useState('');
-  const [fileExtension, setFileExtension] = useState('');
-  const [fileBase64, setFileBase64] = useState('');
-  const [player1Race, setPlayer1Race] = useState<string | null>(null);
-  const [player2Race, setPlayer2Race] = useState<string | null>(null);
-  const [description, setDescription] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const { success: postSuccess, error: postError, loading: postLoading, post } = usePost('uploadReplay');
+  const [fileName, setFileName] = useState('')
+  const [fileExtension, setFileExtension] = useState('')
+  const [fileBase64, setFileBase64] = useState('')
+  const [player1Race, setPlayer1Race] = useState('Terran')
+  const [player2Race, setPlayer2Race] = useState('Terran')
+  const [description, setDescription] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const { success: postSuccess, error: postError, loading: postLoading, post } = usePost('uploadReplay')
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
+    event.preventDefault()
 
     const payload = {
       fileBase64,
@@ -22,32 +22,32 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
       player1Race,
       player2Race,
       description,
-    };
+    }
 
-    await post(payload);
-    fetchReplays();
-    close();
-  };
+    await post(payload)
+    fetchReplays()
+    close()
+  }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files?.[0]
     if (file) {
-      const extension = file.name.split('.').pop();
+      const extension = file.name.split('.').pop()
       if (extension !== 'SC2Replay') {
-        setErrorMessage('Invalid file type. Please upload a .SC2Replay file.');
-        return;
+        setErrorMessage('Invalid file type. Please upload a .SC2Replay file.')
+        return
       }
-      setErrorMessage('');
-      const reader = new FileReader();
+      setErrorMessage('')
+      const reader = new FileReader()
       reader.onloadend = () => {
-        const base64String = reader.result?.toString().split(',')[1] || '';
-        setFileBase64(base64String);
-        setFileName(file.name);
-        setFileExtension(extension);
-      };
-      reader.readAsDataURL(file);
+        const base64String = reader.result?.toString().split(',')[1] || ''
+        setFileBase64(base64String)
+        setFileName(file.name)
+        setFileExtension(extension)
+      }
+      reader.readAsDataURL(file)
     }
-  };
+  }
 
   return (
     <Modal opened={opened} onClose={close} title="Upload replays" centered>
@@ -95,5 +95,5 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
         </form>
       </div>
     </Modal>
-  );
-};
+  )
+}

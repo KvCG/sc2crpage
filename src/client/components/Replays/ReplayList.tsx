@@ -1,7 +1,5 @@
-import { useEffect } from 'react';
-import { SimpleGrid, Notification } from '@mantine/core';
-import { ReplayCard } from './ReplayCard';
-import { useFetch } from '../../hooks/useFetch';
+import { SimpleGrid, Notification } from '@mantine/core'
+import { ReplayCard } from './ReplayCard'
 
 export const ReplayList = ({ confirmDelete, fetchData, fetchError, fetchLoading }) => {
   return (
@@ -21,5 +19,5 @@ export const ReplayList = ({ confirmDelete, fetchData, fetchError, fetchLoading 
         ))}
       </SimpleGrid>
     </>
-  );
-};
+  )
+}

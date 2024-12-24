@@ -1,22 +1,22 @@
-import { useState, useEffect } from 'react';
-import { Card, Image, Group, Text, Badge, Flex, Button } from '@mantine/core';
-import { formatFileSize } from '../../utils/common';
+import { useState, useEffect } from 'react'
+import { Card, Image, Group, Text, Badge, Flex, Button } from '@mantine/core'
+import { formatFileSize } from '../../utils/common'
 
 export const ReplayCard = ({ replay, confirmDelete }) => {
 
-  const [player1Image, setPlayer1Image] = useState('');
-  const [player2Image, setPlayer2Image] = useState('');
+  const [player1Image, setPlayer1Image] = useState('')
+  const [player2Image, setPlayer2Image] = useState('')
 
   const raceImages = {
     Terran: './client/assets/terran_banner.png',
     Protoss: './client/assets/protoss_banner.png',
     Zerg: './client/assets/zerg_banner.png',
-  };
+  }
 
   useEffect(() => {
-    setPlayer1Image(raceImages[replay.player1Race]);
-    setPlayer2Image(raceImages[replay.player2Race]);
-  }, [replay.player1Race, replay.player2Race]);
+    setPlayer1Image(raceImages[replay.player1Race])
+    setPlayer2Image(raceImages[replay.player2Race])
+  }, [replay.player1Race, replay.player2Race])
 
   return (
     <Card key={replay.id} shadow="sm" padding="lg" radius="md" withBorder>
@@ -65,5 +65,5 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
         </Button>
       </Flex>
     </Card>
-  );
-};
+  )
+}
