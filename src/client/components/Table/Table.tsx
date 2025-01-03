@@ -1,4 +1,5 @@
-import { Table, Skeleton, Grid } from '@mantine/core'
+import { useState } from 'react'
+import { Table, Skeleton, Grid, Text } from '@mantine/core'
 import classes from './Table.module.css'
 import cx from 'clsx'
 import { getLeagueSrc } from '../../utils/rankingHelper'
@@ -8,7 +9,9 @@ import { RacesTable } from '../RaceTable/RacesTable'
 
 export function RankingTable({ data, loading }) {
 
-    const rows = data?.map((row, index) => {
+    const [tableData, setTableData] = useState(data)
+
+    const rows = tableData?.map((row, index) => {
         if (row.ratingLast) {
             const {
                 btag,
@@ -54,7 +57,7 @@ export function RankingTable({ data, loading }) {
         }
     })
 
-    if (!loading && !data?.length)
+    if (!loading && !tableData?.length)
         return <p>Sc2Pulse is failing to respond, please refresh the page.</p>
 
     return (
@@ -62,12 +65,14 @@ export function RankingTable({ data, loading }) {
         gutter='md'
     >
         <Grid.Col span={12}>
-            <RacesTable data={data} loading={loading}/>
+            <Text align="center" mb="md">
+                Select a race to filter the table. Click the same race twice to remove the filter.
+            </Text>
+            <RacesTable data={data} setTableData={setTableData} loading={loading} />
         </Grid.Col>
 
         <Skeleton
             className={classes.skeleton}
-            h={1000}
             visible={loading}
             maw={700}
             miw={250}
