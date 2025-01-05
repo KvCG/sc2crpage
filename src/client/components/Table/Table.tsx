@@ -65,9 +65,11 @@ export function RankingTable({ data, loading }) {
         gutter='md'
     >
         <Grid.Col span={12}>
-            <Text align="center" mb="md">
-                Select a race to filter the table. Click the same race twice to remove the filter.
-            </Text>
+            {!loading && tableData?.length &&
+                <Text align="center" mb="md">
+                    Select a race to filter the table. Click the same race twice to remove the filter.
+                </Text>
+            }
             <RacesTable data={data} setTableData={setTableData} loading={loading} />
         </Grid.Col>
 
