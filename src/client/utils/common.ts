@@ -3,7 +3,7 @@ import { loadData } from './localStorage'
 export const getStandardName = player => {
     if (player.name) return player.name
     if (player.btag) return player.btag.split('#')[0]
-	if (player.challongeUsername) return player.challongeUsername
+    if (player.challongeUsername) return player.challongeUsername
 }
 
 export const toCRtime = dateStr => {
@@ -25,7 +25,7 @@ export const toCRtime = dateStr => {
 }
 
 export const calculateRounds = numberOfPlayers => {
-	return numberOfPlayers 
+    return numberOfPlayers
 }
 
 export const filterMatches = (matches, round, state) => {
@@ -42,3 +42,14 @@ export const getParticipant = id => {
     return participants.find(participant => participant.id == id)
 }
 
+export const formatFileSize = (sizeInBytes: number) => {
+    if (sizeInBytes >= 1073741824) {
+        return (sizeInBytes / 1073741824).toFixed(2) + ' GB'
+    } else if (sizeInBytes >= 1048576) {
+        return (sizeInBytes / 1048576).toFixed(2) + ' MB'
+    } else if (sizeInBytes >= 1024) {
+        return (sizeInBytes / 1024).toFixed(2) + ' KB'
+    } else {
+        return sizeInBytes + ' bytes'
+    }
+}
