@@ -24,15 +24,6 @@ jobs:
         npm install
         npm run build:client
 
-    - name: 📂 Sync files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-      with:
-        server: ftpupload.net
-        username: if0_37163958
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./dist/
-        server-dir: /htdocs/
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
