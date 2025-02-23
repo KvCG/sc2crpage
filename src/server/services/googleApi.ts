@@ -10,6 +10,9 @@ const SERVICE_ACCOUNT_KEY = JSON.parse(
 )
 const SCOPES = ['https://www.googleapis.com/auth/drive']
 
+const REPLAY_FOLDER_NAME = 'ReplaysStarcraft2'
+const REPLAY_ANALYSIS_FOLDER_NAME = 'ReplayAnalysisStarcraft2'
+
 /**
  * Authenticates with Google API using service account credentials.
  * @returns {Promise<any>} Authenticated client.
@@ -101,7 +104,7 @@ const getFilesFromFolder = async (folderId: string, accessToken: string) => {
             },
             params: {
                 q: `'${folderId}' in parents and trashed=false`,
-                pageSize: 100,
+                pageSize: 1000,
                 fields: 'files(id, name, mimeType, modifiedTime, size, webContentLink, properties)',
                 orderBy: 'name',
             },
@@ -119,6 +122,7 @@ const getFilesFromFolder = async (folderId: string, accessToken: string) => {
         player1Race: file.properties?.player1Race || '',
         player2Race: file.properties?.player2Race || '',
         description: file.properties?.description || '',
+        replayAnalysisFileId: file.properties?.replayAnalysisFileId || '',
     }))
 }
 
@@ -130,7 +134,7 @@ export const getAllReplays = async () => {
     try {
         const auth = await authenticate() // Authenticate with Google API
         const accessToken = await getAccessToken(auth) // Get access token
-        const folderId = await getOrCreateFolder(auth, 'ReplaysStarcraft2') // Get or create the folder
+        const folderId = await getOrCreateFolder(auth, REPLAY_FOLDER_NAME) // Get or create the folder
         return await getFilesFromFolder(folderId, accessToken) // Retrieve files from the folder
     } catch (error) {
         if (axios.isAxiosError(error)) {
@@ -143,30 +147,70 @@ export const getAllReplays = async () => {
 }
 
 /**
- * Uploads a file to a specified folder in Google Drive.
- * @param {Request} req - Express request object containing the file and metadata.
+ * Retrieves a single JSON file from a specified folder in Google Drive.
  * @param {string} folderId - ID of the folder.
+ * @param {string} fileId - ID of the file.
  * @param {string} accessToken - Access token.
- * @returns {Promise<string>} Uploaded file ID.
+ * @returns {Promise<object>} JSON object.
  */
-const uploadFileToFolder = async (
-    req: Request,
-    folderId: string,
-    accessToken: string
-) => {
-    const { fileBase64, fileName, player1Race, player2Race, description } =
-        req.body
+const getJsonFileFromFolder = async (folderId: string, fileId: string, accessToken: string): Promise<object> => {
+    // Get the file metadata
+    const response = await axios.get(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+        {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+            params: {
+                fields: 'id, name, mimeType, modifiedTime, size, webContentLink, properties',
+            },
+        }
+    )
 
-    const fileMetadata = {
-        name: fileName,
-        parents: [folderId],
-        properties: {
-            player1Race,
-            player2Race,
-            description,
-        },
+    if (!response.data) {
+        return {} // Return an empty object if no file is found
     }
 
+    return response.data // Return the JSON content of the file
+}
+
+/**
+ * Retrieves a single replay analysis JSON file from the 'ReplayAnalysisStarcraft2' folder in Google Drive.
+ * @param {Request} req - Express request object containing the file id.
+ * @returns {Promise<object>} JSON object.
+ */
+export const getReplayAnalysis = async (req: Request): Promise<object> => {
+    try {
+        const { replayAnalysisFileId } = req.body
+
+        const auth = await authenticate() // Authenticate with Google API
+        const accessToken = await getAccessToken(auth) // Get access token
+        const folderId = await getOrCreateFolder(auth, REPLAY_ANALYSIS_FOLDER_NAME) // Get or create the folder
+        return await getJsonFileFromFolder(folderId, replayAnalysisFileId, accessToken) // Retrieve the JSON file from the folder
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error('Google Drive API error on replay analysis retrieving:', error.message)
+        } else {
+            console.error('Unexpected error:', error)
+        }
+        return {}
+    }
+}
+
+/**
+ * Helper function to upload a file to Google Drive.
+ * @param {string} accessToken - Access token.
+ * @param {object} fileMetadata - Metadata of the file.
+ * @param {string} fileContent - Content of the file.
+ * @param {string} contentType - Content type of the file.
+ * @returns {Promise<string>} Uploaded file ID.
+ */
+const uploadFile = async (
+    accessToken: string,
+    fileMetadata: object,
+    fileContent: string,
+    contentType: string
+): Promise<string> => {
     const boundary = 'foo_bar_baz'
     const delimiter = `\r\n--${boundary}\r\n`
     const closeDelimiter = `\r\n--${boundary}--`
@@ -176,10 +220,10 @@ const uploadFileToFolder = async (
         'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
         JSON.stringify(fileMetadata) +
         delimiter +
-        'Content-Type: application/octet-stream\r\n' +
+        `Content-Type: ${contentType}\r\n` +
         'Content-Transfer-Encoding: base64\r\n' +
         '\r\n' +
-        fileBase64 +
+        fileContent +
         closeDelimiter
 
     const response = await axios.post(
@@ -197,18 +241,84 @@ const uploadFileToFolder = async (
 }
 
 /**
+ * Uploads a replay analysis to a specified folder in Google Drive.
+ * @param {Request} req - Express request object containing the file and metadata.
+ * @param {string} folderId - ID of the folder.
+ * @param {string} accessToken - Access token.
+ * @returns {Promise<string>} Uploaded file ID.
+ */
+const uploadReplayAnalysisToFolder = async (
+    req: Request,
+    folderId: string,
+    accessToken: string
+) => {
+    const { fileName, replayAnalysis } = req.body
+
+    const fileMetadata = {
+        name: fileName + '_analysis.json',
+        parents: [folderId],
+        properties: {},
+    }
+
+    const fileContent = Buffer.from(JSON.stringify(replayAnalysis)).toString('base64')
+
+    return await uploadFile(accessToken, fileMetadata, fileContent, 'application/json')
+}
+
+/**
+ * Uploads a replay to a specified folder in Google Drive.
+ * @param {Request} req - Express request object containing the file and metadata.
+ * @param {string} folderId - ID of the folder.
+ * @param {string} accessToken - Access token.
+ * @returns {Promise<string>} Uploaded file ID.
+ */
+const uploadReplayToFolder = async (
+    req: Request,
+    folderId: string,
+    accessToken: string,
+    replayAnalysisFileId: string
+) => {
+    const { fileBase64, fileName, player1Race, player2Race, description } =
+        req.body
+
+    const fileMetadata = {
+        name: fileName,
+        parents: [folderId],
+        properties: {
+            player1Race,
+            player2Race,
+            description,
+            replayAnalysisFileId,
+        },
+    }
+
+    return await uploadFile(accessToken, fileMetadata, fileBase64, 'application/octet-stream')
+}
+
+/**
  * Uploads a replay file to the 'ReplaysStarcraft2' folder in Google Drive.
  * @param {Request} req - Express request object containing the file and metadata.
  * @returns {Promise<string|null>} Uploaded file ID or null if an error occurred.
  */
 export const uploadReplay = async (req: Request) => {
     try {
+        // First we need to authenticate with Google API and gather the access token
         const auth = await authenticate() // Authenticate with Google API
         const accessToken = await getAccessToken(auth) // Get access token
-        const folderId = await getOrCreateFolder(auth, 'ReplaysStarcraft2') // Get or create the folder
-        const fileId = await uploadFileToFolder(req, folderId, accessToken) // Upload the file to the folder
-        await makeFilePublic(fileId, auth) // Make the file publicly accessible
-        return fileId
+
+        // Next we need to upload the replay analysis file to drive and gather the file ID of the uploaded file
+        const replayAnalysisFolderId = await getOrCreateFolder(auth, REPLAY_ANALYSIS_FOLDER_NAME) // Get or create the folder
+        const replayAnalysisFileId = await uploadReplayAnalysisToFolder(req, replayAnalysisFolderId, accessToken) // Upload the file to the folder
+        await makeFilePublic(replayAnalysisFileId, auth) // Make the file publicly accessible
+        console.log('Replay analysis file ID:', replayAnalysisFileId)
+
+        // Finally we can upload the replay file to drive and attach it the replay analysis file id
+        const replayFolderId = await getOrCreateFolder(auth, REPLAY_FOLDER_NAME) // Get or create the folder
+        const replayFileId = await uploadReplayToFolder(req, replayFolderId, accessToken, replayAnalysisFileId) // Upload the file to the folder
+        await makeFilePublic(replayFileId, auth) // Make the file publicly accessible
+        console.log('Replay file ID:', replayFileId)
+
+        return replayFileId
     } catch (error) {
         if (axios.isAxiosError(error)) {
             console.error('Google Drive API error:', error.message)
@@ -221,14 +331,16 @@ export const uploadReplay = async (req: Request) => {
 
 /**
  * Deletes a file from Google Drive.
- * @param {string} fileId - ID of the file to delete.
+ * @param {Request} req - Express request object containing the file and metadata.
  * @returns {Promise<boolean>} - Returns true if the deletion was successful, false otherwise.
  */
-export const deleteReplay = async (fileId: string): Promise<boolean> => {
+export const deleteReplay = async (req: Request): Promise<boolean> => {
     try {
+        const { replayFileId, replayAnalysisFileId } = req.body
         const auth = await authenticate() // Authenticate with Google API
         const drive = google.drive({ version: 'v3', auth }) // Get Google Drive instance
-        await drive.files.delete({ fileId }) // Delete the file
+        if (replayAnalysisFileId) await drive.files.delete({ fileId: replayAnalysisFileId }) // Delete the replay analysis file
+        if (replayFileId) await drive.files.delete({ fileId: replayFileId }) // Delete the replay file
         return true // Return true if deletion was successful
     } catch (error) {
         if (axios.isAxiosError(error)) {

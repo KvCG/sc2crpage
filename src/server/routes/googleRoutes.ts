@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { getAllReplays, uploadReplay, deleteReplay } from '../services/googleApi'
+import { getReplayAnalysis, getAllReplays, uploadReplay, deleteReplay } from '../services/googleApi'
 
 const router = Router()
 
@@ -9,6 +9,15 @@ router.get('/getReplays', async (req: Request, res: Response) => {
         res.json(replays)
     } catch (error) {
         res.json({ error: 'Error getting replays' })
+    }
+})
+
+router.post('/getReplayAnalysis', async (req: Request, res: Response) => {
+    try {
+        const replayAnalysis = await getReplayAnalysis(req)
+        res.json(replayAnalysis)
+    } catch (error) {
+        res.json({ error: 'Error uploading the file' })
     }
 })
 
@@ -23,10 +32,9 @@ router.post('/uploadReplay', async (req: Request, res: Response) => {
 
 router.post('/deleteReplay', async (req: Request, res: Response) => {
     try {
-        const { fileId } = req.body
-        const deleted = await deleteReplay(fileId)
+        const deleted = await deleteReplay(req)
         if (deleted) {
-            res.json({ fileId })
+            res.json({})
         } else {
             res.json({ error: 'Error deleting the file' })
         }
