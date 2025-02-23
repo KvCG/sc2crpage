@@ -101,7 +101,7 @@ const getFilesFromFolder = async (folderId: string, accessToken: string) => {
             },
             params: {
                 q: `'${folderId}' in parents and trashed=false`,
-                pageSize: 100,
+                pageSize: 1000,
                 fields: 'files(id, name, mimeType, modifiedTime, size, webContentLink, properties)',
                 orderBy: 'name',
             },

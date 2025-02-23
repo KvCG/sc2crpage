@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, Image, Group, Text, Badge, Flex, Button } from '@mantine/core'
+import { useNavigate } from 'react-router-dom'
+
 import { formatFileSize } from '../../utils/common'
 import terranBanner from '../../assets/terran_banner.png'
 import protossBanner from '../../assets/protoss_banner.png'
@@ -13,6 +15,12 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
         Terran: terranBanner,
         Protoss: protossBanner,
         Zerg: zergBanner,
+    }
+
+    const navigate = useNavigate()
+
+    const handleInformationClick = () => {
+        navigate('/replayInformation', { state: { downloadUrl: replay.downloadUrl } })
     }
 
     useEffect(() => {
@@ -68,6 +76,14 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
                     download={replay.name}
                 >
                     Download
+                </Button>
+                <Button
+                    color="green"
+                    radius="md"
+                    size="sm"
+                    onClick={handleInformationClick}
+                >
+                    Information
                 </Button>
                 <Button
                     color="red"
