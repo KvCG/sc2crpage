@@ -25,15 +25,15 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
         loading: postLoading,
         post,
     } = usePost('uploadReplay')
-    const { data: fetchData, loading: fetchLoading, error: fetchError, fetch } = useFetch('analyzeReplayBase64')
+    const { data: replayAnalysis, loading: replayAnalysisLoading, error: replayAnalysisError, fetch } = useFetch('analyzeReplayBase64')
 
     useEffect(() => {
-        if (fetchData) {
-            setPlayer1Race(fetchData.players["1"].race)
-            setPlayer2Race(fetchData.players["2"].race)
-            setDescription("Map played: " + fetchData.map)
+        if (replayAnalysis) {
+            setPlayer1Race(replayAnalysis.players["1"].race)
+            setPlayer2Race(replayAnalysis.players["2"].race)
+            setDescription("Map played: " + replayAnalysis.map)
         }
-    }, [fetchData])
+    }, [replayAnalysis])
 
     const handleSubmit = async event => {
         event.preventDefault()
@@ -45,6 +45,7 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
             player1Race,
             player2Race,
             description,
+            replayAnalysis
         }
 
         await post(payload)
@@ -106,11 +107,11 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
                         required
                     />
                     <Space h="md" />
-                    {fetchLoading ? (
+                    {replayAnalysisLoading ? (
                         <div>Loading replay information...</div>
-                    ) : fetchError ? (
+                    ) : replayAnalysisError ? (
                         <div>Error loading replay data</div>
-                    ) : fetchData ? (
+                    ) : replayAnalysis ? (
                         <>
                             <Flex gap="md" wrap="wrap">
                                 <NativeSelect

@@ -5,12 +5,12 @@ import { Container, Grid, Text, Title, Table, Paper, Space } from '@mantine/core
 
 export const ReplayInformation = () => {
     const location = useLocation()
-    const url = location.state?.downloadUrl
-    const { data: replayInformation = {}, loading: fetchLoading, error: fetchError, fetch } = useFetch('analyzeReplayUrl')
+    const replayAnalysisFileId = location.state?.replayAnalysisFileId
+    const { data: replayInformation = null, loading: fetchLoading, error: fetchError, fetch } = useFetch('replayAnalysis')
 
     useEffect(() => {
-        if (url) {
-            fetch({ 'fileUrl': url })
+        if (replayAnalysisFileId) {
+            fetch({ 'replayAnalysisFileId': replayAnalysisFileId })
         }
     }, [])
 
@@ -36,7 +36,8 @@ export const ReplayInformation = () => {
             <Title order={1} size="h1" c="blue">Replay Information</Title>
             {fetchLoading && <Text size="md" c="white">Loading...</Text>}
             {fetchError && <Text size="md" c="red">{fetchError}</Text>}
-            {replayInformation && (
+            {(!fetchLoading && !replayInformation) || replayInformation && Object.keys(replayInformation).length === 0 && <Text size="md" c="dimmed">No replay information available</Text>}
+            {replayInformation && Object.keys(replayInformation).length != 0 && (
                 <div>
                     <Text size="md" c="dimmed">Category: {replayInformation.category}</Text>
                     <Text size="md" c="dimmed">Timestamp: {new Date(replayInformation.unix_timestamp * 1000).toLocaleString()}</Text>
@@ -45,7 +46,7 @@ export const ReplayInformation = () => {
                     <Text size="md" c="dimmed">Map: {replayInformation.map}</Text>
                     <Text size="md" c="dimmed">Game Time: {calculateGameTime(replayInformation.frames, replayInformation.frames_per_second)}</Text>
                     <Grid>
-                        {Object.keys(replayInformation?.players).map(playerKey => {
+                        {replayInformation?.players && Object.keys(replayInformation.players).map(playerKey => {
                             const player = replayInformation.players[playerKey]
                             return (
                                 <Grid.Col span={6} key={playerKey}>
@@ -55,9 +56,9 @@ export const ReplayInformation = () => {
                                         <Text size="md" c="dimmed">Race: {player.race}</Text>
                                         <Text size="md" c="dimmed">Peak League: {leagueMap[player.league]}</Text>
                                         <Text size="md" c="dimmed">Winner: {player.is_winner ? 'Yes' : 'No'}</Text>
-   
+
                                         <Title order={4} size="h4" c="blue" mt="1em" mb=".5em">Build Order</Title>
-   
+
                                         {player.buildOrder.length > 0 ? (
                                             <Table withBorder withColumnBorders style={{ margin: '0 auto', borderCollapse: 'collapse' }}>
                                                 <thead>

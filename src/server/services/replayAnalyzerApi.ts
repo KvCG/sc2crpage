@@ -3,7 +3,7 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-const API_BASE_URL =  process.env.REPLAY_ANALYZER_URL
+const API_BASE_URL = process.env.REPLAY_ANALYZER_URL
 
 /**
  * Analyze a replay using Base64 encoded data.
@@ -12,14 +12,9 @@ const API_BASE_URL =  process.env.REPLAY_ANALYZER_URL
  */
 export const analyzeReplayBase64 = async (fileBase64: string): Promise<any> => {
     try {
-        console.time('analyzeReplayBase64'); // Start the timer
-
         const response = await axios.post(`${API_BASE_URL}/analyzeReplayBase64`, {
             file_base64: fileBase64,
         });
-
-        console.timeEnd('analyzeReplayBase64'); // End the timer and log the elapsed time
-
         return response.data;
     } catch (error) {
         console.error('Error analyzing replay (Base64)');

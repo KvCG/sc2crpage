@@ -20,7 +20,7 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
     const navigate = useNavigate()
 
     const handleInformationClick = () => {
-        navigate('/replayInformation', { state: { downloadUrl: replay.downloadUrl } })
+        navigate('/replayInformation', { state: { replayAnalysisFileId: replay.replayAnalysisFileId } })
     }
 
     useEffect(() => {
@@ -89,7 +89,7 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
                     color="red"
                     size="sm"
                     radius="md"
-                    onClick={() => confirmDelete(replay.id)}
+                    onClick={() => confirmDelete({replayFileId: replay.id, replayAnalysisFileId: replay.replayAnalysisFileId})}
                 >
                     Delete
                 </Button>

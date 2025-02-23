@@ -7,6 +7,7 @@ import {
     getDailySnapshot,
 	getTournament,
     getReplays,
+    getReplayAnalysis,
 } from '../services/api'
 
 export const useFetch = type => {
@@ -37,6 +38,9 @@ export const useFetch = type => {
                 break
             case 'analyzeReplayUrl':
                 data = (await analyzeReplayUrl(params)).data
+                break
+            case 'replayAnalysis':
+                data = (await getReplayAnalysis(params)).data
                 break
         }
 
