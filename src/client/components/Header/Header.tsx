@@ -10,7 +10,7 @@ import { useLocation } from 'react-router-dom'
 export const Header = () => {
     const location = useLocation()
     const initialTab = links.filter(link => link.link === location.pathname)
-    const [active, setActive] = useState(initialTab[0].link)
+    const [active, setActive] = useState(initialTab[0]?.link)
     const [opened, { toggle }] = useDisclosure(false)
 
     const items = links.map(link => (

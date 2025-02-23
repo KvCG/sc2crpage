@@ -42,6 +42,21 @@ export const getReplays = async () => {
     return response
 }
 
+export const analyzeReplayBase64 = async body => {
+    const response = await api.post(`api/analyzeReplayBase64`, body)
+    return response
+}
+
+export const analyzeReplayUrl = async body => {
+    const response = await api.post(`api/analyzeReplayUrl`, body)
+    return response
+}
+
+export const getReplayAnalysis = async body => {
+    const response = await api.post(`api/getReplayAnalysis`, body)
+    return response
+}
+
 export const uploadReplay = async body => {
     const response = await api.post(`api/uploadReplay`, body)
     return response
