@@ -10,7 +10,7 @@ import { useFetch } from '../hooks/useFetch'
 export const Replay = () => {
     const [opened, { open, close }] = useDisclosure(false)
     const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false)
-    const [fileIdToDelete, setFileIdToDelete] = useState<string | null>(null)
+    const [fileToDelete, setFileToDelete] = useState<object | null>(null)
     const { data: fetchData, loading: fetchLoading, error: fetchError, fetch } = useFetch('replays')
     const [filteredData, setFilteredData] = useState(fetchData)
 
@@ -26,8 +26,8 @@ export const Replay = () => {
         setFilteredData(fetchData)
     }, [fetchData])
 
-    const confirmDelete = (fileId: string) => {
-        setFileIdToDelete(fileId)
+    const confirmDelete = (file: object) => {
+        setFileToDelete(file)
         openDeleteModal()
     }
 
@@ -43,7 +43,7 @@ export const Replay = () => {
 
             <h1>Replays</h1>
             <ReplayList confirmDelete={confirmDelete} fetchData={filteredData} fetchLoading={fetchLoading} fetchError={fetchError} />
-            <DeleteReplayModal opened={deleteModalOpened} close={closeDeleteModal} fileIdToDelete={fileIdToDelete} fetchReplays={fetchReplays} />
+            <DeleteReplayModal opened={deleteModalOpened} close={closeDeleteModal} fileToDelete={fileToDelete} fetchReplays={fetchReplays} />
         </Container>
     )
 }

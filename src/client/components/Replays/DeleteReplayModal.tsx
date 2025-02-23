@@ -5,14 +5,14 @@ import { usePost } from '../../hooks/usePost'
 export const DeleteReplayModal = ({
     opened,
     close,
-    fileIdToDelete,
+    fileToDelete,
     fetchReplays,
 }) => {
     const { loading: postLoading, post } = usePost('deleteReplay')
 
     const handleDelete = async () => {
-        if (fileIdToDelete) {
-            await post({ fileId: fileIdToDelete })
+        if (fileToDelete) {
+            await post({ replayFileId: fileToDelete.replayFileId, replayAnalysisFileId: fileToDelete.replayAnalysisFileId })
             fetchReplays()
             close()
         }
