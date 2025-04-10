@@ -1,4 +1,3 @@
-// services/weatherService.ts
 import axios, { AxiosError } from 'axios'
 import https from 'https'
 import { readCsv } from '../utils/csvParser'
@@ -20,59 +19,147 @@ const api = axios.create({
 
 export const searchPlayer = async (term: string) => {
     try {
-        // Node automatically decodes URL params son in order to send the search term to the pulse API we need to encode it again
-        const response = await api.get(
-            `/character/search?term=${encodeURIComponent(term)}`
-        )
+        // Node automatically decodes URL params; so we encode the search term again.
+        const response = await api.get(`/character/search?term=${encodeURIComponent(term)}`)
         return response.data
     } catch (error) {
         const axiosError = error as AxiosError
-        console.log(axiosError.message)
+        console.error(`[searchPlayer] Error while searching for term "${term}": ${axiosError.message}`)
     }
 }
 
-export const getTop = async (daysAgo = 120, retries = 0, maxRetries = 3) => {
-    const players = await readCsv()
-    const ids = players.map(player => player.id)
-    let chunkSize = 10
-    const reqArray = []
+const getCurrentSeason = async () => {
+    try {
+        const response = await api.get(`season/list/all`)
+        // The current season is assumed to be the first element
+        return response.data[0].battlenetId
+    } catch (error) {
+        const axiosError = error as AxiosError
+        console.error(`[getCurrentSeason] Error fetching current season: ${axiosError.message}`)
+    }
+}
 
-    for (let i = 0; i < ids.length; i += chunkSize) {
-        const chunk = ids.slice(i, i + chunkSize)
-        reqArray.push(
-            api.get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)
-        )
+const getPlayerStats = async (playerId: string) => {
+    try {
+        const seasonId = await getCurrentSeason()
+        const response = await api.get(`group/team?season=${seasonId}&queue=LOTV_1V1&race=&characterId=${playerId}`)
+        return response.data
+    } catch (error) {
+        const axiosError = error as AxiosError
+        // If the player is not found an 404 error will be thrown, we can ignore this error
+        // cause is an expected behavior
+        if (axiosError.response && axiosError.response.status !== 404) {
+            console.error(`[getPlayerStats] Error fetching stats for playerId "${playerId}": ${axiosError.message}`)
+        }
+    }
+}
+
+const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergGamesPlayed?: number, protossGamesPlayed?: number, terranGamesPlayed?: number, randomGamesPlayed?: number }> }>) => {
+    const gamesPerRace = {
+        zergGamesPlayed: 0,
+        protossGamesPlayed: 0,
+        terranGamesPlayed: 0,
+        randomGamesPlayed: 0
     }
 
+    playerStats?.forEach(player => {
+        player.members.forEach(member => {
+            gamesPerRace.zergGamesPlayed += member.zergGamesPlayed || 0
+            gamesPerRace.protossGamesPlayed += member.protossGamesPlayed || 0
+            gamesPerRace.terranGamesPlayed += member.terranGamesPlayed || 0
+            gamesPerRace.randomGamesPlayed += member.randomGamesPlayed || 0
+        })
+    })
+    return gamesPerRace
+}
+
+const getPlayerLastDatePlayed = async (playerStats: Array<{ lastPlayed: string }>) => {
     try {
+        if (!playerStats || playerStats.length === 0) return "No games of 1vs1 in this season"
+
+        const mostRecent = playerStats.reduce((mostRecent, current) => {
+            const mostRecentDate = new Date(mostRecent.lastPlayed)
+            const currentDate = new Date(current.lastPlayed)
+            return currentDate > mostRecentDate ? current : mostRecent
+        })
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }
+        const localLastDatePlayed = new Date(mostRecent.lastPlayed).toLocaleString('en-GB', options).replace(',', '')
+        return localLastDatePlayed
+    } catch (error) {
+        const axiosError = error as AxiosError
+        console.error(`[getPlayerLastDatePlayed] Error processing last played date: ${axiosError.message}`)
+        return "Error occurred while fetching the last date played"
+    }
+}
+
+export const updatePlayerInformation = async (playersInformation: any[]) => {
+    const playersArray = Array.isArray(playersInformation) ? playersInformation : [playersInformation]
+    const updatedPlayers = await Promise.all(
+        playersArray.map(async (player: { playerCharacterId: string }) => {
+            if (player.playerCharacterId) {
+                const playerStats = await getPlayerStats(player.playerCharacterId)
+                const gamesPerRace = await getPlayerGamesPerRace(playerStats)
+                const lastDatePlayed = await getPlayerLastDatePlayed(playerStats)
+                return {
+                    ...player,
+                    gamesPerRace,
+                    lastDatePlayed,
+                }
+            }
+            return player   
+        })
+    )
+
+    return updatedPlayers
+}
+
+const getPlayersIds = async () => {
+    try {
+        const players = await readCsv()
+        return players.map((player: { id: any }) => player.id)
+    } catch (error) {
+        console.error(`[getPlayersIds] Error reading CSV: ${(error as Error).message}`)
+        return []
+    }
+}
+
+const handleApiError = async (error: AxiosError, retries: number, maxRetries: number, retryFunction: () => Promise<any>) => {
+    if (error.code === 'ECONNABORTED') {
+        console.error(`[handleApiError] Request timed out: ${error.message}`)
+    }
+
+    if (retries < maxRetries) {
+        const delay = retryDelay(retries)
+        console.error(`[handleApiError] Retry attempt ${retries + 1}/${maxRetries} in ${delay / 1000} seconds. Error code: ${error.code}`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        return retryFunction()
+    } else {
+        console.error(`[handleApiError] Max retries reached. Aborting. Error code: ${error.code}`)
+    }
+
+    console.error(`[handleApiError] Error occurred: ${error.code}`)
+    return []
+}
+
+export const getTop = async (daysAgo = 120, retries = 0, maxRetries = 3) => {
+    try {
+        const ids = await getPlayersIds()
+        const reqArray: any[] = []
+        // Split the ids into chunks of 10
+        const idChunks = chunkArray(ids, 10)
+        idChunks.map(chunk => reqArray.push(api.get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)))
         const rankingData = await Promise.all(reqArray)
         const finalRank = rankingData.flatMap(data => data.data)
         return finalRank
     } catch (error) {
-        const axiosError = error as AxiosError
-        if (axiosError.code === 'ECONNABORTED') {
-            console.error('Request timed out:', axiosError.message)
-        }
-
-        if (retries < maxRetries) {
-            const delay = retryDelay(retries)
-            console.log(`Retrying ranking in ${delay / 1000} seconds...`)
-            await new Promise(resolve => setTimeout(resolve, delay)) // Exponential backoff to avoid flooding the pulse api
-            return getTop(daysAgo, retries + 1, maxRetries)
-        } else {
-            console.error('Max retries reached. Aborting.')
-        }
-
-        console.error('Error occurred:', axiosError.code)
-        return [] //fallback response
+        console.error(`[getTop] Error fetching top players for daysAgo="${daysAgo}": ${(error as AxiosError).message}`)
+        return handleApiError(error as AxiosError, retries, maxRetries, () => getTop(daysAgo, retries + 1, maxRetries))
     }
 }
 
 export const getDailySnapshot = async (retries = 0, maxRetries = 3) => {
-    const players = await readCsv()
-    const ids = players.map(player => player.id)
+    const ids = await getPlayersIds()
     const cachedData = cache.get('snapShot')
-
     if (cachedData) {
         return cachedData
     } else {
@@ -101,45 +188,23 @@ export const getDailySnapshot = async (retries = 0, maxRetries = 3) => {
                 '60': allResponses.flatMap(responses => responses[1].data),
                 '90': allResponses.flatMap(responses => responses[2].data),
                 '120': allResponses.flatMap(responses => responses[3].data),
-                expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
+                expiry: Date.now() + timeUntilNextRefresh, // Expires at calculated time
             }
 
             cache.set('snapShot', response, timeUntilNextRefresh / 1000)
+            console.info(`[getDailySnapshot] Snapshot cached successfully. Next refresh in ${timeUntilNextRefresh / 1000} seconds.`)
 
-			cache.on('expired', async key => {
-                console.log(
-                    'The key: ',
-                    key,
-                    'has expired at ',
-                    `${new Date().toLocaleString('en-US', {
-                        timeZone: 'America/Costa_Rica',
-                    })}`
-                )
-
-				if (key === 'snapShot') {
-                    console.log('Fetching new snapshot after cache expiration...')
-                    await getDailySnapshot() // Trigger snapshot retrieval again
+            cache.on('expired', async key => {
+                console.info(`[Cache] Key "${key}" has expired at ${new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' })}`)
+                if (key === 'snapShot') {
+                    console.info(`[Cache] Fetching new snapshot after cache expiration...`)
+                    await getDailySnapshot()
                 }
             })
-
             return response
         } catch (error) {
-            const axiosError = error as AxiosError
-            if (axiosError.code === 'ECONNABORTED') {
-                console.error('Request timed out:', axiosError.message)
-            }
-
-            if (retries < maxRetries) {
-                const delay = retryDelay(retries)
-                console.log(`Retrying Snapshot in ${delay / 1000} seconds...`)
-                await new Promise(resolve => setTimeout(resolve, delay)) // Exponential backoff to avoid flooding the pulse api
-                return getDailySnapshot(retries + 1, maxRetries)
-            } else {
-                console.error('Max retries reached. Aborting.')
-            }
-
-            console.error('Error occurred:', axiosError.code)
-            return [] // Returning an empty array or a fallback response
+            console.error(`[getDailySnapshot] Error fetching daily snapshot: ${(error as AxiosError).message}`)
+            return handleApiError(error as AxiosError, retries, maxRetries, () => getDailySnapshot(retries + 1, maxRetries))
         }
     }
 }
