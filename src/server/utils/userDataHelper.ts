@@ -3,8 +3,8 @@ import { readCsv } from './csvParser'
 import { formatData } from './formatData'
 
 export const verifyPlayer = async player => {
-    const reankedPlayers = await readCsv()
-    reankedPlayers.forEach(rankedPlayer => {
+    const rankedPlayers = await readCsv()
+    rankedPlayers.forEach(rankedPlayer => {
         if (rankedPlayer.id == player.playerCharacterId) {
             player.btag = rankedPlayer.btag
             if (rankedPlayer.name) {
