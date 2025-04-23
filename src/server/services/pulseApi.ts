@@ -82,7 +82,15 @@ const getPlayerLastDatePlayed = async (playerStats: Array<{ lastPlayed: string }
             const currentDate = new Date(current.lastPlayed)
             return currentDate > mostRecentDate ? current : mostRecent
         })
-        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }
+        const options = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'America/Costa_Rica',
+        };        
         const localLastDatePlayed = new Date(mostRecent.lastPlayed).toLocaleString('en-GB', options).replace(',', '')
         return localLastDatePlayed
     } catch (error) {
