@@ -121,7 +121,7 @@ const isPlayerLikelyOnline = (
 
         const diffMinutes = now.diff(lastPlayed, 'minutes').minutes
 
-        return diffMinutes <= 20
+        return diffMinutes <= 30 //Its a long time but SC2Pulse api is slow and games could take longer
     } catch (error) {
         console.error('[isPlayerLikelyOnline] Error:', error)
         return false
