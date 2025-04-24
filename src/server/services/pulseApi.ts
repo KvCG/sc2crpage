@@ -75,48 +75,63 @@ const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergG
 
 const getPlayerLastDatePlayed = async (playerStats: Array<{ lastPlayed: string }>) => {
     try {
-        if (!playerStats || playerStats.length === 0) return '-'
+        if (!playerStats || playerStats.length === 0) return "-"
 
-        const mostRecent = playerStats.reduce((mostRecent, current) => {
-            const mostRecentDate = new Date(mostRecent.lastPlayed)
-            const currentDate = new Date(current.lastPlayed)
-            return currentDate > mostRecentDate ? current : mostRecent
-        })
+        const mostRecent = playerStats.reduce((a, b) =>
+            new Date(b.lastPlayed) > new Date(a.lastPlayed) ? b : a
+        )
 
-        const lastPlayedDate = new Date(mostRecent.lastPlayed)
+        const tz = 'America/Costa_Rica'
         const now = new Date()
+        const lastPlayedUTC = new Date(mostRecent.lastPlayed)
 
-        const crLastPlayed = new Date(
-            lastPlayedDate.toLocaleString('en-US', {
-                timeZone: 'America/Costa_Rica',
-            })
-        )
-        const crNow = new Date(
-            now.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' })
-        )
+        // Convert to Costa Rica time
+        const lastPlayed = new Date(lastPlayedUTC.toLocaleString('en-US', { timeZone: tz }))
+        const current = new Date(now.toLocaleString('en-US', { timeZone: tz }))
 
-        const isSameDay =
-            crLastPlayed.getFullYear() === crNow.getFullYear() &&
-            crLastPlayed.getMonth() === crNow.getMonth() &&
-            crLastPlayed.getDate() === crNow.getDate()
+        // Midnight-based day difference
+        const midnightNow = new Date(current)
+        midnightNow.setHours(0, 0, 0, 0)
 
-        if (isSameDay) {
-            const timeString = crLastPlayed.toLocaleTimeString('en-US', {
-                hour: '2-digit',
+        const midnightLastPlayed = new Date(lastPlayed)
+        midnightLastPlayed.setHours(0, 0, 0, 0)
+
+        const diffDays = Math.floor((midnightNow.getTime() - midnightLastPlayed.getTime()) / (1000 * 60 * 60 * 24))
+
+        if (diffDays === 0) {
+            return lastPlayed.toLocaleTimeString('en-US', {
+                hour: 'numeric',
                 minute: '2-digit',
                 hour12: true,
-                timeZone: 'America/Costa_Rica',
-            })
-            return `${timeString}`
+                timeZone: tz,
+            }).replace(':00', '') // removes ":00" if minutes are zero
         }
 
-        const diffTime = crNow.getTime() - crLastPlayed.getTime()
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-
-        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
+        return `${diffDays}d ago`
     } catch (error) {
         console.error(`[getPlayerLastDatePlayed] Error:`, error)
-        return 'Error occurred while fetching the last date played'
+        return "-"
+    }
+}
+
+const isPlayerLikelyOnline = (playerStats: Array<{ lastPlayed: string }>): boolean => {
+    if (!playerStats || playerStats.length === 0) return false
+
+    try {
+        // Find the most recent match
+        const mostRecent = playerStats.reduce((a, b) =>
+            new Date(b.lastPlayed) > new Date(a.lastPlayed) ? b : a
+        )
+
+        const now = new Date().getTime()
+        const lastPlayedTime = new Date(mostRecent.lastPlayed).getTime()
+
+        const diffMinutes = Math.abs(now - lastPlayedTime) / (1000 * 60)
+
+        return diffMinutes <= 40
+    } catch (error) {
+        console.error('[isPlayerLikelyOnline] Error:', error)
+        return false
     }
 }
 
@@ -128,10 +143,12 @@ export const updatePlayerInformation = async (playersInformation: any[]) => {
                 const playerStats = await getPlayerStats(player.playerCharacterId)
                 const gamesPerRace = await getPlayerGamesPerRace(playerStats)
                 const lastDatePlayed = await getPlayerLastDatePlayed(playerStats)
+				const online = isPlayerLikelyOnline(playerStats)
                 return {
                     ...player,
                     gamesPerRace,
                     lastDatePlayed,
+					online
                 }
             }
             return player

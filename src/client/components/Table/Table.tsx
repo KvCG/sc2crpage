@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Table, Skeleton, Grid, Text } from '@mantine/core'
 import cx from 'clsx'
 import classes from './Table.module.css'
-import { getLeagueSrc } from '../../utils/rankingHelper'
+import { addOnlineIndicator, getLeagueSrc } from '../../utils/rankingHelper'
 import { raceAssets } from '../../constants/races'
 import { getStandardName } from '../../utils/common'
 import { RacesTable } from '../RaceTable/RacesTable'
@@ -14,7 +14,7 @@ const defaultVisibleColumns: ColumnOptions = {
     mmr: true,
     rank: true,
     race: true,
-    lastPlayed: false,
+    lastPlayed: true,
     terran: false,
     protoss: false,
     zerg: false,
@@ -32,6 +32,7 @@ const RankingTableRow = ({ row, index, visibleColumns }) => {
         name,
         lastDatePlayed,
         gamesPerRace,
+		online
     } = row
 
     const totalGames =
@@ -58,12 +59,12 @@ const RankingTableRow = ({ row, index, visibleColumns }) => {
                     <img className={classes.rank} src={raceAssets[race]?.assetPath} alt={race} />
                 </Table.Td>
             )}
-            {visibleColumns.lastPlayed && <Table.Td>{lastDatePlayed}</Table.Td>}
             {visibleColumns.terran && <Table.Td>{gamesPerRace?.terranGamesPlayed}</Table.Td>}
             {visibleColumns.protoss && <Table.Td>{gamesPerRace?.protossGamesPlayed}</Table.Td>}
             {visibleColumns.zerg && <Table.Td>{gamesPerRace?.zergGamesPlayed}</Table.Td>}
             {visibleColumns.random && <Table.Td>{gamesPerRace?.randomGamesPlayed}</Table.Td>}
             {visibleColumns.total && <Table.Td>{totalGames}</Table.Td>}
+            {visibleColumns.lastPlayed && <Table.Td>{addOnlineIndicator(lastDatePlayed, online)}</Table.Td>}
         </Table.Tr>
     )
 }
