@@ -128,7 +128,7 @@ const isPlayerLikelyOnline = (playerStats: Array<{ lastPlayed: string }>): boole
 
         const diffMinutes = Math.abs(now - lastPlayedTime) / (1000 * 60)
 
-        return diffMinutes <= 40
+        return diffMinutes <= 15 // If there is a difference of 15mins between the last played time and the current time the player is likely online
     } catch (error) {
         console.error('[isPlayerLikelyOnline] Error:', error)
         return false
