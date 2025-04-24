@@ -55,3 +55,12 @@ export const addPositionChangeIndicator = (currentRanking, previousRanking) => {
 
     return finalRanking
 }
+
+export const addOnlineIndicator = (lastPlayed, online) => {
+    if (online) {
+		return '🟢'
+	}
+
+    return lastPlayed
+}
+
