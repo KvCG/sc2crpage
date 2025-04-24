@@ -3,7 +3,12 @@ import https from 'https'
 import { readCsv } from '../utils/csvParser'
 import cache from '../utils/cache'
 import { getTimeUntilNextRefresh } from '../utils/cache'
-import { chunkArray, retryDelay } from '../utils/pulseApiHelper'
+import {
+    chunkArray,
+    retryDelay,
+    toCostaRicaTime,
+} from '../utils/pulseApiHelper'
+import { DateTime } from 'luxon'
 
 const agent = new https.Agent({
     rejectUnauthorized: false,
@@ -73,62 +78,50 @@ const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergG
     return gamesPerRace
 }
 
-const getPlayerLastDatePlayed = async (playerStats: Array<{ lastPlayed: string }>) => {
+const getPlayerLastDatePlayed = async (
+    playerStats: Array<{ lastPlayed: string }>
+) => {
     try {
-        if (!playerStats || playerStats.length === 0) return "-"
+        if (!playerStats || playerStats.length === 0) return '-'
 
         const mostRecent = playerStats.reduce((a, b) =>
             new Date(b.lastPlayed) > new Date(a.lastPlayed) ? b : a
         )
 
-        const tz = 'America/Costa_Rica'
-        const now = new Date()
-        const lastPlayedUTC = new Date(mostRecent.lastPlayed)
+        const lastPlayed = toCostaRicaTime(mostRecent.lastPlayed)
+        const now = DateTime.now().setZone('America/Costa_Rica')
 
-        // Convert to Costa Rica time
-        const lastPlayed = new Date(lastPlayedUTC.toLocaleString('en-US', { timeZone: tz }))
-        const current = new Date(now.toLocaleString('en-US', { timeZone: tz }))
-
-        // Midnight-based day difference
-        const midnightNow = new Date(current)
-        midnightNow.setHours(0, 0, 0, 0)
-
-        const midnightLastPlayed = new Date(lastPlayed)
-        midnightLastPlayed.setHours(0, 0, 0, 0)
-
-        const diffDays = Math.floor((midnightNow.getTime() - midnightLastPlayed.getTime()) / (1000 * 60 * 60 * 24))
+        const diffDays = now
+            .startOf('day')
+            .diff(lastPlayed.startOf('day'), 'days').days
 
         if (diffDays === 0) {
-            return lastPlayed.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
-                timeZone: tz,
-            }).replace(':00', '') // removes ":00" if minutes are zero
+            return lastPlayed.toFormat('h:mm a') // e.g., "7:33 AM"
         }
 
-        return `${diffDays}d ago`
+        return `${Math.floor(diffDays)}d ago`
     } catch (error) {
         console.error(`[getPlayerLastDatePlayed] Error:`, error)
-        return "-"
+        return '-'
     }
 }
 
-const isPlayerLikelyOnline = (playerStats: Array<{ lastPlayed: string }>): boolean => {
+const isPlayerLikelyOnline = (
+    playerStats: Array<{ lastPlayed: string }>
+): boolean => {
     if (!playerStats || playerStats.length === 0) return false
 
     try {
-        // Find the most recent match
         const mostRecent = playerStats.reduce((a, b) =>
             new Date(b.lastPlayed) > new Date(a.lastPlayed) ? b : a
         )
 
-        const now = new Date().getTime()
-        const lastPlayedTime = new Date(mostRecent.lastPlayed).getTime()
+        const lastPlayed = toCostaRicaTime(mostRecent.lastPlayed)
+        const now = DateTime.now().setZone('America/Costa_Rica')
 
-        const diffMinutes = Math.abs(now - lastPlayedTime) / (1000 * 60)
+        const diffMinutes = now.diff(lastPlayed, 'minutes').minutes
 
-        return diffMinutes <= 15 // If there is a difference of 15mins between the last played time and the current time the player is likely online
+        return diffMinutes <= 10
     } catch (error) {
         console.error('[isPlayerLikelyOnline] Error:', error)
         return false
