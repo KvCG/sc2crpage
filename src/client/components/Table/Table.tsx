@@ -85,7 +85,7 @@ export function RankingTable({ data, loading }) {
     }
 
     return (
-        <Grid gutter="md" overflow='auto'>
+        <Grid gutter="md">
             <Grid.Col span={12}>
                 {!loading && tableData?.length > 0 && (
                     <Text align="center" mb="md">
