@@ -59,7 +59,7 @@ const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergG
         zergGamesPlayed: 0,
         protossGamesPlayed: 0,
         terranGamesPlayed: 0,
-        randomGamesPlayed: 0
+        randomGamesPlayed: 0,
     }
 
     playerStats?.forEach(player => {
@@ -75,28 +75,48 @@ const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergG
 
 const getPlayerLastDatePlayed = async (playerStats: Array<{ lastPlayed: string }>) => {
     try {
-        if (!playerStats || playerStats.length === 0) return "No games of 1vs1 in this season"
+        if (!playerStats || playerStats.length === 0) return '-'
 
         const mostRecent = playerStats.reduce((mostRecent, current) => {
             const mostRecentDate = new Date(mostRecent.lastPlayed)
             const currentDate = new Date(current.lastPlayed)
             return currentDate > mostRecentDate ? current : mostRecent
         })
-        const options = {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-            timeZone: 'America/Costa_Rica',
-        };        
-        const localLastDatePlayed = new Date(mostRecent.lastPlayed).toLocaleString('en-GB', options).replace(',', '')
-        return localLastDatePlayed
+
+        const lastPlayedDate = new Date(mostRecent.lastPlayed)
+        const now = new Date()
+
+        const crLastPlayed = new Date(
+            lastPlayedDate.toLocaleString('en-US', {
+                timeZone: 'America/Costa_Rica',
+            })
+        )
+        const crNow = new Date(
+            now.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' })
+        )
+
+        const isSameDay =
+            crLastPlayed.getFullYear() === crNow.getFullYear() &&
+            crLastPlayed.getMonth() === crNow.getMonth() &&
+            crLastPlayed.getDate() === crNow.getDate()
+
+        if (isSameDay) {
+            const timeString = crLastPlayed.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: 'America/Costa_Rica',
+            })
+            return `${timeString}`
+        }
+
+        const diffTime = crNow.getTime() - crLastPlayed.getTime()
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
     } catch (error) {
-        const axiosError = error as AxiosError
-        console.error(`[getPlayerLastDatePlayed] Error processing last played date: ${axiosError.message}`)
-        return "Error occurred while fetching the last date played"
+        console.error(`[getPlayerLastDatePlayed] Error:`, error)
+        return 'Error occurred while fetching the last date played'
     }
 }
 
@@ -114,7 +134,7 @@ export const updatePlayerInformation = async (playersInformation: any[]) => {
                     lastDatePlayed,
                 }
             }
-            return player   
+            return player
         })
     )
 
