@@ -129,7 +129,7 @@ export function RankingTable({ data, loading }) {
                             {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
                             {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
                             {visibleColumns.race && <Table.Th>Race</Table.Th>}
-                            {visibleColumns.lastPlayed && <Table.Th>Last Played</Table.Th>}
+                            
                             {visibleColumns.terran && <Table.Th># Terran</Table.Th>}
                             {visibleColumns.protoss && <Table.Th># Protoss</Table.Th>}
                             {visibleColumns.zerg && <Table.Th># Zerg</Table.Th>}
@@ -137,6 +137,7 @@ export function RankingTable({ data, loading }) {
                             {visibleColumns.total && (
                                 <Table.Th title="Total games played this season">Total Games</Table.Th>
                             )}
+							{visibleColumns.lastPlayed && <Table.Th>Last Played</Table.Th>}
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
