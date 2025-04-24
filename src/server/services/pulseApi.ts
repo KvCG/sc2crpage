@@ -121,7 +121,7 @@ const isPlayerLikelyOnline = (
 
         const diffMinutes = now.diff(lastPlayed, 'minutes').minutes
 
-        return diffMinutes <= 10
+        return diffMinutes <= 20
     } catch (error) {
         console.error('[isPlayerLikelyOnline] Error:', error)
         return false
