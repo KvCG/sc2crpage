@@ -226,7 +226,7 @@ export const getDailySnapshot = async (retries = 0, maxRetries = 3) => {
                 '60': allResponses.flatMap(responses => responses[1].data),
                 '90': allResponses.flatMap(responses => responses[2].data),
                 '120': allResponses.flatMap(responses => responses[3].data),
-                expiry: Date.now() + timeUntilNextRefresh, // Expires at calculated time
+                expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
             }
 
             cache.set('snapShot', response, timeUntilNextRefresh / 1000)

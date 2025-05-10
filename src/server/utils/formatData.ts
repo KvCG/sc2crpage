@@ -71,8 +71,8 @@ const formatRankingData = async data => {
     if (!data) return null
     data = await Promise.all(
         (Array.isArray(data) ? data : [data]).map(async playerData => {
-            const verifiedPlayerData = await verifyPlayer(playerData);
-            return verifiedPlayerData;
+            const verifiedPlayerData = await verifyPlayer(playerData)
+            return verifiedPlayerData
         })
     )
     data = filterByHighestRatingLast(data)

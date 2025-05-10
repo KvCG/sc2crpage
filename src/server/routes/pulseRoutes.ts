@@ -48,7 +48,7 @@ router.get('/snapshot', async (req: Request, res: Response) => {
     if (!snapshotRanking) res.json(null)
     const formattedData = {}
     const updatedSnapshotRanking = await updatePlayerInformation(snapshotRanking)
-    for (const [key, value] of Object.entries(updatedSnapshotRanking)) {
+    for (const [key, value] of Object.entries(updatedSnapshotRanking[0])) {
         if (key != 'expiry') {
             formattedData[key] = await formatData(value, 'ranking')
         } else {
