@@ -1,15 +1,24 @@
+/**
+ * StarCraft II Pulse API Service
+ * Provides functions to fetch, process, and cache player and ranking data from the SC2Pulse API.
+ * Includes helpers for player stats aggregation, race extraction, online status, and cache management.
+ * 
+ * @module pulseApi
+ */
+
 import axios, { AxiosError } from 'axios'
 import https from 'https'
 import { readCsv } from '../utils/csvParser'
 import cache from '../utils/cache'
 import { getTimeUntilNextRefresh } from '../utils/cache'
 import {
-    chunkArray,
-    retryDelay,
     toCostaRicaTime,
 } from '../utils/pulseApiHelper'
 import { DateTime } from 'luxon'
 
+/**
+ * HTTPS agent for axios requests, disables certificate validation and enables keep-alive.
+ */
 const agent = new https.Agent({
     rejectUnauthorized: false,
     keepAlive: true,
@@ -17,14 +26,22 @@ const agent = new https.Agent({
     timeout: 30000,
 })
 
+/**
+ * Axios instance for SC2Pulse API requests.
+ */
 const api = axios.create({
     baseURL: 'https://sc2pulse.nephest.com/sc2/api',
     httpAgent: agent,
 })
 
+/**
+ * Searches for a player by name or BattleTag.
+ * @param {string} term - The search term (player name or BattleTag).
+ * @returns {Promise<any>} The search results from the API.
+ */
 export const searchPlayer = async (term: string) => {
     try {
-        // Node automatically decodes URL params; so we encode the search term again.
+        // Node automatically decodes URL params so we encode the search term again.
         const response = await api.get(`/character/search?term=${encodeURIComponent(term)}`)
         return response.data
     } catch (error) {
@@ -33,6 +50,10 @@ export const searchPlayer = async (term: string) => {
     }
 }
 
+/**
+ * Fetches the current season ID from the API.
+ * @returns {Promise<string|undefined>} The current season's Battle.net ID.
+ */
 const getCurrentSeason = async () => {
     try {
         const response = await api.get(`season/list/all`)
@@ -44,22 +65,35 @@ const getCurrentSeason = async () => {
     }
 }
 
-const getPlayerStats = async (playerId: string) => {
+/**
+ * Fetches player stats for a list of player IDs.
+ * @param {string[]} playerIds - Array of player character IDs.
+ * @returns {Promise<any[]>} Array of team stats objects.
+ */
+const getPlayersStats = async (playerIds: string[]) => {
+    if (!playerIds || playerIds.length === 0) return []
+    const seasonId = await getCurrentSeason()
+    const params = playerIds.map(id => `characterId=${id}`).join('&')
+    const url = `group/team?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&${params}`
     try {
-        const seasonId = await getCurrentSeason()
-        const response = await api.get(`group/team?season=${seasonId}&queue=LOTV_1V1&race=&characterId=${playerId}`)
-        return response.data
+        const response = await api.get(url)
+        // Always return an array
+        return Array.isArray(response.data) ? response.data : [response.data]
     } catch (error) {
         const axiosError = error as AxiosError
-        // If the player is not found an 404 error will be thrown, we can ignore this error
-        // cause is an expected behavior
-        if (axiosError.response && axiosError.response.status !== 404) {
-            console.error(`[getPlayerStats] Error fetching stats for playerId "${playerId}": ${axiosError.message}`)
-        }
+        console.error(`[getPlayersStats] Error fetching stats: ${axiosError.message}`)
+        return []
     }
 }
 
-const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergGamesPlayed?: number, protossGamesPlayed?: number, terranGamesPlayed?: number, randomGamesPlayed?: number }> }>) => {
+/**
+ * Aggregates the number of games played per race for a list of members.
+ * @param {Array} members - Array of member objects.
+ * @returns {Promise<{zergGamesPlayed: number, protossGamesPlayed: number, terranGamesPlayed: number, randomGamesPlayed: number}>}
+ */
+const getPlayerGamesPerRace = async (
+    members: Array<{ zergGamesPlayed?: number, protossGamesPlayed?: number, terranGamesPlayed?: number, randomGamesPlayed?: number, raceGames?: any }>
+) => {
     const gamesPerRace = {
         zergGamesPlayed: 0,
         protossGamesPlayed: 0,
@@ -67,17 +101,22 @@ const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergG
         randomGamesPlayed: 0,
     }
 
-    playerStats?.forEach(player => {
-        player.members.forEach(member => {
-            gamesPerRace.zergGamesPlayed += member.zergGamesPlayed || 0
-            gamesPerRace.protossGamesPlayed += member.protossGamesPlayed || 0
-            gamesPerRace.terranGamesPlayed += member.terranGamesPlayed || 0
-            gamesPerRace.randomGamesPlayed += member.randomGamesPlayed || 0
-        })
+    members.forEach(member => {
+        // Prefer direct fields, fallback to raceGames object if present
+        gamesPerRace.zergGamesPlayed += member.zergGamesPlayed ?? member.raceGames?.ZERG ?? 0
+        gamesPerRace.protossGamesPlayed += member.protossGamesPlayed ?? member.raceGames?.PROTOSS ?? 0
+        gamesPerRace.terranGamesPlayed += member.terranGamesPlayed ?? member.raceGames?.TERRAN ?? 0
+        gamesPerRace.randomGamesPlayed += member.randomGamesPlayed ?? member.raceGames?.RANDOM ?? 0
     })
+
     return gamesPerRace
 }
 
+/**
+ * Gets the last date a player played, formatted for Costa Rica time.
+ * @param {Array} playerStats - Array of objects with a lastPlayed property.
+ * @returns {Promise<string>} Formatted last played date or '-' if unavailable.
+ */
 const getPlayerLastDatePlayed = async (
     playerStats: Array<{ lastPlayed: string }>
 ) => {
@@ -88,12 +127,16 @@ const getPlayerLastDatePlayed = async (
             new Date(b.lastPlayed) > new Date(a.lastPlayed) ? b : a
         )
 
+        if (!mostRecent || !mostRecent.lastPlayed) return '-'
+
         const lastPlayed = toCostaRicaTime(mostRecent.lastPlayed)
         const now = DateTime.now().setZone('America/Costa_Rica')
 
         const diffDays = now
             .startOf('day')
             .diff(lastPlayed.startOf('day'), 'days').days
+
+        if (isNaN(diffDays)) return '-'
 
         if (diffDays === 0) {
             return lastPlayed.toFormat('h:mm a') // e.g., "7:33 AM"
@@ -106,6 +149,11 @@ const getPlayerLastDatePlayed = async (
     }
 }
 
+/**
+ * Determines if a player is likely online based on their last played time.
+ * @param {Array} playerStats - Array of objects with a lastPlayed property.
+ * @returns {boolean} True if the player is likely online, false otherwise.
+ */
 const isPlayerLikelyOnline = (
     playerStats: Array<{ lastPlayed: string }>
 ): boolean => {
@@ -128,29 +176,10 @@ const isPlayerLikelyOnline = (
     }
 }
 
-export const updatePlayerInformation = async (playersInformation: any[]) => {
-    const playersArray = Array.isArray(playersInformation) ? playersInformation : [playersInformation]
-    const updatedPlayers = await Promise.all(
-        playersArray.map(async (player: { playerCharacterId: string }) => {
-            if (player.playerCharacterId) {
-                const playerStats = await getPlayerStats(player.playerCharacterId)
-                const gamesPerRace = await getPlayerGamesPerRace(playerStats)
-                const lastDatePlayed = await getPlayerLastDatePlayed(playerStats)
-				const online = isPlayerLikelyOnline(playerStats)
-                return {
-                    ...player,
-                    gamesPerRace,
-                    lastDatePlayed,
-					online
-                }
-            }
-            return player
-        })
-    )
-
-    return updatedPlayers
-}
-
+/**
+ * Reads the CSV file and returns an array of player character IDs.
+ * @returns {Promise<string[]>} Array of player character IDs.
+ */
 const getPlayersIds = async () => {
     try {
         const players = await readCsv()
@@ -161,88 +190,128 @@ const getPlayersIds = async () => {
     }
 }
 
-const handleApiError = async (error: AxiosError, retries: number, maxRetries: number, retryFunction: () => Promise<any>) => {
-    if (error.code === 'ECONNABORTED') {
-        console.error(`[handleApiError] Request timed out: ${error.message}`)
-    }
-
-    if (retries < maxRetries) {
-        const delay = retryDelay(retries)
-        console.error(`[handleApiError] Retry attempt ${retries + 1}/${maxRetries} in ${delay / 1000} seconds. Error code: ${error.code}`)
-        await new Promise(resolve => setTimeout(resolve, delay))
-        return retryFunction()
-    } else {
-        console.error(`[handleApiError] Max retries reached. Aborting. Error code: ${error.code}`)
-    }
-
-    console.error(`[handleApiError] Error occurred: ${error.code}`)
-    return []
+/**
+ * Groups stats by characterId for fast lookup.
+ * @param {any[]} allStats - Array of team stats objects.
+ * @returns {Record<string, any[]>} Object mapping characterId to an array of stats.
+ */
+function groupStatsByCharacterId(allStats: any[]): Record<string, any[]> {
+    const statsByCharacterId: Record<string, any[]> = {}
+    allStats.forEach(team => {
+        team.members.forEach(member => {
+            const charId = String(member.character?.id)
+            if (!statsByCharacterId[charId]) statsByCharacterId[charId] = []
+            statsByCharacterId[charId].push({
+                ...member,
+                lastPlayed: team.lastPlayed,
+                leagueType: team.league?.type,
+                rating: team.rating
+            })
+        })
+    })
+    return statsByCharacterId
 }
 
-export const getTop = async (daysAgo = 120, retries = 0, maxRetries = 3) => {
-    try {
-        const ids = await getPlayersIds()
-        const reqArray: any[] = []
-        // Split the ids into chunks of 10
-        const idChunks = chunkArray(ids, 10)
-        idChunks.map(chunk => reqArray.push(api.get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)))
-        const rankingData = await Promise.all(reqArray)
-        const finalRank = rankingData.flatMap(data => data.data)
-        return finalRank
-    } catch (error) {
-        console.error(`[getTop] Error fetching top players for daysAgo="${daysAgo}": ${(error as AxiosError).message}`)
-        return handleApiError(error as AxiosError, retries, maxRetries, () => getTop(daysAgo, retries + 1, maxRetries))
-    }
+/**
+ * Finds the member/team with the highest rating.
+ * @param {any[]} statsForPlayer - Array of stats for a player.
+ * @returns {any} The member/team object with the highest rating.
+ */
+function getHighestRatingObj(statsForPlayer: any[]): any {
+    return statsForPlayer.reduce((best, curr) =>
+        curr.rating > (best?.rating ?? -Infinity) ? curr : best, null)
 }
 
-export const getDailySnapshot = async (retries = 0, maxRetries = 3) => {
-    const ids = await getPlayersIds()
-    const cachedData = cache.get('snapShot')
+/**
+ * Finds the highest league type for a player.
+ * @param {any[]} statsForPlayer - Array of stats for a player.
+ * @returns {number|null} The highest league type or null if not found.
+ */
+function getHighestLeagueType(statsForPlayer: any[]): number | null {
+    const highest = statsForPlayer.reduce((max, curr) =>
+        (curr.leagueType ?? -Infinity) > max ? curr.leagueType : max, -Infinity)
+    return highest === -Infinity ? null : highest
+}
+
+/**
+ * Extracts the race from the member with the highest rating.
+ * @param {any} highestRatingObj - The member/team object with the highest rating.
+ * @returns {string|null} The race string ("ZERG", "TERRAN", "PROTOSS", "RANDOM") or null.
+ */
+function extractRace(highestRatingObj: any): string | null {
+    if (highestRatingObj?.raceGames) {
+        return Object.keys(highestRatingObj.raceGames)[0] ?? null
+    } else if (typeof highestRatingObj?.zergGamesPlayed === 'number' && highestRatingObj.zergGamesPlayed > 0) {
+        return 'ZERG'
+    } else if (typeof highestRatingObj?.protossGamesPlayed === 'number' && highestRatingObj.protossGamesPlayed > 0) {
+        return 'PROTOSS'
+    } else if (typeof highestRatingObj?.terranGamesPlayed === 'number' && highestRatingObj.terranGamesPlayed > 0) {
+        return 'TERRAN'
+    } else if (typeof highestRatingObj?.randomGamesPlayed === 'number' && highestRatingObj.randomGamesPlayed > 0) {
+        return 'RANDOM'
+    }
+    return null
+}
+
+/**
+ * Main function to get the top player rankings.
+ * Caches the result to avoid excessive API calls and refreshes automatically on expiration.
+ * @param {number} [retries=0] - Current retry count.
+ * @param {number} [maxRetries=3] - Maximum number of retries.
+ * @returns {Promise<any[]>} Array of player ranking objects.
+ */
+export const getTop = async (retries = 0, maxRetries = 3) => {
+    const cacheKey = 'snapShot'
+    const cachedData = cache.get(cacheKey)
     if (cachedData) {
         return cachedData
-    } else {
-        try {
-            // Split the ids into chunks of 10
-            const idChunks = chunkArray(ids, 10)
+    }
+    
+    try {
+        const characterIds = await getPlayersIds()
+        const allStats = await getPlayersStats(characterIds)
+        const statsByCharacterId = groupStatsByCharacterId(allStats)
 
-            // Function to request data for each chunk
-            const fetchDataForChunk = async (chunk: string[]) => {
-                return await Promise.all([
-                    api.get(`character/${chunk.join(',')}/summary/1v1/30/`),
-                    api.get(`character/${chunk.join(',')}/summary/1v1/60/`),
-                    api.get(`character/${chunk.join(',')}/summary/1v1/90/`),
-                    api.get(`character/${chunk.join(',')}/summary/1v1/120/`),
-                ])
-            }
+        const finalRanking = await Promise.all(
+            characterIds.map(async (characterId: string) => {
+                const statsForPlayer = statsByCharacterId[characterId] || []
+                const gamesPerRace = await getPlayerGamesPerRace(statsForPlayer)
+                const lastDatePlayed = await getPlayerLastDatePlayed(statsForPlayer)
+                const online = isPlayerLikelyOnline(statsForPlayer)
 
-            // Fetch data for all chunks
-            const allResponses = await Promise.all(
-                idChunks.map(chunk => fetchDataForChunk(chunk))
-            )
-            const timeUntilNextRefresh = getTimeUntilNextRefresh()
-            // Combine the results from all chunks
-            const response = {
-                '30': allResponses.flatMap(responses => responses[0].data),
-                '60': allResponses.flatMap(responses => responses[1].data),
-                '90': allResponses.flatMap(responses => responses[2].data),
-                '120': allResponses.flatMap(responses => responses[3].data),
-                expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
-            }
+                const highestRatingObj = getHighestRatingObj(statsForPlayer)
+                const highestLeagueType = getHighestLeagueType(statsForPlayer)
+                const race = extractRace(highestRatingObj)
 
-            cache.set('snapShot', response, timeUntilNextRefresh / 1000)
-            console.info(`[getDailySnapshot] Snapshot cached successfully. Next refresh in ${timeUntilNextRefresh / 1000} seconds.`)
-
-            cache.on('expired', async key => {
-                console.info(`[Cache] Key "${key}" has expired at ${new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' })}`)
-                if (key === 'snapShot') {
-                    console.info(`[Cache] Fetching new snapshot after cache expiration...`)
-                    await getDailySnapshot()
+                return {
+                    playerCharacterId: characterId,
+                    race,
+                    gamesPerRace,
+                    lastDatePlayed,
+                    online,
+                    ratingLast: highestRatingObj?.rating ?? null,
+                    leagueTypeLast: highestLeagueType
                 }
             })
-            return response
-        } catch (error) {
-            console.error(`[getDailySnapshot] Error fetching daily snapshot: ${(error as AxiosError).message}`)
-            return handleApiError(error as AxiosError, retries, maxRetries, () => getDailySnapshot(retries + 1, maxRetries))
+        )
+
+        const timeUntilNextRefresh = getTimeUntilNextRefresh()
+        cache.set(cacheKey, finalRanking, timeUntilNextRefresh / 1000)
+
+        cache.on('expired', async key => {
+            if (key === cacheKey) {
+                console.info(`[Cache] "${cacheKey}" expired, refreshing...`)
+                await getTop()
+            }
+        })
+
+        return finalRanking
+    } catch (error) {
+        console.error(`[getTop] Error:`, error)
+        if (retries < maxRetries) {
+            return getTop(retries + 1, maxRetries)
         }
+        console.error(`[getTop] Failed after ${maxRetries} retries:`, error)
+        return []
     }
 }
