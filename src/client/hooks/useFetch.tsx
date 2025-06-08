@@ -4,7 +4,6 @@ import {
     analyzeReplayUrl, 
     search,
     getTop,
-    getDailySnapshot,
 	getTournament,
     getReplays,
     getReplayAnalysis,
@@ -22,10 +21,7 @@ export const useFetch = type => {
                 data = (await search(params)).data
                 break
             case 'ranking':
-                data = (await getTop(params)).data
-                break
-            case 'snapshot':
-                data = (await getDailySnapshot()).data
+                data = (await getTop()).data
                 break
             case 'tournament':
                 data = (await getTournament()).data
