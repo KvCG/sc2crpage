@@ -10,7 +10,6 @@ import axios, { AxiosError } from 'axios'
 import https from 'https'
 import { readCsv } from '../utils/csvParser'
 import cache from '../utils/cache'
-import { getTimeUntilNextRefresh } from '../utils/cache'
 import {
     toCostaRicaTime,
 } from '../utils/pulseApiHelper'
@@ -243,8 +242,34 @@ function extractRace(highestRatingObj: any): string | null {
 }
 
 /**
+ * inflightPromise is used to prevent a "cache stampede" problem.
+ *
+ * What is a cache stampede?
+ * -------------------------
+ * When the cache expires (or is empty), if multiple requests arrive at the same time,
+ * each request would trigger a new fetch to the expensive data source (API, DB, etc.).
+ * This can overwhelm your backend or external services, especially under high load.
+ *
+ * How does inflightPromise solve this?
+ * ------------------------------------
+ * - When a request comes in and the cache is empty, we start fetching the data and assign
+ *   the resulting Promise to inflightPromise.
+ * - If another request comes in while the first fetch is still in progress, it will see
+ *   that inflightPromise is not null and simply "await" the same Promise, instead of
+ *   starting a new fetch.
+ * - Once the fetch completes (success or error), inflightPromise is set back to null.
+ * - This ensures that, at most, only one fetch is in progress at any time, and all
+ *   concurrent requests share the same result.
+ *
+ * This pattern is especially useful in stateless environments like Express/Node.js,
+ * where many requests can arrive in parallel.
+ */
+let inflightPromise: Promise<any[]> | null = null
+
+/**
  * Main function to get the top player rankings.
  * Caches the result to avoid excessive API calls and refreshes automatically on expiration.
+ * Uses an in-flight promise to prevent cache stampede.
  * @param {number} [retries=0] - Current retry count.
  * @param {number} [maxRetries=3] - Maximum number of retries.
  * @returns {Promise<any[]>} Array of player ranking objects.
@@ -253,54 +278,61 @@ export const getTop = async (retries = 0, maxRetries = 3) => {
     const cacheKey = 'snapShot'
     const cachedData = cache.get(cacheKey)
     if (cachedData) {
+        // If cache is valid, return it immediately.
         return cachedData
     }
-    
-    try {
-        const characterIds = await getPlayersIds()
-        const allStats = await getPlayersStats(characterIds)
-        const statsByCharacterId = groupStatsByCharacterId(allStats)
-
-        const finalRanking = await Promise.all(
-            characterIds.map(async (characterId: string) => {
-                const statsForPlayer = statsByCharacterId[characterId] || []
-                const gamesPerRace = await getPlayerGamesPerRace(statsForPlayer)
-                const lastDatePlayed = await getPlayerLastDatePlayed(statsForPlayer)
-                const online = isPlayerLikelyOnline(statsForPlayer)
-
-                const highestRatingObj = getHighestRatingObj(statsForPlayer)
-                const highestLeagueType = highestRatingObj?.leagueType ?? null
-                const race = extractRace(highestRatingObj)
-
-                return {
-                    playerCharacterId: characterId,
-                    race,
-                    gamesPerRace,
-                    lastDatePlayed,
-                    online,
-                    ratingLast: highestRatingObj?.rating ?? null,
-                    leagueTypeLast: highestLeagueType
-                }
-            })
-        )
-
-        const timeUntilNextRefresh = getTimeUntilNextRefresh()
-        cache.set(cacheKey, finalRanking, timeUntilNextRefresh / 1000)
-
-        cache.on('expired', async key => {
-            if (key === cacheKey) {
-                console.info(`[Cache] "${cacheKey}" expired, refreshing...`)
-                await getTop()
-            }
-        })
-
-        return finalRanking
-    } catch (error) {
-        console.error(`[getTop] Error:`, error)
-        if (retries < maxRetries) {
-            return getTop(retries + 1, maxRetries)
-        }
-        console.error(`[getTop] Failed after ${maxRetries} retries:`, error)
-        return []
+    if (inflightPromise) {
+        // If a fetch is already in progress, return the same promise.
+        // This prevents multiple concurrent fetches for the same data.
+        return inflightPromise
     }
+
+    // No cache and no fetch in progress: start a new fetch and store the promise.
+    inflightPromise = (async () => {
+        try {
+            const characterIds = await getPlayersIds()
+            const allStats = await getPlayersStats(characterIds)
+            const statsByCharacterId = groupStatsByCharacterId(allStats)
+
+            const finalRanking = await Promise.all(
+                characterIds.map(async (characterId: string) => {
+                    const statsForPlayer = statsByCharacterId[characterId] || []
+                    const gamesPerRace = await getPlayerGamesPerRace(statsForPlayer)
+                    const lastDatePlayed = await getPlayerLastDatePlayed(statsForPlayer)
+                    const online = isPlayerLikelyOnline(statsForPlayer)
+
+                    const highestRatingObj = getHighestRatingObj(statsForPlayer)
+                    const highestLeagueType = highestRatingObj?.leagueType ?? null
+                    const race = extractRace(highestRatingObj)
+
+                    return {
+                        playerCharacterId: characterId,
+                        race,
+                        gamesPerRace,
+                        lastDatePlayed,
+                        online,
+                        ratingLast: highestRatingObj?.rating ?? null,
+                        leagueTypeLast: highestLeagueType
+                    }
+                })
+            )
+
+            // Store in cache for 10 seconds (lru-cache handles TTL)
+            cache.set(cacheKey, finalRanking)
+            return finalRanking
+        } catch (error) {
+            console.error(`[getTop] Error:`, error)
+            if (retries < maxRetries) {
+                return getTop(retries + 1, maxRetries)
+            }
+            console.error(`[getTop] Failed after ${maxRetries} retries:`, error)
+            return []
+        } finally {
+            // Always reset inflightPromise so future requests can trigger a new fetch if needed.
+            inflightPromise = null
+        }
+    })()
+
+    // Return the in-flight promise so all concurrent callers share the same result.
+    return inflightPromise
 }
