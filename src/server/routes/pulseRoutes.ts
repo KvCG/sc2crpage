@@ -18,8 +18,7 @@ router.get('/top', async (req: Request, res: Response) => {
     console.log('\nGetting live ranking data')
     console.log('INFO: ', details)
     const rankingData = await getTop()
-    const updatedRankingData = await updatePlayerInformation(rankingData)
-    const formattedData = await formatData(updatedRankingData, 'ranking')
+    const formattedData = await formatData(rankingData, 'ranking')
     res.json(formattedData)
 })
 
