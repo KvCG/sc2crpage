@@ -223,17 +223,6 @@ function getHighestRatingObj(statsForPlayer: any[]): any {
 }
 
 /**
- * Finds the highest league type for a player.
- * @param {any[]} statsForPlayer - Array of stats for a player.
- * @returns {number|null} The highest league type or null if not found.
- */
-function getHighestLeagueType(statsForPlayer: any[]): number | null {
-    const highest = statsForPlayer.reduce((max, curr) =>
-        (curr.leagueType ?? -Infinity) > max ? curr.leagueType : max, -Infinity)
-    return highest === -Infinity ? null : highest
-}
-
-/**
  * Extracts the race from the member with the highest rating.
  * @param {any} highestRatingObj - The member/team object with the highest rating.
  * @returns {string|null} The race string ("ZERG", "TERRAN", "PROTOSS", "RANDOM") or null.
@@ -280,7 +269,7 @@ export const getTop = async (retries = 0, maxRetries = 3) => {
                 const online = isPlayerLikelyOnline(statsForPlayer)
 
                 const highestRatingObj = getHighestRatingObj(statsForPlayer)
-                const highestLeagueType = getHighestLeagueType(statsForPlayer)
+                const highestLeagueType = highestRatingObj?.leagueType ?? null
                 const race = extractRace(highestRatingObj)
 
                 return {
