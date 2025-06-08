@@ -266,7 +266,7 @@ export const getTop = async (retries = 0, maxRetries = 3) => {
     if (cachedData) {
         return cachedData
     }
-
+    
     try {
         const characterIds = await getPlayersIds()
         const allStats = await getPlayersStats(characterIds)

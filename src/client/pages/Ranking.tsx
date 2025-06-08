@@ -30,7 +30,7 @@ export const Ranking = () => {
             )
             const ttl = 300000 // 5 min
             const wrapper = {
-                data: data,
+                data: finalRanking,
                 expiry: new Date().getTime() + ttl,
             }
             saveSnapShot('snapShot', wrapper)

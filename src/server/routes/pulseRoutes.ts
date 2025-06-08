@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { getTop, searchPlayer, updatePlayerInformation } from '../services/pulseApi'
+import { getTop, searchPlayer} from '../services/pulseApi'
 import { formatData } from '../utils/formatData'
 import { getClientInfo } from '../utils/getClientInfo'
 
