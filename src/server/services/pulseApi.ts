@@ -24,7 +24,7 @@ const api = axios.create({
 
 export const searchPlayer = async (term: string) => {
     try {
-        // Node automatically decodes URL params; so we encode the search term again.
+        // Node automatically decodes URL params so we encode the search term again.
         const response = await api.get(`/character/search?term=${encodeURIComponent(term)}`)
         return response.data
     } catch (error) {
@@ -44,22 +44,25 @@ const getCurrentSeason = async () => {
     }
 }
 
-const getPlayerStats = async (playerId: string) => {
+const getPlayersStats = async (playerIds: string[]) => {
+    if (!playerIds || playerIds.length === 0) return []
+    const seasonId = await getCurrentSeason()
+    const params = playerIds.map(id => `characterId=${id}`).join('&')
+    const url = `group/team?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&${params}`
     try {
-        const seasonId = await getCurrentSeason()
-        const response = await api.get(`group/team?season=${seasonId}&queue=LOTV_1V1&race=&characterId=${playerId}`)
-        return response.data
+        const response = await api.get(url)
+        // Always return an array
+        return Array.isArray(response.data) ? response.data : [response.data]
     } catch (error) {
         const axiosError = error as AxiosError
-        // If the player is not found an 404 error will be thrown, we can ignore this error
-        // cause is an expected behavior
-        if (axiosError.response && axiosError.response.status !== 404) {
-            console.error(`[getPlayerStats] Error fetching stats for playerId "${playerId}": ${axiosError.message}`)
-        }
+        console.error(`[getPlayersStats] Error fetching stats: ${axiosError.message}`)
+        return []
     }
 }
 
-const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergGamesPlayed?: number, protossGamesPlayed?: number, terranGamesPlayed?: number, randomGamesPlayed?: number }> }>) => {
+const getPlayerGamesPerRace = async (
+    members: Array<{ zergGamesPlayed?: number, protossGamesPlayed?: number, terranGamesPlayed?: number, randomGamesPlayed?: number, raceGames?: any }>
+) => {
     const gamesPerRace = {
         zergGamesPlayed: 0,
         protossGamesPlayed: 0,
@@ -67,14 +70,14 @@ const getPlayerGamesPerRace = async (playerStats: Array<{ members: Array<{ zergG
         randomGamesPlayed: 0,
     }
 
-    playerStats?.forEach(player => {
-        player.members.forEach(member => {
-            gamesPerRace.zergGamesPlayed += member.zergGamesPlayed || 0
-            gamesPerRace.protossGamesPlayed += member.protossGamesPlayed || 0
-            gamesPerRace.terranGamesPlayed += member.terranGamesPlayed || 0
-            gamesPerRace.randomGamesPlayed += member.randomGamesPlayed || 0
-        })
+    members.forEach(member => {
+        // Prefer direct fields, fallback to raceGames object if present
+        gamesPerRace.zergGamesPlayed += member.zergGamesPlayed ?? member.raceGames?.ZERG ?? 0
+        gamesPerRace.protossGamesPlayed += member.protossGamesPlayed ?? member.raceGames?.PROTOSS ?? 0
+        gamesPerRace.terranGamesPlayed += member.terranGamesPlayed ?? member.raceGames?.TERRAN ?? 0
+        gamesPerRace.randomGamesPlayed += member.randomGamesPlayed ?? member.raceGames?.RANDOM ?? 0
     })
+
     return gamesPerRace
 }
 
@@ -88,12 +91,16 @@ const getPlayerLastDatePlayed = async (
             new Date(b.lastPlayed) > new Date(a.lastPlayed) ? b : a
         )
 
+        if (!mostRecent || !mostRecent.lastPlayed) return '-'
+
         const lastPlayed = toCostaRicaTime(mostRecent.lastPlayed)
         const now = DateTime.now().setZone('America/Costa_Rica')
 
         const diffDays = now
             .startOf('day')
             .diff(lastPlayed.startOf('day'), 'days').days
+
+        if (isNaN(diffDays)) return '-'
 
         if (diffDays === 0) {
             return lastPlayed.toFormat('h:mm a') // e.g., "7:33 AM"
@@ -130,21 +137,40 @@ const isPlayerLikelyOnline = (
 
 export const updatePlayerInformation = async (playersInformation: any[]) => {
     const playersArray = Array.isArray(playersInformation) ? playersInformation : [playersInformation]
+    const characterIds = playersArray
+        .filter((player: any) => player && player.playerCharacterId)
+        .map((player: { playerCharacterId: string }) => player.playerCharacterId)
+
+    // Batch fetch all stats
+    const allStats = await getPlayersStats(characterIds)
+
+    // Group stats by characterId for fast lookup
+    const statsByCharacterId: Record<string, any[]> = {}
+    allStats.forEach(team => {
+        team.members.forEach(member => {
+            const charId = String(member.character?.id)
+            if (!statsByCharacterId[charId]) statsByCharacterId[charId] = []
+            // Attach lastPlayed from team to each member for correct date calculation
+            statsByCharacterId[charId].push({
+                ...member,
+                lastPlayed: team.lastPlayed
+            })
+        })
+    })
+
+    // Map results in the same order as playersArray
     const updatedPlayers = await Promise.all(
         playersArray.map(async (player: { playerCharacterId: string }) => {
-            if (player.playerCharacterId) {
-                const playerStats = await getPlayerStats(player.playerCharacterId)
-                const gamesPerRace = await getPlayerGamesPerRace(playerStats)
-                const lastDatePlayed = await getPlayerLastDatePlayed(playerStats)
-				const online = isPlayerLikelyOnline(playerStats)
-                return {
-                    ...player,
-                    gamesPerRace,
-                    lastDatePlayed,
-					online
-                }
+            const statsForPlayer = statsByCharacterId[player.playerCharacterId] || []
+            const gamesPerRace = await getPlayerGamesPerRace(statsForPlayer)
+            const lastDatePlayed = await getPlayerLastDatePlayed(statsForPlayer)
+            const online = isPlayerLikelyOnline(statsForPlayer)
+            return {
+                ...player,
+                gamesPerRace,
+                lastDatePlayed,
+                online
             }
-            return player
         })
     )
 
@@ -179,70 +205,71 @@ const handleApiError = async (error: AxiosError, retries: number, maxRetries: nu
     return []
 }
 
-export const getTop = async (daysAgo = 120, retries = 0, maxRetries = 3) => {
+export const getTop = async (retries = 0, maxRetries = 3) => {
+    const daysAgo = 120 // Default to 30 days ago
     try {
         const ids = await getPlayersIds()
         const reqArray: any[] = []
-        // Split the ids into chunks of 10
-        const idChunks = chunkArray(ids, 10)
-        idChunks.map(chunk => reqArray.push(api.get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}/`)))
+        // Split the ids into chunks of 50
+        const idChunks = chunkArray(ids, 50)
+        idChunks.map(chunk => reqArray.push(api.get(`character/${chunk.join(',')}/summary/1v1/${daysAgo}`)))
         const rankingData = await Promise.all(reqArray)
         const finalRank = rankingData.flatMap(data => data.data)
         return finalRank
     } catch (error) {
         console.error(`[getTop] Error fetching top players for daysAgo="${daysAgo}": ${(error as AxiosError).message}`)
-        return handleApiError(error as AxiosError, retries, maxRetries, () => getTop(daysAgo, retries + 1, maxRetries))
+        return handleApiError(error as AxiosError, retries, maxRetries, () => getTop(retries + 1, maxRetries))
     }
 }
 
-export const getDailySnapshot = async (retries = 0, maxRetries = 3) => {
-    const ids = await getPlayersIds()
-    const cachedData = cache.get('snapShot')
-    if (cachedData) {
-        return cachedData
-    } else {
-        try {
-            // Split the ids into chunks of 10
-            const idChunks = chunkArray(ids, 10)
+// export const getDailySnapshot = async (retries = 0, maxRetries = 3) => {
+//     const ids = await getPlayersIds()
+//     const cachedData = cache.get('snapShot')
+//     if (cachedData) {
+//         return cachedData
+//     } else {
+//         try {
+//             // Split the ids into chunks of 10
+//             const idChunks = chunkArray(ids, 10)
 
-            // Function to request data for each chunk
-            const fetchDataForChunk = async (chunk: string[]) => {
-                return await Promise.all([
-                    api.get(`character/${chunk.join(',')}/summary/1v1/30/`),
-                    api.get(`character/${chunk.join(',')}/summary/1v1/60/`),
-                    api.get(`character/${chunk.join(',')}/summary/1v1/90/`),
-                    api.get(`character/${chunk.join(',')}/summary/1v1/120/`),
-                ])
-            }
+//             // Function to request data for each chunk
+//             const fetchDataForChunk = async (chunk: string[]) => {
+//                 return await Promise.all([
+//                     api.get(`character/${chunk.join(',')}/summary/1v1/30/`),
+//                     api.get(`character/${chunk.join(',')}/summary/1v1/60/`),
+//                     api.get(`character/${chunk.join(',')}/summary/1v1/90/`),
+//                     api.get(`character/${chunk.join(',')}/summary/1v1/120/`),
+//                 ])
+//             }
 
-            // Fetch data for all chunks
-            const allResponses = await Promise.all(
-                idChunks.map(chunk => fetchDataForChunk(chunk))
-            )
-            const timeUntilNextRefresh = getTimeUntilNextRefresh()
-            // Combine the results from all chunks
-            const response = {
-                '30': allResponses.flatMap(responses => responses[0].data),
-                '60': allResponses.flatMap(responses => responses[1].data),
-                '90': allResponses.flatMap(responses => responses[2].data),
-                '120': allResponses.flatMap(responses => responses[3].data),
-                expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
-            }
+//             // Fetch data for all chunks
+//             const allResponses = await Promise.all(
+//                 idChunks.map(chunk => fetchDataForChunk(chunk))
+//             )
+//             const timeUntilNextRefresh = getTimeUntilNextRefresh()
+//             // Combine the results from all chunks
+//             const response = {
+//                 '30': allResponses.flatMap(responses => responses[0].data),
+//                 '60': allResponses.flatMap(responses => responses[1].data),
+//                 '90': allResponses.flatMap(responses => responses[2].data),
+//                 '120': allResponses.flatMap(responses => responses[3].data),
+//                 expiry: Date.now() + timeUntilNextRefresh, // Every day expires at 12am
+//             }
 
-            cache.set('snapShot', response, timeUntilNextRefresh / 1000)
-            console.info(`[getDailySnapshot] Snapshot cached successfully. Next refresh in ${timeUntilNextRefresh / 1000} seconds.`)
+//             cache.set('snapShot', response, timeUntilNextRefresh / 1000)
+//             console.info(`[getDailySnapshot] Snapshot cached successfully. Next refresh in ${timeUntilNextRefresh / 1000} seconds.`)
 
-            cache.on('expired', async key => {
-                console.info(`[Cache] Key "${key}" has expired at ${new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' })}`)
-                if (key === 'snapShot') {
-                    console.info(`[Cache] Fetching new snapshot after cache expiration...`)
-                    await getDailySnapshot()
-                }
-            })
-            return response
-        } catch (error) {
-            console.error(`[getDailySnapshot] Error fetching daily snapshot: ${(error as AxiosError).message}`)
-            return handleApiError(error as AxiosError, retries, maxRetries, () => getDailySnapshot(retries + 1, maxRetries))
-        }
-    }
-}
+//             cache.on('expired', async key => {
+//                 console.info(`[Cache] Key "${key}" has expired at ${new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' })}`)
+//                 if (key === 'snapShot') {
+//                     console.info(`[Cache] Fetching new snapshot after cache expiration...`)
+//                     await getDailySnapshot()
+//                 }
+//             })
+//             return response
+//         } catch (error) {
+//             console.error(`[getDailySnapshot] Error fetching daily snapshot: ${(error as AxiosError).message}`)
+//             return handleApiError(error as AxiosError, retries, maxRetries, () => getDailySnapshot(retries + 1, maxRetries))
+//         }
+//     }
+// }

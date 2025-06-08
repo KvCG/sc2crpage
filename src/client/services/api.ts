@@ -11,15 +11,8 @@ export const search = async (searchTerm: string) => {
     return response
 }
 
-export const getTop = async (depth) => {
-    const response = await api.get(`api/top/${depth}`)
-
-    return response
-}
-
-export const getDailySnapshot = async () => {
-    const response = await api.get(`api/snapshot/`)
-
+export const getTop = async () => {
+    const response = await api.get(`api/top`)
     return response
 }
 

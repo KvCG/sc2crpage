@@ -16,6 +16,7 @@ export const verifyPlayer = async player => {
 }
 
 export const verifyChallongeParticipant = async challongeParticipant => {
+    // TODO Check where this is used and updated
     const snapshot = cache.get('snapShot')
     const reankedPlayers = await readCsv()
     for (const rankedPlayer of reankedPlayers) {
