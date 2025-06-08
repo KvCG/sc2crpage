@@ -16,17 +16,18 @@ export const verifyPlayer = async player => {
 }
 
 export const verifyChallongeParticipant = async challongeParticipant => {
+    // TODO Check where this is used and updated
     const snapshot = cache.get('snapShot')
-    const reankedPlayers = await readCsv()
-    for (const rankedPlayer of reankedPlayers) {
+    const rankedPlayers = await readCsv()
+    for (const rankedPlayer of rankedPlayers) {
         if (rankedPlayer?.challongeId == challongeParticipant.challongeUserId) {
             challongeParticipant.btag = rankedPlayer.btag
             challongeParticipant.name = null
             if (rankedPlayer.name) {
                 challongeParticipant.name = rankedPlayer.name
             }
-            if (snapshot && snapshot['120']) {
-                const formattedData = await formatData(snapshot['120'], 'ranking')
+            if (snapshot) {
+                const formattedData = await formatData(snapshot, 'ranking')
                 const match = formattedData.find(
                     player => player.playerCharacterId == rankedPlayer.id
                 )
