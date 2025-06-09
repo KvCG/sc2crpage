@@ -317,7 +317,7 @@ export const getTop = async (retries = 0, maxRetries = 3) => {
                 })
             )
 
-            // Store in cache for 10 seconds (lru-cache handles TTL)
+            // Store in cache for 30 seconds (lru-cache handles TTL)
             cache.set(cacheKey, finalRanking)
             return finalRanking
         } catch (error) {
