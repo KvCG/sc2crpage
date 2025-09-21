@@ -14,6 +14,18 @@
   - Status: in-progress
   - Links: branch chore/simple-ci-and-docs
 
+- BL-007: Fix dual deploy env mapping (ops)
+  - Type: techdebt
+  - Priority: P0
+  - Why: Vercel now has dev/prod but both talk to the same Render instance; we need correct env separation to avoid cross-environment traffic.
+  - Acceptance Criteria:
+    - Vercel dev deploy points to Render dev (or isolated dev URL/env).
+    - Vercel prod deploy points to Render prod instance.
+    - Environment variables clearly scoped for dev vs prod in Vercel and Render.
+    - Documented mapping in README/CONTRIBUTING.
+  - Status: in-progress
+  - Links: branch chore/simple-ci-and-docs
+
 ## NEXT (P1)
 
 - BL-002: Server test suite expansion (server)
