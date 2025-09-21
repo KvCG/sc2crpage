@@ -22,12 +22,9 @@ items:
     why: Cover routes/middleware/services, esp. SC2Pulse caching and error mapping.
     acceptance:
       - Vitest server suite covers pulseRoutes, pulseApi, error handlers
-      - v8 coverage >= 60% server-side
+      - v8 coverage  60% server-side
       - Tests run non-interactively via npm scripts
-    status: in-progress
-    notes:
-      - Initial server tests and fixtures added (routes, middleware, services)
-      - SC2Pulse caching and error mapping covered; non-interactive Vitest config
+    status: planned
     links:
       branch: test/server-suite
 
@@ -40,10 +37,7 @@ items:
     acceptance:
       - vitest.client.config.ts coverage.include limited to src/client/**
       - Pass with no tests enabled; sample test scaffold added
-    status: in-progress
-    notes:
-      - Coverage include restricted to src/client/** and passWithNoTests enabled
-      - MSW/RTL scaffolding planned next
+    status: planned
     links:
       branch: test/client-coverage-scope
 
@@ -83,40 +77,9 @@ items:
     priority: P3
     why: Enforce branch protections, required checks, secret scanning, and Dependabot.
     acceptance:
-      - Branch protections on dev/main (required CI, review, linear history)
+      - Branch protections on main/dev (required CI, review, linear history)
       - Dependabot alerts enabled and visible
       - Secret scanning + push protection on
       - Optional: CodeQL workflow
     status: planned
     links: {}
-
-  - id: BL-007
-    title: Fix dual deploy env mapping
-    type: techdebt
-    area: ops
-    priority: P0
-    why: Vercel has dev/prod but both point to the same Render instance; enforce proper environment separation to avoid cross-environment traffic.
-    acceptance:
-      - Vercel dev deploy points to Render dev (or isolated dev URL/env)
-      - Vercel prod deploy points to Render prod instance
-      - Environment variables scoped per env in Vercel and Render
-      - Mapping documented in README/CONTRIBUTING
-    status: in-progress
-    links:
-      branch: chore/simple-ci-and-docs
-
-  - id: BL-008
-    title: Backlog steward enforcement
-    type: docs
-    area: ops
-    priority: P0
-    why: Enforce branch/commit/PR conventions tied to backlog IDs for traceability.
-    acceptance:
-      - USAGE.md documents capture/persist, branch naming, commit, PR rules, lifecycle, diffs, hygiene, guardrails
-      - New branches follow <type>/<BL-###>-<kebab-title>
-      - All new branches are created from main (default branch)
-      - Commits include [BL-###] suffix and conventional commit format
-      - PR template/title guidance included; PRs carry acceptance and checklist
-    status: in-progress
-    links:
-      branch: docs/BL-008-backlog-steward-enforcement
