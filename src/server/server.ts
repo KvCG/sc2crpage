@@ -4,6 +4,7 @@ import path from 'path'
 import cors from 'cors'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
+import crypto from 'crypto'
 import chokidar from 'chokidar'
 import 'dotenv/config'
 
@@ -48,6 +49,19 @@ if (process.env.NODE_ENV === 'development') {
 
 // Middleware and routes
 app.use(cors())
+// Correlation + response time
+app.use((req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now()
+    const corr = (req.headers['x-correlation-id'] as string) || crypto.randomUUID?.() || crypto.randomBytes(16).toString('hex')
+    res.setHeader('x-correlation-id', corr)
+    res.setHeader('x-powered-by', 'sc2cr')
+    res.setHeader('x-response-start-ms', String(start))
+    res.on('finish', () => {
+        const ms = Date.now() - start
+        try { res.setHeader('x-response-time-ms', String(ms)) } catch {}
+    })
+    next()
+})
 app.use(express.static(path.join(__dirname, '../')))
 app.use(express.json({ limit: '30mb' }))
 app.use(express.urlencoded({ limit: '30mb', extended: true }))
