@@ -44,3 +44,9 @@ Run the following command
 ```bash
 npm run dev
 ```
+
+## Contributing
+- Branching: `main` (prod), `dev` (sandbox), `feature/*` from `main`.
+- CI: single workflow runs on PRs to `dev` and `main` (lint, type-check, tests, build).
+- Deploys: handled by Vercel per branch; no deploy steps in CI.
+- See `.github/CONTRIBUTING.md` for details on authoring rules and release flow.
