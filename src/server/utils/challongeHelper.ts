@@ -1,12 +1,12 @@
-export const addMatchCategory = (match, participants) => {
+export const addMatchCategory = (match: any, participants: any[]) => {
     const mmrRangePremier = Number(process.env.MMR_RANGE_FOR_PREMIER_MATCH)
     const mmrRangeClose = Number(process.env.MMR_RANGE_FOR_CLOSE_MATCH)
     if (!mmrRangePremier && !mmrRangeClose) return match
     const player1 = participants.find(
-        participant => participant.id == match.player1Id
+        (participant: any) => participant.id == match.player1Id
     )
     const player2 = participants.find(
-        participant => participant.id == match.player2Id
+        (participant: any) => participant.id == match.player2Id
     )
 
     const mmrDiff = Math.abs(player1?.ratingAvg - player2?.ratingAvg)
@@ -25,8 +25,8 @@ export const addMatchCategory = (match, participants) => {
     return match
 }
 
-export const getStandingsData = (info, participants, matches) => {
-    let standings = participants.map(participant => ({
+export const getStandingsData = (info: any, participants: any[], matches: any[]) => {
+    const standings = participants.map((participant: any) => ({
         id: participant.id,
         name: participant.name,
         challongeUsername: participant.challongeUsername,
@@ -41,9 +41,9 @@ export const getStandingsData = (info, participants, matches) => {
         forfeited: false, // starts as false, but will be true if the player leaves the tournament
     }))
 
-    matches.forEach(match => {
-        const winner = standings.find(p => p.id === match.winnerId)
-        const loser = standings.find(p => p.id === match.loserId)
+    matches.forEach((match: any) => {
+        const winner = standings.find((p: any) => p.id === match.winnerId)
+        const loser = standings.find((p: any) => p.id === match.loserId)
 
         // Get the game scores from scores_csv (e.g., "2-1")
         const [player1Score, player2Score] = match.scoresCsv
@@ -98,7 +98,7 @@ export const getStandingsData = (info, participants, matches) => {
     })
 
     // Sort standings with the following rules:
-    standings.sort((a, b) => {
+    standings.sort((a: any, b: any) => {
         // Players who have not played any matches go to the bottom
         if (a.gamesPlayed === 0 && b.gamesPlayed !== 0) return 1 // 'a' goes below 'b'
         if (b.gamesPlayed === 0 && a.gamesPlayed !== 0) return -1 // 'b' goes below 'a'
@@ -106,7 +106,7 @@ export const getStandingsData = (info, participants, matches) => {
         // If both players have the same points, check head-to-head record first
         if (b.points === a.points) {
             const headToHeadMatch = matches.find(
-                match =>
+                (match: any) =>
                     (match.winnerId === a.id && match.loserId === b.id) ||
                     (match.winnerId === b.id && match.loserId === a.id)
             )
