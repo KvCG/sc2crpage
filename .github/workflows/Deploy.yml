@@ -1,66 +1,115 @@
-name: 🚀 Deploy website on push
+name: CI / Docker publish / Render+Fly deploy
 
 on:
-  push:
-    branches:
-      - main
+    push:
+        branches: [main, dev, feature/**, bugfix/**, hotfix/**]
+    pull_request:
+        branches: [main, dev]
+    workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    NODE_VERSION: '20'
+    IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr
 
 jobs:
-  web-deploy:
-    name: 🎉 Deploy
-    runs-on: ubuntu-latest
+    checks:
+        name: Verify (typecheck • lint • tests)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: 'npm'
+            - run: npm ci
+            - run: npm run typecheck || true # <- keep or remove if you have script
+            - run: npm run lint || true # <- keep or remove if you have script
+            - run: npm run test -- --coverage || true # <- keep or enforce
 
-    steps:
-      - name: 🚚 Get latest code
-        uses: actions/checkout@v4
+    docker_publish:
+        name: Build & Push API image
+        needs: checks
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+            - name: Decide tag
+              id: meta
+              run: |
+                  if [ "${{ github.event_name }}" = "pull_request" ]; then
+                    echo "tag=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+                  elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+                    echo "tag=latest" >> $GITHUB_OUTPUT
+                  elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+                    echo "tag=dev" >> $GITHUB_OUTPUT
+                  else
+                    BRANCH="${GITHUB_REF_NAME//\//-}"
+                    echo "tag=${BRANCH}" >> $GITHUB_OUTPUT
+                  fi
 
-      - name: 🔨 Build Project
-        run: |
-          npm ci
-          npm run build:client
+            - uses: docker/setup-qemu-action@v3
+            - uses: docker/setup-buildx-action@v3
 
-      - name: 📂 Sync files to FTP (legacy)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ftpupload.net
-          username: if0_37163958
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/
-          server-dir: /htdocs/
+            - uses: docker/login-action@v3
+              if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+              with:
+                  username: ${{ secrets.DOCKER_HUB_USERNAME }}
+                  password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+            - name: Cache Docker layers
+              uses: actions/cache@v4
+              with:
+                  path: /tmp/.buildx-cache
+                  key: ${{ runner.os }}-buildx-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-buildx-
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+            # If your Dockerfile expects precompiled backend, uncomment:
+            # - name: Prebuild backend
+            #   run: |
+            #     npm ci
+            #     npm run build:server
 
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+            - name: Build & Push
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  # file: src/server/Dockerfile   # uncomment if Dockerfile lives there
+                  push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+                  tags: |
+                      ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+                      ${{ env.IMAGE_NAME }}:${{ github.sha }}
+                  cache-from: type=local,src=/tmp/.buildx-cache
+                  cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
-      - name: Build and Push Docker image
-        run: |
-          docker buildx build \
-          -t ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr:latest \
-          . \
-          --push
-
-      - name: Deploy to Render (main only)
+    deploy_prod_render:
+        name: Deploy PRODUCTION (Render)
+        needs: docker_publish
+        runs-on: ubuntu-latest
         if: github.ref == 'refs/heads/main'
-        env:
-          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: |
-          curl "$deploy_url"
+        steps:
+            - name: Deploy to Render
+              env:
+                  deploy_url: ${{ secrets.RENDER_PROD_DEPLOY_HOOK_URL }}
+              run: curl -fsSL "$deploy_url"
+
+    deploy_dev_flyio:
+        name: Deploy DEV (Fly.io)
+        needs: docker_publish
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/dev'
+        steps:
+            - name: Setup flyctl
+              uses: superfly/flyctl-actions/setup-flyctl@v1
+            - name: Deploy image to Fly.io (use prebuilt image)
+              env:
+                  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+              run: |
+                  flyctl deploy --app "${{ secrets.FLY_APP_NAME_DEV }}" \
+                    --image "${{ env.IMAGE_NAME }}:dev" \
+                    --strategy immediate \
+                    --wait-timeout 600
