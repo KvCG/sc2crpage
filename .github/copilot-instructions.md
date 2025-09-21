@@ -3,50 +3,58 @@
 ## Overview
 - Full-stack SC2 stats/replays/tournaments app
 - Stack: React/TS (client) + Node/Express (server)
-- Deploy: Vercel (client) + Render (server)
+- Deploys: Vercel (client) + Render prod API + Fly.io dev API
 
 ## Architecture & Flow
-- Client `src/client`: `services/api.ts` (HTTP), `hooks/useFetch.tsx`, pages in `pages/`, UI in `components/`.
-- Server `src/server`: routes mounted via `routes/apiRoutes.ts`; SC2Pulse via `services/pulseApi.ts`; shaping in `utils/formatData.ts`; caching in `utils/cache.ts`.
+- Client (`src/client`): API calls in `services/api.ts`, config in `services/config.ts` with host-based switch to `src/client/config/{prod,dev,local}.config.json`.
+- Server (`src/server`): routes mounted via `routes/apiRoutes.ts` combining `pulse`, `challonge`, `utility`, `google`, `replayAnalyzer`.
+- Utils: SC2Pulse data shaping in `utils/formatData.ts` and helpers in `utils/pulseApiHelper.ts`; in-memory cache `utils/cache.ts` (LRU, TTL 30s).
 - Flow: Client → `/api/*` → service fetch/transform → formatted payload → client.
 
 ## Dev, Build, Run
-- Dev: `npm run dev` (Vite + nodemon; FE+BE concurrently)
+- Dev: `npm run dev` (Vite FE + nodemon BE, concurrent)
 - Build: `npm run build` (client + server via `scripts/build.cjs`)
 - Start (built): `npm start` → `dist/webserver/server.cjs`
-- Data: after build, place `dist/data/ladderCR.csv` (request from maintainers)
-- Docker: build `npm run buildImg` | run `npm run localPod` | push `npm run pushImg`
+- Local Docker: `npm run buildImg` → `npm run localPod` (publishes on `127.0.0.1:3000`)
 
-## Testing
-- Runner: Vitest (separate configs per side)
-- Server: `npm run test:server` | coverage: `npm run test:coverage:server`
-- Client: `npm run test:client` (jsdom; `passWithNoTests` true) | coverage: `npm run test:coverage:client`
-- Both in parallel: `npm test` | watch: `npm run test:watch`
+## Data (ladderCR.csv)
+- Runtime path: `dist/data/ladderCR.csv` (server reads `../data/ladderCR.csv` from `__dirname`).
+- If missing and Firebase configured, `middleware/fbFileManagement.ts` downloads from bucket (`ranked_players/ladderCR.csv`). Otherwise, manually place the file after build.
 
 ## Server Patterns
-- Routing: `routes/{pulse,challonge,utility,google,replayAnalyzer}Routes.ts` mounted in `routes/apiRoutes.ts`.
-- Middleware/headers: `server.ts` sets `x-correlation-id`, `x-response-start-ms`, `x-response-time-ms`; pulse routes add `x-sc2pulse-attribution`; client info via `utils/getClientInfo.ts`.
-- Caching: `utils/cache.ts` LRU (TTL 30s). `pulseApi.getTop()` uses key `snapShot` + in-flight promise de-dup.
-- SC2Pulse: `services/pulseHttpClient.ts` typed axios client (env base), ~4 rps limit, jittered retries on 429/5xx (max 3), standardized error mapping; used by `services/pulseApi.ts` (`getTop`, `searchPlayer`).
-- Formatting/helpers: `utils/formatData.ts`, `utils/pulseApiHelper.ts`, user verification in `utils/userDataHelper.ts`.
+- Caching: `utils/cache.ts` stores a single snapshot (`snapShot`) with TTL 30s; `services/pulseApi.ts#getTop` shares an in-flight promise to prevent stampedes.
+- SC2Pulse access: `services/pulseApi.ts` (axios + https agent) implements `searchPlayer`, `getTop`, and helpers (race extraction, last played in CR time, online heuristic).
+- Middleware/SPA: `server.ts` serves static `dist` assets, mounts `/api`, and falls back to `index.html`; dev-only WebSocket on port 4000 for reloads.
 
 ## Client Patterns
-- API base in `src/client/services/config.ts`; calls in `services/api.ts`.
-- Data fetching: `hooks/useFetch.tsx`; pages in `pages/`; components colocated under `components/`.
+- Config switch: `services/config.ts` chooses API base by host; prod → Render, dev → Fly.io, local → `http://localhost:3000/`.
+- Data fetching: custom hooks in `hooks/`, UI pages under `pages/`, components colocated under `components/`.
+
+## CI/CD (Deploy.yml)
+- Unified workflow: checks → docker buildx (push to Docker Hub + Fly registry) → deploys.
+- Prod: on `main`, Render deploy webhook (`RENDER_DEPLOY_HOOK_URL`).
+- Dev: on `dev`, Fly deploy from prebuilt image tag (`registry.fly.io/${FLY_APP_NAME_DEV}:dev`).
+- Tags: `latest` (main), `dev` (dev), `pr-#` (PRs), or sanitized branch name; SHA tag also pushed.
+
+## Env Vars (server)
+- Firebase: `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON string) for bucket download.
+- Challonge: `CHALLONGE_API_KEY`, `CURRENT_TOURNAMENT`.
+- Google: `GOOGLE_SERVICE_ACCOUNT_KEY`.
+- Replay analyzer: `REPLAY_ANALYZER_URL`.
+- Tunables: `MMR_RANGE_FOR_PREMIER_MATCH`, `MMR_RANGE_FOR_CLOSE_MATCH`, `PORT`.
 
 ## Conventions
-- Naming: Components PascalCase; hooks/utils camelCase; tests `*.test.ts(x)`.
-- Branches: `feature/...`, `server/...`, `client/...`; commits `feat|fix|docs(scope): msg`.
-- Errors: return `{ error, code, context? }`; avoid leaking raw errors.
-- Env: use `process.env.*`; document/validate.
+- Naming: Components PascalCase; hooks/utils camelCase.
+- Branches: `main` (prod), `dev` (sandbox), `feature/*` from `main`.
+- Commits: `feat|fix|docs(scope): msg`.
+- Errors: prefer `{ error, code, context? }` without leaking raw errors.
 
-## Notes & Files
-- Test configs: `vitest.server.config.ts` (node), `vitest.client.config.ts` (jsdom + RTL + MSW). Server coverage scoped to `src/server/**`.
-- Key server files: `src/server/services/{pulseApi.ts,pulseHttpClient.ts}`, `src/server/routes/apiRoutes.ts`, `src/server/utils/{cache.ts,formatData.ts}`.
+## Testing
+- Vitest is referenced in docs, but no configs/scripts exist in repo yet. Align tests/scripts before enforcing in CI.
 
 ## Unknowns / Gaps
-- Env vars: confirm names/defaults (`SC2PULSE_BASE_URL`, limiter/retry settings, Firebase, Challonge).
-- Ladder data: confirm source/automation to place `dist/data/ladderCR.csv` after build.
-- Error contract: confirm canonical `{ error, code, context? }` across routes.
-- Logging: confirm library/fields beyond headers (e.g., pino integration).
-- Client coverage: confirm desired scope to avoid including non-client files when no client tests.
+- Confirm client deploys (Vercel) and branch→preview mapping.
+- Define authoritative source/automation for `ladderCR.csv` in CI/CD.
+- Standardize error contract across routes and add tests.
+- Finalize test runner setup (Vitest configs, scripts) to match `.github/TESTING.md`.
+- Any rate limits/retries for SC2Pulse to externalize via env?

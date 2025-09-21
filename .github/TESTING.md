@@ -1,61 +1,51 @@
 # Testing Guide
 
-This project uses Vitest for both server and client tests.
+Status: Vitest is planned but not configured yet in this repo (no vitest config or npm scripts exist). This guide outlines the intended setup and first targets so we can align code and CI next.
 
-## Commands
+## Planned Commands
 
+Suggested npm scripts to add:
 ```bash
 # Run all tests
 npm test
 
-# Server-only tests
+# Server-only
 npm run test:server
 
-# Client-only tests
+# Client-only
 npm run test:client
 
 # Coverage
 npm run test:coverage
 ```
 
-## Structure
+## Suggested Structure
 
 - Server tests:
-   - Unit: `src/server/__tests__/unit/**/*.test.ts`
-   - Integration: `src/server/__tests__/integration/**/*.test.ts`
-   - Legacy catch-all still supported: `src/server/**/*.test.ts`
+  - Unit: `src/server/__tests__/unit/**/*.test.ts`
+  - Integration: `src/server/__tests__/integration/**/*.test.ts`
 - Client tests: `src/client/**/*.test.tsx`
-- Test setup: `src/test/setup.ts`
-- MSW handlers: `src/test/mocks/server.ts`
+- Optional setup: `src/test/setup.ts` and `src/test/mocks/server.ts` (MSW)
 
-## What to Test First
+## First Targets
 
-1. Caching behavior (`src/server/utils/cache.ts`)
-2. SC2Pulse service (`src/server/services/pulseApi.ts`)
-   - Cache hits/misses
-   - In-flight promise sharing (stampede prevention)
-   - Error handling and retries
-3. Data formatting (`src/server/utils/formatData.ts`)
-4. Critical UI components (Ranking table, Replays)
+1. Cache behavior: `src/server/utils/cache.ts`
+2. SC2Pulse service: `src/server/services/pulseApi.ts`
+   - Cache hit/miss, in-flight promise sharing
+3. Data formatting: `src/server/utils/formatData.ts`
 
-## Writing Tests
+## Minimal Next Steps
 
-- Prefer unit tests for pure utilities
-- Use MSW to mock external APIs for integration-like tests
-- Avoid brittle selectors in UI tests; use accessible roles/text
+- Add Vitest deps and config files:
+  - `vitest.config.ts` (node for server) and optional `vitest.client.config.ts` (jsdom)
+- Add npm scripts as above; scope coverage to relevant folders
+- Use MSW for API interactions as needed
 
-## Coverage Targets
+## CI Note
 
-- Server core (cache + pulseApi): 80%+
-- Utilities (formatters/helpers): 70%+
-- UI components: 60%+ (grow over time)
+CI currently runs `npm run test -- --coverage || true` in `.github/workflows/Deploy.yml`. Once scripts/configs are added, remove the `|| true` to enforce failures.
 
-## CI
+## Open Questions
 
-Tests must pass on PRs before merge. Add/update tests alongside code changes.
-
-## Questions / Gaps
-
-- Define critical E2E flows (Playwright/Cypress)
-- Confirm acceptable flakiness thresholds for networked tests
-- Establish snapshot testing policy for UI
+- Do we want a single root Vitest config or split client/server configs?
+- Any preferred E2E runner (Playwright/Cypress) to integrate later?
