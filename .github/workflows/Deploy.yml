@@ -103,13 +103,28 @@ jobs:
         runs-on: ubuntu-latest
         if: github.ref == 'refs/heads/dev'
         steps:
+            - name: Checkout
+              uses: actions/checkout@v4
             - name: Setup flyctl
               uses: superfly/flyctl-actions/setup-flyctl@v1
+            - name: Ensure Fly app exists
+              env:
+                  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+                  FLY_APP: ${{ secrets.FLY_APP_NAME_DEV }}
+              run: |
+                  set -e
+                  if ! flyctl status --app "$FLY_APP" >/dev/null 2>&1; then
+                    echo "App $FLY_APP not found. Creating..."
+                    flyctl apps create "$FLY_APP" || true
+                  else
+                    echo "App $FLY_APP exists."
+                  fi
             - name: Deploy image to Fly.io (use prebuilt image)
               env:
                   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
               run: |
                   flyctl deploy --app "${{ secrets.FLY_APP_NAME_DEV }}" \
+                    --config fly.toml \
                     --image "${{ env.IMAGE_NAME }}:dev" \
                     --strategy immediate \
                     --wait-timeout 600
