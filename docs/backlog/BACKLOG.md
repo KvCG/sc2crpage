@@ -14,6 +14,43 @@
   - Status: in-progress
   - Links: branch chore/simple-ci-and-docs
 
+- BL-007: Fix dual deploy env mapping (ops)
+  - Type: techdebt
+  - Priority: P0
+  - Why: Vercel now has dev/prod but both talk to the same Render instance; we need correct env separation to avoid cross-environment traffic.
+  - Acceptance Criteria:
+    - Vercel dev deploy points to Render dev (or isolated dev URL/env).
+    - Vercel prod deploy points to Render prod instance.
+    - Environment variables clearly scoped for dev vs prod in Vercel and Render.
+    - Documented mapping in README/CONTRIBUTING.
+  - Status: in-progress
+  - Links: branch chore/simple-ci-and-docs
+
+- BL-008: Backlog steward enforcement (ops)
+  - Type: docs
+  - Priority: P0
+  - Why: Enforce branch/commit/PR conventions tied to backlog IDs for traceability and predictable delivery.
+  - Acceptance Criteria:
+    - Backlog USAGE.md documents capture/persist, branch naming, commit format, PR rules, lifecycle commands, minimal diffs, hygiene, guardrails.
+    - Branch naming enforced in docs and used in new work: `<type>/<BL-###>-<kebab-title>`.
+    - All new branches are created from `main` (default branch).
+    - Commits include `[BL-###]` suffix and conventional type(scope).
+    - PR template/title guidance added; PRs include acceptance and checklist.
+  - Status: in-progress
+  - Links: branch docs/BL-008-backlog-steward-enforcement
+
+- BL-009: Rebase chore/simple-ci-and-docs cleanly (ops)
+  - Type: techdebt
+  - Priority: P0
+  - Why: Keep history linear and remove stale docs conflicts so CI/docs changes can be reviewed in isolation.
+  - Acceptance Criteria:
+    - Branch `chore/simple-ci-and-docs` rebased onto `origin/main` with conflicts resolved by keeping `main` versions for `docs/backlog/**`.
+    - No remaining conflicts; push succeeds with `--force-with-lease`.
+    - PR opened to `dev` referencing [BL-009] with acceptance checklist; CI green.
+    - No unrelated file churn introduced (minimal diff principle).
+  - Status: planned
+  - Links: branch chore/simple-ci-and-docs
+
 ## NEXT (P1)
 
 - BL-002: Server test suite expansion (server)
