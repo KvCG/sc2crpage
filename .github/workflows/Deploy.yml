@@ -12,8 +12,8 @@ concurrency:
     cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
-  IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr
+    NODE_VERSION: '20'
+    IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr
 
 jobs:
     checks:
@@ -90,8 +90,6 @@ jobs:
                   cache-from: type=local,src=/tmp/.buildx-cache
                   cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
-            # image verification is skipped to avoid logging repo names
-
     deploy_prod_render:
         name: Deploy PRODUCTION (Render)
         needs: docker_publish
@@ -109,17 +107,14 @@ jobs:
         runs-on: ubuntu-latest
         if: github.ref == 'refs/heads/dev'
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-            - name: Setup flyctl
-              uses: superfly/flyctl-actions/setup-flyctl@v1
-            - name: Deploy image to Fly.io (dev tag)
+            - uses: actions/checkout@v4
+            - uses: superfly/flyctl-actions/setup-flyctl@v1
+            - name: Deploy prebuilt image
               env:
                   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
               run: |
-                  IMAGE_DEV="${{ env.IMAGE_NAME }}:dev"
+                  IMAGE="${{ env.IMAGE_NAME }}:${{ needs.docker_publish.outputs.tag }}"
                   flyctl deploy --config fly.toml \
-                    --remote-only \
-                    --image "$IMAGE_DEV" \
+                    --image "$IMAGE" \
                     --strategy immediate \
                     --wait-timeout 600
