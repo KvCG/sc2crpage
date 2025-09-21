@@ -1,11 +1,8 @@
 {
-  "defaults": [
-    "NeO-Reviewer1",
-    "NeO-Reviewer2"
-  ],
-  "byPrefix": {
-    "test": ["NeO-Reviewer1", "NeO-Reviewer2"],
-    "docs": ["NeO-Reviewer1", "NeO-Reviewer2"],
-    "chore": ["NeO-Reviewer1", "NeO-Reviewer2"]
-  }
+    "defaults": ["NeO11hub", "CarlosCartinCascante"],
+    "byPrefix": {
+        "test": ["NeO11hub", "CarlosCartinCascante"],
+        "docs": ["NeO11hub", "CarlosCartinCascante"],
+        "chore": ["NeO11hub", "CarlosCartinCascante"]
+    }
 }
