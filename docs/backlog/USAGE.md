@@ -72,5 +72,15 @@ If any field is missing, the steward will infer where possible; otherwise it wil
 - Persist updates to BOTH files with minimal diffs and keep sections in sync.
 - Consolidate near-duplicates; reference links (branch/pr/issue) when obvious.
 - Produce a short "Backlog delta" at the end of each session summarizing created/updated/promoted/done items.
-  - Format: Created [ids]; Updated [ids]; Promoted [ids]; Done [ids].
+  - Format: Δ Backlog: +N created (IDs) · M updated (IDs) · K done (IDs)
   - If uncertain on any field: write "I don't know" and add a TODO note.
+
+## Branch/Commit/PR Enforcement
+- Branch naming: `<type>/<BL-###>-<kebab-title>` where type ∈ {feature, fix, chore, docs, refactor, spike}.
+- Commits: conventional commit + ticket suffix, e.g., `feat(client): concise message [BL-021]`.
+- PRs: Title `[BL-###] Clear title`; body links branch, lists acceptance criteria, test notes, and a release checklist.
+- Always link branch/PR/issue in both BACKLOG.md and backlog.yaml under the item’s Links.
+
+## Guardrails (project practices)
+- Delivery flow: feature from main → Draft PR to dev → rebase on main for release → PR to main → merge → sync main→dev (rebase + --force-with-lease).
+- Quality: readability over cleverness; comment complex logic; error contract `{ error, code, context }`; structured logging; `process.env` for config; Vitest tests (server: axios + vi.hoisted; client: MSW + RTL).

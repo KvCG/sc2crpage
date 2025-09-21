@@ -26,6 +26,18 @@
   - Status: in-progress
   - Links: branch chore/simple-ci-and-docs
 
+- BL-008: Backlog steward enforcement (ops)
+  - Type: docs
+  - Priority: P0
+  - Why: Enforce branch/commit/PR conventions tied to backlog IDs for traceability and predictable delivery.
+  - Acceptance Criteria:
+    - Backlog USAGE.md documents capture/persist, branch naming, commit format, PR rules, lifecycle commands, minimal diffs, hygiene, guardrails.
+    - Branch naming enforced in docs and used in new work: `<type>/<BL-###>-<kebab-title>`.
+    - Commits include `[BL-###]` suffix and conventional type(scope).
+    - PR template/title guidance added; PRs include acceptance and checklist.
+  - Status: in-progress
+  - Links: branch docs/BL-008-backlog-steward-enforcement
+
 ## NEXT (P1)
 
 - BL-002: Server test suite expansion (server)
