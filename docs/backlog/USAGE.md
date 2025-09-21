@@ -38,7 +38,7 @@ If any field is missing, the steward will infer where possible; otherwise it wil
 - BACKLOG.md: Keep section headers unchanged. Insert or move only the affected item.
 - backlog.yaml: Mirror all fields (id, title, type, area, priority, why, acceptance[], status, links).
 - IDs: Allocate next BL-### sequentially; do not reuse IDs.
-- Links: Use keys `branch`, `pr`, `issue` when available.
+- Links: Use keys `branch` or `branches`, `pr`, `issue` when available.
 
 ## Lifecycle Commands
 - promote BL-### to P0|P1|P2|P3
