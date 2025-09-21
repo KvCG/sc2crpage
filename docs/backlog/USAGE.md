@@ -20,8 +20,8 @@ Write a line beginning with one of the following keywords; the steward will pars
 - add: <title> | <type> | <area> | <priority> | why <reason> | ac: <bullet1>; <bullet2>; ...
 - idea: <title> | <area> | why <reason>
 - todo: <title> | <area> | ac: <bullets>
-- fix: <title> | area server | why <reason> | ac: <bullets>
-- feat: <title> | area client | ac: <bullets>
+- fix: <title> | server | why <reason> | ac: <bullets>
+- feat: <title> | client | ac: <bullets>
 - note: BL-### "<note text>"
 
 If any field is missing, the steward will infer where possible; otherwise it will add a TODO note in the item.
