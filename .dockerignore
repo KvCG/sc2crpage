@@ -1,0 +1,35 @@
+# === Logs ===
+**/logs/
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/lerna-debug.log*
+
+# === Build artifacts & deps ===
+**/node_modules/
+**/dist/
+**/dist-ssr/
+
+# === Local env/secrets ===
+**/*.local
+**/.env
+**/secrets/
+
+# === Project data you don't want in image context ===
+**/src/data/
+
+# === Editors/OS cruft ===
+**/.vscode/*
+!**/.vscode/extensions.json
+**/.idea/
+**/.DS_Store
+**/*.suo
+**/*.ntvs*
+**/*.njsproj
+**/*.sln
+**/*.sw?
+
+# Fly config (keep it out of context if you never COPY it)
+fly.toml
