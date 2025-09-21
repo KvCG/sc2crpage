@@ -107,22 +107,7 @@ jobs:
         runs-on: ubuntu-latest
         if: github.ref == 'refs/heads/dev'
         steps:
-            - uses: actions/checkout@v4
             - uses: superfly/flyctl-actions/setup-flyctl@v1
-
-            - name: Auth Docker with Fly.io
-              run: flyctl auth docker
-              env:
-                  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-            - name: Push to Fly.io registry
-              run: |
-                  docker tag ${{ env.IMAGE_NAME }}:${{ needs.docker_publish.outputs.tag }} \
-                    registry.fly.io/${{ secrets.FLY_APP_NAME_DEV }}:${{ needs.docker_publish.outputs.tag }}
-                  docker push registry.fly.io/${{ secrets.FLY_APP_NAME_DEV }}:${{ needs.docker_publish.outputs.tag }}
-              env:
-                  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
             - name: Deploy from Fly.io registry
               run: |
                   flyctl deploy --config fly.toml \
