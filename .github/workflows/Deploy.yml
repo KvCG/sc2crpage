@@ -96,7 +96,7 @@ jobs:
         steps:
             - name: Deploy to Render
               env:
-          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+                deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
               run: curl -fsSL "$deploy_url"
 
     deploy_dev_flyio:
