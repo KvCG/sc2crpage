@@ -41,21 +41,56 @@ jobs:
                 head: `${context.repo.owner}:${branch}`,
                 state: 'open',
               })
+              let prNumber
               if (existing.length) {
-                core.info(`PR already exists: #${existing[0].number}`)
-                return
+                prNumber = existing[0].number
+                core.info(`PR already exists: #${prNumber}`)
+              } else {
+                const { data: pr } = await github.rest.pulls.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: branch,
+                  base,
+                  title,
+                  body,
+                  maintainer_can_modify: true,
+                  draft: false,
+                })
+                prNumber = pr.number
+                core.info(`Opened PR #${prNumber}`)
               }
-              const { data: pr } = await github.rest.pulls.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                head: branch,
-                base,
-                title,
-                body,
-                maintainer_can_modify: true,
-                draft: false,
-              })
-              core.info(`Opened PR #${pr.number}`)
+
+              // Attempt to request reviewers from .github/reviewers.json
+              try {
+                const res = await github.rest.repos.getContent({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  path: '.github/reviewers.json',
+                })
+                let content = ''
+                if (Array.isArray(res.data)) {
+                  core.info('reviewers.json path resolved to directory unexpectedly')
+                } else {
+                  content = Buffer.from(res.data.content, res.data.encoding).toString()
+                }
+                const cfg = content ? JSON.parse(content) : {}
+                const prefix = branch.includes('/') ? branch.split('/')[0] : ''
+                let reviewers = (cfg.byPrefix && cfg.byPrefix[prefix]) || cfg.defaults || []
+                reviewers = (reviewers || []).filter(r => r && typeof r === 'string' && !r.includes('<'))
+                if (reviewers.length) {
+                  await github.rest.pulls.requestReviewers({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: prNumber,
+                    reviewers,
+                  })
+                  core.info(`Requested reviewers: ${reviewers.join(', ')}`)
+                } else {
+                  core.info('No reviewers configured or placeholders detected; skipping reviewer request')
+                }
+              } catch (e) {
+                core.warning(`Unable to request reviewers: ${e.message}`)
+              }
             } catch (err) {
               core.setFailed(err.message)
             }
