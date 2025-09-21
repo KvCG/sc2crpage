@@ -47,7 +47,7 @@
   - Why: Cover routes/middleware/services, esp. SC2Pulse caching and error mapping.
   - Acceptance Criteria:
     - Vitest server suite covers pulseRoutes, pulseApi, error handlers.
-    - v8 coverage ≥ 60% server-side.
+    - v8 coverage >= 60% server-side.
     - Tests run non-interactively via npm scripts.
   - Status: in-progress
   - Notes: Initial server tests and fixtures added (routes, middleware, services). Vitest server config in place; SC2Pulse caching and error mapping covered. Tests run non-interactively.
