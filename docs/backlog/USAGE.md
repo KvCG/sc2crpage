@@ -1,6 +1,6 @@
 # Backlog Steward Usage Guide
 
-This repo maintains a human-readable backlog (`docs/backlog/BACKLOG.md`) and a machine-readable mirror (`docs/backlog/backlog.yaml`). Use this guide for adding, updating, and evolving backlog items via chat.
+This repo maintains a human-readable backlog (`docs/backlog/backlog.md`) and a machine-readable mirror (`docs/backlog/backlog.yaml`). Use this guide for adding, updating, and evolving backlog items via chat.
 
 ## Conventions
 - IDs: Use incremental `BL-###` identifiers (e.g., BL-007).
