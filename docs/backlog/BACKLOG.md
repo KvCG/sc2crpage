@@ -39,6 +39,18 @@
   - Status: in-progress
   - Links: branch docs/BL-008-backlog-steward-enforcement
 
+- BL-009: Rebase chore/simple-ci-and-docs cleanly (ops)
+  - Type: techdebt
+  - Priority: P0
+  - Why: Keep history linear and remove stale docs conflicts so CI/docs changes can be reviewed in isolation.
+  - Acceptance Criteria:
+    - Branch `chore/simple-ci-and-docs` rebased onto `origin/main` with conflicts resolved by keeping `main` versions for `docs/backlog/**`.
+    - No remaining conflicts; push succeeds with `--force-with-lease`.
+    - PR opened to `dev` referencing [BL-009] with acceptance checklist; CI green.
+    - No unrelated file churn introduced (minimal diff principle).
+  - Status: planned
+  - Links: branch chore/simple-ci-and-docs
+
 ## NEXT (P1)
 
 - BL-002: Server test suite expansion (server)
