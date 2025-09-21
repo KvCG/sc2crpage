@@ -24,7 +24,10 @@ items:
       - Vitest server suite covers pulseRoutes, pulseApi, error handlers
       - v8 coverage >= 60% server-side
       - Tests run non-interactively via npm scripts
-    status: planned
+    status: in-progress
+    notes:
+      - Initial server tests and fixtures added (routes, middleware, services)
+      - SC2Pulse caching and error mapping covered; non-interactive Vitest config
     links:
       branch: test/server-suite
 
@@ -37,7 +40,10 @@ items:
     acceptance:
       - vitest.client.config.ts coverage.include limited to src/client/**
       - Pass with no tests enabled; sample test scaffold added
-    status: planned
+    status: in-progress
+    notes:
+      - Coverage include restricted to src/client/** and passWithNoTests enabled
+      - MSW/RTL scaffolding planned next
     links:
       branch: test/client-coverage-scope
 
