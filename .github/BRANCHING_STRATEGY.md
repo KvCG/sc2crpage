@@ -55,23 +55,22 @@ client/ui/ranking-table-redesign
    ```
 
 2. **Regular Development**
-   ```bash
-   git add .
+ `dev` - Integration/sandbox branch for feature development
    git commit -m "feat(scope): descriptive message"
    git push origin feature/scope/description
    ```
 
 3. **Prepare for Review**
-   ```bash
-   git fetch origin develop
-   git rebase origin/develop
+    # From dev branch
+    git checkout dev
+    git pull origin dev
    git push origin feature/scope/description -f
    ```
 
 ### Server-First Deployment
 
-1. **Server Changes**
-   ```bash
+    git fetch origin dev
+    git rebase origin/dev
    git checkout -b server/feature-name
    # Make server changes
    git push origin server/feature-name
@@ -79,8 +78,8 @@ client/ui/ranking-table-redesign
    ```
 
 2. **Client Changes**
-   ```bash
-   git checkout -b client/feature-name
+    git checkout dev
+    git pull origin dev
    # Make client changes
    git push origin client/feature-name
    # Create PR to develop after server PR is merged
@@ -100,20 +99,16 @@ client/ui/ranking-table-redesign
    - Deploy server changes
    - Verify server health
    - Deploy client changes
-   - Monitor for issues
 
 3. **Finalize Release**
    ```bash
    git checkout main
    git merge release/1.x.x --no-ff
-   git tag -a v1.x.x -m "Release version 1.x.x"
    ```
 
 ## Branch Protection Rules
 
 - `main` branch:
-  - Require pull request reviews
-  - Require status checks to pass
   - No direct pushes
   - No deletion
 

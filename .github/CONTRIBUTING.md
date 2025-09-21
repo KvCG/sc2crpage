@@ -14,15 +14,12 @@ Flow:
    - `git checkout dev && git fetch origin && git rebase origin/main && git push --force-with-lease origin dev`
 
 ## Deploys
-- Vercel auto-deploys by branch (main=prod, dev=sandbox). No deploy steps in CI.
+- Client: Vercel auto-deploys by branch (main=prod, dev=permanent preview; other branches get previews).
+- API: Render (prod from `main`) and Fly.io (dev from `dev`), triggered by `.github/workflows/Deploy.yml`.
 
-## CI (tiny)
-Runs on PRs to `dev` and `main`:
-- `npm ci`
-- `npm run lint`
-- `tsc --noEmit`
-- `vitest` (server+client)
-- `vite build`
+## CI
+- Unified workflow: `.github/workflows/Deploy.yml` runs checks (type/lint/tests), builds Docker, and deploys to environments.
+   - Note: tests are planned; scripts/config may be added later to enforce.
 
 ## Authoring Rules
 - Prioritize readability/maintainability; avoid bloat.
@@ -30,7 +27,7 @@ Runs on PRs to `dev` and `main`:
 - Follow patterns: Express routes → services → utils; client services/hooks/components.
 - Error contract: `{ error, code, context }`. Logging: structured.
 - Env via `process.env`; add new keys to `.env.example` and note in docs.
-- Tests (Vitest): co-locate. Server uses axios mocks with `vi.hoisted`; client uses MSW + RTL.
+- Tests (Vitest planned): co-locate. Prefer MSW for client and axios mocking for server.
 
 ## Behavior
 - Before coding: scan nearby files and align with patterns.
