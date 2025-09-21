@@ -1,0 +1,26 @@
+/// <reference types="vitest" />
+import { defineConfig, configDefaults } from 'vitest/config'
+
+export default defineConfig({
+    test: {
+        globals: true,
+        environment: 'node',
+        include: [
+            'src/server/**/*.{test,spec}.{ts,tsx}',
+            'src/server/**/__tests__/**/*.{test,spec}.{ts,tsx}',
+        ],
+        exclude: [...configDefaults.exclude, 'e2e/**'],
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'json', 'html'],
+            include: ['src/server/**'],
+            exclude: [
+                'node_modules/',
+                'src/test/',
+                '**/*.d.ts',
+                'coverage/**',
+                'dist/**',
+            ],
+        },
+    },
+})

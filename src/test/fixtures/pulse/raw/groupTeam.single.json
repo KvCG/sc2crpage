@@ -1,0 +1,14 @@
+{
+    "members": [
+        {
+            "character": { "id": "1" },
+            "terranGamesPlayed": 3,
+            "protossGamesPlayed": 0,
+            "zergGamesPlayed": 0,
+            "randomGamesPlayed": 0
+        }
+    ],
+    "lastPlayed": "2024-01-02T12:00:00Z",
+    "league": { "type": "DIAMOND" },
+    "rating": 2500
+}
