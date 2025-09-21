@@ -5,6 +5,7 @@ This repo maintains a human-readable backlog (`docs/backlog/BACKLOG.md`) and a m
 ## Conventions
 - IDs: Use incremental `BL-###` identifiers (e.g., BL-007).
 - Types: `feature | bug | techdebt | docs`.
+  > **Note:** These are backlog item types. Branch naming later uses [conventional commit types](https://www.conventionalcommits.org/en/v1.0.0/) (`feature`, `fix`, `chore`, `docs`, `refactor`, `spike`), which are similar but not identical. Be sure to use the correct type for each context.
 - Areas: `client | server | ops`.
 - Priorities: `P0 (NOW) | P1 (NEXT) | P2 (LATER) | P3 (NICE TO HAVE)`.
 - Sections in BACKLOG.md:
