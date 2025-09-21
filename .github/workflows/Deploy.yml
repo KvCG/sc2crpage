@@ -12,8 +12,8 @@ concurrency:
     cancel-in-progress: true
 
 env:
-    NODE_VERSION: '20'
-    IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr
+  NODE_VERSION: '20'
+  IMAGE_NAME: kerverus/sc2cr
 
 jobs:
     checks:
@@ -90,6 +90,11 @@ jobs:
                   cache-from: type=local,src=/tmp/.buildx-cache
                   cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
+            - name: Verify image (dev tag)
+              if: github.ref == 'refs/heads/dev'
+              run: |
+                  docker buildx imagetools inspect "${{ env.IMAGE_NAME }}:dev"
+
     deploy_prod_render:
         name: Deploy PRODUCTION (Render)
         needs: docker_publish
@@ -111,11 +116,12 @@ jobs:
               uses: actions/checkout@v4
             - name: Setup flyctl
               uses: superfly/flyctl-actions/setup-flyctl@v1
-            - name: Deploy image to Fly.io (use prebuilt image)
+            - name: Deploy image to Fly.io (dev tag)
               env:
                   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
               run: |
                   flyctl deploy --config fly.toml \
+                    --remote-only \
                     --image "${{ env.IMAGE_NAME }}:dev" \
                     --strategy immediate \
                     --wait-timeout 600
