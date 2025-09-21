@@ -14,31 +14,6 @@
   - Status: in-progress
   - Links: branch chore/simple-ci-and-docs
 
-- BL-007: Fix dual deploy env mapping (ops)
-  - Type: techdebt
-  - Priority: P0
-  - Why: Vercel now has dev/prod but both talk to the same Render instance; we need correct env separation to avoid cross-environment traffic.
-  - Acceptance Criteria:
-    - Vercel dev deploy points to Render dev (or isolated dev URL/env).
-    - Vercel prod deploy points to Render prod instance.
-    - Environment variables clearly scoped for dev vs prod in Vercel and Render.
-    - Documented mapping in README/CONTRIBUTING.
-  - Status: in-progress
-  - Links: branch chore/simple-ci-and-docs
-
-- BL-008: Backlog steward enforcement (ops)
-  - Type: docs
-  - Priority: P0
-  - Why: Enforce branch/commit/PR conventions tied to backlog IDs for traceability and predictable delivery.
-  - Acceptance Criteria:
-    - Backlog USAGE.md documents capture/persist, branch naming, commit format, PR rules, lifecycle commands, minimal diffs, hygiene, guardrails.
-    - Branch naming enforced in docs and used in new work: `<type>/<BL-###>-<kebab-title>`.
-    - All new branches are created from `main` (default branch).
-    - Commits include `[BL-###]` suffix and conventional type(scope).
-    - PR template/title guidance added; PRs include acceptance and checklist.
-  - Status: in-progress
-  - Links: branch docs/BL-008-backlog-steward-enforcement
-
 ## NEXT (P1)
 
 - BL-002: Server test suite expansion (server)
@@ -47,10 +22,9 @@
   - Why: Cover routes/middleware/services, esp. SC2Pulse caching and error mapping.
   - Acceptance Criteria:
     - Vitest server suite covers pulseRoutes, pulseApi, error handlers.
-    - v8 coverage >= 60% server-side.
+    - v8 coverage ≥ 60% server-side.
     - Tests run non-interactively via npm scripts.
-  - Status: in-progress
-  - Notes: Initial server tests and fixtures added (routes, middleware, services). Vitest server config in place; SC2Pulse caching and error mapping covered. Tests run non-interactively.
+  - Status: planned
   - Links: branch test/server-suite
 
 - BL-003: Client coverage scoping and scaffolding (client)
@@ -60,8 +34,7 @@
   - Acceptance Criteria:
     - vitest.client.config.ts coverage.include limited to src/client/**
     - Pass with no tests enabled; sample test scaffold added.
-  - Status: in-progress
-  - Notes: Coverage include restricted to `src/client/**` and passWithNoTests enabled; preparing MSW/RTL test scaffolding.
+  - Status: planned
   - Links: branch test/client-coverage-scope
 
 ## LATER (P2)
