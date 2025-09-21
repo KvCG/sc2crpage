@@ -33,6 +33,7 @@
   - Acceptance Criteria:
     - Backlog USAGE.md documents capture/persist, branch naming, commit format, PR rules, lifecycle commands, minimal diffs, hygiene, guardrails.
     - Branch naming enforced in docs and used in new work: `<type>/<BL-###>-<kebab-title>`.
+    - All new branches are created from `main` (default branch).
     - Commits include `[BL-###]` suffix and conventional type(scope).
     - PR template/title guidance added; PRs include acceptance and checklist.
   - Status: in-progress

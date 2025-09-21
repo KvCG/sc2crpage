@@ -77,6 +77,10 @@ If any field is missing, the steward will infer where possible; otherwise it wil
 
 ## Branch/Commit/PR Enforcement
 - Branch naming: `<type>/<BL-###>-<kebab-title>` where type ∈ {feature, fix, chore, docs, refactor, spike}.
+- Always create branches from `main` (default branch):
+  - `git fetch origin`
+  - `git checkout main && git pull --ff-only`
+  - `git checkout -b <type>/<BL-###>-<kebab-title>`
 - Commits: conventional commit + ticket suffix, e.g., `feat(client): concise message [BL-021]`.
 - PRs: Title `[BL-###] Clear title`; body links branch, lists acceptance criteria, test notes, and a release checklist.
 - Always link branch/PR/issue in both BACKLOG.md and backlog.yaml under the item’s Links.

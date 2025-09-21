@@ -108,6 +108,7 @@ items:
     acceptance:
       - USAGE.md documents capture/persist, branch naming, commit, PR rules, lifecycle, diffs, hygiene, guardrails
       - New branches follow <type>/<BL-###>-<kebab-title>
+      - All new branches are created from main (default branch)
       - Commits include [BL-###] suffix and conventional commit format
       - PR template/title guidance included; PRs carry acceptance and checklist
     status: in-progress
