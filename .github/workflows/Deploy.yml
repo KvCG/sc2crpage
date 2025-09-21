@@ -13,7 +13,7 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
-  IMAGE_NAME: kerverus/sc2cr
+  IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/sc2cr
 
 jobs:
     checks:
@@ -86,10 +86,7 @@ jobs:
                   cache-from: type=local,src=/tmp/.buildx-cache
                   cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
-            - name: Verify image (dev tag)
-              if: github.ref == 'refs/heads/dev'
-              run: |
-                  docker buildx imagetools inspect "${{ env.IMAGE_NAME }}:dev"
+            # image verification is skipped to avoid logging repo names
 
     deploy_prod_render:
         name: Deploy PRODUCTION (Render)
@@ -99,7 +96,7 @@ jobs:
         steps:
             - name: Deploy to Render
               env:
-                  deploy_url: ${{ secrets.RENDER_PROD_DEPLOY_HOOK_URL }}
+          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
               run: curl -fsSL "$deploy_url"
 
     deploy_dev_flyio:
@@ -116,8 +113,9 @@ jobs:
               env:
                   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
               run: |
+                  IMAGE_DEV="${{ env.IMAGE_NAME }}:dev"
                   flyctl deploy --config fly.toml \
                     --remote-only \
-                    --image "${{ env.IMAGE_NAME }}:dev" \
+                    --image "$IMAGE_DEV" \
                     --strategy immediate \
                     --wait-timeout 600
