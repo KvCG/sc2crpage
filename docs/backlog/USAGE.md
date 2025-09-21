@@ -77,7 +77,7 @@ If any field is missing, the steward will infer where possible; otherwise it wil
   - If uncertain on any field: write "I don't know" and add a TODO note.
 
 ## Branch/Commit/PR Enforcement
-- Branch naming: `<type>/<BL-###>-<kebab-title>` where type ∈ {feature, fix, chore, docs, refactor, spike}.
+- Branch naming: `<commit-type>/<BL-###>-<kebab-title>` (commit-type ∈ {feature, fix, chore, docs, refactor, spike}; see conventional commit types).
 - Always create branches from `main` (default branch):
   - `git fetch origin`
   - `git checkout main && git pull --ff-only`
