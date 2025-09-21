@@ -26,6 +26,20 @@ Write a line beginning with one of the following keywords; the steward will pars
 
 If any field is missing, the steward will infer where possible; otherwise it will add a TODO note in the item.
 
+### Parsing rules
+- Split fields by `|` when present; trim whitespace.
+- `why` is captured after the literal token `why ` until next `|` or end.
+- `ac:` starts acceptance criteria; split bullets by `;` or line breaks.
+- If `priority` missing, default to P2 unless the text implies urgency.
+- If `type` missing, infer from keywords: fix/bug → bug, feat/feature → feature, idea/todo → techdebt by default.
+- If `area` missing, infer from referenced files/branches; else set TODO.
+
+### Formatting expectations
+- BACKLOG.md: Keep section headers unchanged. Insert or move only the affected item.
+- backlog.yaml: Mirror all fields (id, title, type, area, priority, why, acceptance[], status, links).
+- IDs: Allocate next BL-### sequentially; do not reuse IDs.
+- Links: Use keys `branch`, `pr`, `issue` when available.
+
 ## Lifecycle Commands
 - promote BL-### to P0|P1|P2|P3
 - demote BL-### to P1|P2|P3
@@ -34,6 +48,7 @@ If any field is missing, the steward will infer where possible; otherwise it wil
 - link BL-### branch <name> / pr <#> / issue <#>
 - start BL-### (marks Status: in-progress)
 - done BL-### (moves item to DONE)
+  - Also set `status: done` in YAML; keep acceptance intact.
 
 ## Acceptance Criteria
 - Keep AC concrete and testable. Prefer bullets that can be verified in CI/tests.
@@ -57,3 +72,5 @@ If any field is missing, the steward will infer where possible; otherwise it wil
 - Persist updates to BOTH files with minimal diffs and keep sections in sync.
 - Consolidate near-duplicates; reference links (branch/pr/issue) when obvious.
 - Produce a short "Backlog delta" at the end of each session summarizing created/updated/promoted/done items.
+  - Format: Created [ids]; Updated [ids]; Promoted [ids]; Done [ids].
+  - If uncertain on any field: write "I don't know" and add a TODO note.

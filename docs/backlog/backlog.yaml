@@ -22,7 +22,7 @@ items:
     why: Cover routes/middleware/services, esp. SC2Pulse caching and error mapping.
     acceptance:
       - Vitest server suite covers pulseRoutes, pulseApi, error handlers
-      - v8 coverage  60% server-side
+    - v8 coverage >= 60% server-side
       - Tests run non-interactively via npm scripts
     status: planned
     links:
