@@ -1,23 +1,35 @@
-# PR Title
+## Description
+<!-- Describe your changes in detail -->
 
-- Use: [BL-###] concise summary
+## Type of Change
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] This change requires a documentation update
 
-## Summary
-- What changed and why
-- Scope and any exclusions
+## Documentation Updates
+<!-- List any documentation files that were updated/created -->
+- [ ] README.md updated (if applicable)
+- [ ] API documentation updated (if applicable)
+- [ ] New features documented
+- [ ] Changes reflected in relevant .md files
 
-## Acceptance Checklist
-- [ ] Branch created from `main` (per docs/backlog/USAGE.md)
-- [ ] PR targets `dev` unless a release to `main`
-- [ ] Includes a valid backlog ID in title and body (e.g., [BL-008])
-- [ ] CI green: eslint, tsc, tests, build
-- [ ] Minimal diff; unrelated changes excluded
-- [ ] Updated docs/backlog entries if applicable
+## Testing
+<!-- Describe the tests you ran and/or added -->
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] E2E tests added/updated (if applicable)
 
-## Links
-- Backlog: docs/backlog/BACKLOG.md
-- USAGE: docs/backlog/USAGE.md
-- Item: BL-### (link to section in BACKLOG.md or backlog.yaml)
+## Deployment Impact
+<!-- How should this be deployed? -->
+- [ ] Server changes need to be deployed first
+- [ ] Client changes depend on server deployment
+- [ ] No deployment order dependency
 
-## Notes for Reviewers
-- Risks, rollbacks, and targeted reviewers (CODEOWNERS applies)
+## Checklist
+- [ ] My code follows the style guidelines of this project
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new warnings
+- [ ] Any dependent changes have been merged and published
