@@ -1,7 +1,8 @@
 import admin from 'firebase-admin'
 import 'dotenv/config'
+import type { Bucket } from '@google-cloud/storage'
 
-let bucket = null
+let bucket: Bucket | null = null
 
 try {
     const serviceAccount = JSON.parse(
@@ -17,6 +18,5 @@ try {
 } catch (error) {
 	console.log('Firebase init error. Ignore if you have ladder.csv')
 }
-
 
 export { bucket }

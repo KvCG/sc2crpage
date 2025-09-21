@@ -22,12 +22,9 @@ items:
     why: Cover routes/middleware/services, esp. SC2Pulse caching and error mapping.
     acceptance:
       - Vitest server suite covers pulseRoutes, pulseApi, error handlers
-      - v8 coverage >= 60% server-side
+      - v8 coverage  60% server-side
       - Tests run non-interactively via npm scripts
-    status: in-progress
-    notes:
-      - Initial server tests and fixtures added (routes, middleware, services)
-      - SC2Pulse caching and error mapping covered; non-interactive Vitest config
+    status: planned
     links:
       branch: test/server-suite
 
@@ -40,10 +37,7 @@ items:
     acceptance:
       - vitest.client.config.ts coverage.include limited to src/client/**
       - Pass with no tests enabled; sample test scaffold added
-    status: in-progress
-    notes:
-      - Coverage include restricted to src/client/** and passWithNoTests enabled
-      - MSW/RTL scaffolding planned next
+    status: planned
     links:
       branch: test/client-coverage-scope
 
@@ -83,7 +77,7 @@ items:
     priority: P3
     why: Enforce branch protections, required checks, secret scanning, and Dependabot.
     acceptance:
-      - Branch protections on dev/main (required CI, review, linear history)
+      - Branch protections on main/dev (required CI, review, linear history)
       - Dependabot alerts enabled and visible
       - Secret scanning + push protection on
       - Optional: CodeQL workflow
