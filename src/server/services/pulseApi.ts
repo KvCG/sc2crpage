@@ -6,32 +6,15 @@
  * @module pulseApi
  */
 
-import axios, { AxiosError } from 'axios'
-import https from 'https'
+import { AxiosError } from 'axios'
 import { readCsv } from '../utils/csvParser'
 import cache from '../utils/cache'
 import {
     toCostaRicaTime,
 } from '../utils/pulseApiHelper'
 import { DateTime } from 'luxon'
+import { get, withBasePath, endpoints } from './pulseHttpClient'
 
-/**
- * HTTPS agent for axios requests, disables certificate validation and enables keep-alive.
- */
-const agent = new https.Agent({
-    rejectUnauthorized: false,
-    keepAlive: true,
-    keepAliveMsecs: 15000,
-    timeout: 30000,
-})
-
-/**
- * Axios instance for SC2Pulse API requests.
- */
-const api = axios.create({
-    baseURL: 'https://sc2pulse.nephest.com/sc2/api',
-    httpAgent: agent,
-})
 
 /**
  * Searches for a player by name or BattleTag.
@@ -41,8 +24,8 @@ const api = axios.create({
 export const searchPlayer = async (term: string) => {
     try {
         // Node automatically decodes URL params so we encode the search term again.
-        const response = await api.get(`/character/search?term=${encodeURIComponent(term)}`)
-        return response.data
+        const data = await get<any>(withBasePath(endpoints.searchCharacter), { term: encodeURIComponent(term) })
+        return data
     } catch (error) {
         const axiosError = error as AxiosError
         console.error(`[searchPlayer] Error while searching for term "${term}": ${axiosError.message}`)
@@ -55,9 +38,8 @@ export const searchPlayer = async (term: string) => {
  */
 const getCurrentSeason = async () => {
     try {
-        const response = await api.get(`season/list/all`)
-        // The current season is assumed to be the first element
-        return response.data[0].battlenetId
+        const data = await get<any[]>(withBasePath(endpoints.listSeasons))
+        return data?.[0]?.battlenetId
     } catch (error) {
         const axiosError = error as AxiosError
         console.error(`[getCurrentSeason] Error fetching current season: ${axiosError.message}`)
@@ -73,11 +55,12 @@ const getPlayersStats = async (playerIds: string[]) => {
     if (!playerIds || playerIds.length === 0) return []
     const seasonId = await getCurrentSeason()
     const params = playerIds.map(id => `characterId=${id}`).join('&')
-    const url = `group/team?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&${params}`
+    const races = ['TERRAN', 'PROTOSS', 'ZERG', 'RANDOM']
+        .map(r => `race=${r}`).join('&')
+    const url = `${withBasePath(endpoints.groupTeam)}?season=${seasonId}&queue=LOTV_1V1&${races}&${params}`
     try {
-        const response = await api.get(url)
-        // Always return an array
-        return Array.isArray(response.data) ? response.data : [response.data]
+        const data = await get<any | any[]>(url)
+        return Array.isArray(data) ? data : [data]
     } catch (error) {
         const axiosError = error as AxiosError
         console.error(`[getPlayersStats] Error fetching stats: ${axiosError.message}`)
@@ -179,10 +162,10 @@ const isPlayerLikelyOnline = (
  * Reads the CSV file and returns an array of player character IDs.
  * @returns {Promise<string[]>} Array of player character IDs.
  */
-const getPlayersIds = async () => {
+const getPlayersIds = async (): Promise<string[]> => {
     try {
-        const players = await readCsv()
-        return players.map((player: { id: any }) => player.id)
+        const players = await readCsv() as unknown as Array<{ id: string }>
+        return players.map((player) => player.id)
     } catch (error) {
         console.error(`[getPlayersIds] Error reading CSV: ${(error as Error).message}`)
         return []
@@ -197,7 +180,7 @@ const getPlayersIds = async () => {
 function groupStatsByCharacterId(allStats: any[]): Record<string, any[]> {
     const statsByCharacterId: Record<string, any[]> = {}
     allStats.forEach(team => {
-        team.members.forEach(member => {
+        team.members.forEach((member: any) => {
             const charId = String(member.character?.id)
             if (!statsByCharacterId[charId]) statsByCharacterId[charId] = []
             statsByCharacterId[charId].push({
@@ -274,7 +257,7 @@ let inflightPromise: Promise<any[]> | null = null
  * @param {number} [maxRetries=3] - Maximum number of retries.
  * @returns {Promise<any[]>} Array of player ranking objects.
  */
-export const getTop = async (retries = 0, maxRetries = 3) => {
+export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
     const cacheKey = 'snapShot'
     const cachedData = cache.get(cacheKey)
     if (cachedData) {
@@ -288,7 +271,7 @@ export const getTop = async (retries = 0, maxRetries = 3) => {
     }
 
     // No cache and no fetch in progress: start a new fetch and store the promise.
-    inflightPromise = (async () => {
+    inflightPromise = (async (): Promise<any[]> => {
         try {
             const characterIds = await getPlayersIds()
             const allStats = await getPlayersStats(characterIds)

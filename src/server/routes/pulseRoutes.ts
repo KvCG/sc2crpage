@@ -17,6 +17,7 @@ router.get('/top', async (req: Request, res: Response) => {
 
     console.log('\nGetting live ranking data')
     console.log('INFO: ', details)
+    res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
     const rankingData = await getTop()
     const formattedData = await formatData(rankingData, 'ranking')
     res.json(formattedData)
@@ -35,7 +36,8 @@ router.get('/search', async (req: Request, res: Response) => {
     }
     console.log('INFO:', details)
 
-    const playerData = await searchPlayer(term)
+    res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
+    const playerData = await searchPlayer(term as string)
     const formattedData = await formatData(playerData, 'search')
     res.json(formattedData)
 })
