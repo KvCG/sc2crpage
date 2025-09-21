@@ -1,0 +1,11 @@
+{
+  "defaults": [
+    "NeO-Reviewer1",
+    "NeO-Reviewer2"
+  ],
+  "byPrefix": {
+    "test": ["NeO-Reviewer1", "NeO-Reviewer2"],
+    "docs": ["NeO-Reviewer1", "NeO-Reviewer2"],
+    "chore": ["NeO-Reviewer1", "NeO-Reviewer2"]
+  }
+}
