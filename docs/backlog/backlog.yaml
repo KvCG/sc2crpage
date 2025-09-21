@@ -1,0 +1,122 @@
+items:
+  - id: BL-001
+    title: Minimal CI stability and linting
+    type: techdebt
+    area: ops
+    priority: P0
+    why: Keep PR CI green with flat ESLint config and TS checks.
+    acceptance:
+      - CI runs lint, typecheck, build on PRs to dev/main
+      - eslint config uses flat ESM; no config errors
+      - Lint has 0 errors (warnings allowed)
+      - Repo builds without interactive input
+    status: in-progress
+    links:
+      branch: chore/simple-ci-and-docs
+
+  - id: BL-002
+    title: Server test suite expansion
+    type: techdebt
+    area: server
+    priority: P1
+    why: Cover routes/middleware/services, esp. SC2Pulse caching and error mapping.
+    acceptance:
+      - Vitest server suite covers pulseRoutes, pulseApi, error handlers
+      - v8 coverage >= 60% server-side
+      - Tests run non-interactively via npm scripts
+    status: in-progress
+    notes:
+      - Initial server tests and fixtures added (routes, middleware, services)
+      - SC2Pulse caching and error mapping covered; non-interactive Vitest config
+    links:
+      branch: test/server-suite
+
+  - id: BL-003
+    title: Client coverage scoping and scaffolding
+    type: techdebt
+    area: client
+    priority: P1
+    why: Avoid noise from non-client files and build a base for RTL/MSW tests.
+    acceptance:
+      - vitest.client.config.ts coverage.include limited to src/client/**
+      - Pass with no tests enabled; sample test scaffold added
+    status: in-progress
+    notes:
+      - Coverage include restricted to src/client/** and passWithNoTests enabled
+      - MSW/RTL scaffolding planned next
+    links:
+      branch: test/client-coverage-scope
+
+  - id: BL-004
+    title: Repo docs and contribution model
+    type: docs
+    area: ops
+    priority: P2
+    why: Ensure consistent PR flow, branching, and CI expectations.
+    acceptance:
+      - CONTRIBUTING.md documents delivery model and CI scope
+      - CODEOWNERS added for key areas
+      - README references contributing
+    status: done
+    links:
+      branches:
+        - docs/repo-docs
+        - chore/simple-ci-and-docs
+
+  - id: BL-005
+    title: Simplify workflows to single CI
+    type: techdebt
+    area: ops
+    priority: P2
+    why: Reduce maintenance surface; rely on Vercel for deploys.
+    acceptance:
+      - Only .github/workflows/ci.yml exists
+      - Old Deploy.yml removed
+    status: done
+    links:
+      branch: chore/simple-ci-and-docs
+
+  - id: BL-006
+    title: Security and governance baseline
+    type: techdebt
+    area: ops
+    priority: P3
+    why: Enforce branch protections, required checks, secret scanning, and Dependabot.
+    acceptance:
+      - Branch protections on dev/main (required CI, review, linear history)
+      - Dependabot alerts enabled and visible
+      - Secret scanning + push protection on
+      - Optional: CodeQL workflow
+    status: planned
+    links: {}
+
+  - id: BL-007
+    title: Fix dual deploy env mapping
+    type: techdebt
+    area: ops
+    priority: P0
+    why: Vercel has dev/prod but both point to the same Render instance; enforce proper environment separation to avoid cross-environment traffic.
+    acceptance:
+      - Vercel dev deploy points to Render dev (or isolated dev URL/env)
+      - Vercel prod deploy points to Render prod instance
+      - Environment variables scoped per env in Vercel and Render
+      - Mapping documented in README/CONTRIBUTING
+    status: in-progress
+    links:
+      branch: chore/simple-ci-and-docs
+
+  - id: BL-008
+    title: Backlog steward enforcement
+    type: docs
+    area: ops
+    priority: P0
+    why: Enforce branch/commit/PR conventions tied to backlog IDs for traceability.
+    acceptance:
+      - USAGE.md documents capture/persist, branch naming, commit, PR rules, lifecycle, diffs, hygiene, guardrails
+      - New branches follow <type>/<BL-###>-<kebab-title>
+      - All new branches are created from main (default branch)
+      - Commits include [BL-###] suffix and conventional commit format
+      - PR template/title guidance included; PRs carry acceptance and checklist
+    status: in-progress
+    links:
+      branch: docs/BL-008-backlog-steward-enforcement
