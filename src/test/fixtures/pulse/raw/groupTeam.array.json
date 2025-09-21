@@ -1,0 +1,13 @@
+[
+    {
+        "members": [
+            {
+                "character": { "id": "1" },
+                "raceGames": { "PROTOSS": 10 }
+            }
+        ],
+        "lastPlayed": "2024-01-01T12:00:00Z",
+        "league": { "type": "MASTER" },
+        "rating": 3000
+    }
+]
