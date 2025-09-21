@@ -83,7 +83,7 @@ items:
     priority: P3
     why: Enforce branch protections, required checks, secret scanning, and Dependabot.
     acceptance:
-      - Branch protections on main/dev (required CI, review, linear history)
+      - Branch protections on dev/main (required CI, review, linear history)
       - Dependabot alerts enabled and visible
       - Secret scanning + push protection on
       - Optional: CodeQL workflow
