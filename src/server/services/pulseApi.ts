@@ -41,7 +41,8 @@ export const searchPlayer = async (term: string) => {
 const getCurrentSeason = async () => {
     try {
         const data = await get<any[]>(withBasePath(endpoints.listSeasons))
-        return data?.[0]?.battlenetId
+        const us = data?.find((s: any) => s?.region === 'US')
+        return us?.battlenetId ?? data?.[0]?.battlenetId
     } catch (error) {
         const axiosError = error as AxiosError
         console.error(`[getCurrentSeason] Error fetching current season: ${axiosError.message}`)
@@ -70,10 +71,7 @@ const getPlayersStats = async (playerIds: string[]) => {
         const limit = Math.min(chunk.length * 4, 400)
         const url = `${withBasePath(endpoints.groupTeam)}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&limit=${limit}&${params}`
         try {
-            const t0 = Date.now()
             const data = await get<any | any[]>(url)
-            const dt = Date.now() - t0
-            observePulseLatency(dt)
             const arr = Array.isArray(data) ? data : [data]
             all.push(...arr)
         } catch (error) {
