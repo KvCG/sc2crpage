@@ -3,40 +3,48 @@ import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { Flex} from '@mantine/core'
 import { IconRefresh } from '@tabler/icons-react'
-import { addPositionChangeIndicator } from '../utils/rankingHelper'
+import { addPositionChangeIndicator, type DecoratedRow } from '../utils/rankingHelper'
 import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
+import { getSnapshot } from '../services/api'
 
 export const Ranking = () => {
     const { data, loading, error, fetch } = useFetch('ranking')
-    const [currentData, setCurrentData] = useState(data)
+    const [currentData, setCurrentData] = useState<DecoratedRow[] | null>(null)
+    const [baseline, setBaseline] = useState<DecoratedRow[] | null>(null)
 
     useEffect(() => {
-        // On mount, load snapshot if valid, else fetch
-        const snapshotData = loadData('snapShot')
-        if (isValid('snapShot', snapshotData)) {
-            setCurrentData(snapshotData.data)
-        } else {
+        // On mount: resolve baseline (daily snapshot), then fetch live ranking
+        const init = async () => {
+            // Cleanup legacy key to avoid conflicts with new dailySnapshot cache
+            try { localStorage.removeItem('snapShot') } catch {}
+            const cached = loadData('dailySnapshot')
+            if (isValid('dailySnapshot', cached)) {
+                setBaseline(cached.data as DecoratedRow[])
+            } else {
+                try {
+                    const resp = await getSnapshot()
+                    const serverSnap = resp.data // { data, createdAt, expiry }
+                    const wrapper = { data: serverSnap.data, expiry: serverSnap.expiry }
+                    saveSnapShot('dailySnapshot', wrapper)
+                    setBaseline(serverSnap.data as DecoratedRow[])
+                } catch (e) {
+                    // If snapshot fails, proceed without baseline
+                    setBaseline([])
+                }
+            }
             fetch()
         }
+        init()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {
-        // When new data arrives, compare to previous snapshot and update UI
-        if (data) {
-            const prevSnapshot = loadData('snapShot')
-            const finalRanking = addPositionChangeIndicator(
-                data,
-                prevSnapshot ? prevSnapshot.data : []
-            )
-            const ttl = 300000 // 5 min
-            const wrapper = {
-                data: finalRanking,
-                expiry: new Date().getTime() + ttl,
-            }
-            saveSnapShot('snapShot', wrapper)
+        // When live data arrives and we have a baseline, compute indicators
+        if (data && baseline !== null) {
+            const finalRanking = addPositionChangeIndicator(data, baseline)
             setCurrentData(finalRanking)
         }
-    }, [data])
+    }, [data, baseline])
 
     const renderResults = () => {
         if (error) {

@@ -16,6 +16,11 @@ export const getTop = async () => {
     return response
 }
 
+export const getSnapshot = async () => {
+    const response = await api.get(`api/snapshot`)
+    return response
+}
+
 export const getTournament = async () => {
     const response = await api.get(`api/tournament/`)
 

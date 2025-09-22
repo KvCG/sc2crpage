@@ -7,7 +7,12 @@ import master from '../assets/Master.png'
 import gm from '../assets/Grandmaster.png'
 import unknownRank from '../assets/unknownRank.svg'
 
-export const getLeagueSrc = leagueType => {
+ // Directional indicator for position movement
+ export type Indicator = 'up' | 'down' | 'none'
+type RowWithBtag = { btag?: string; [key: string]: any }
+export type DecoratedRow = RowWithBtag & { positionChangeIndicator: Indicator; positionDelta?: number }
+
+export const getLeagueSrc = (leagueType: number) => {
     switch (leagueType) {
         case 0:
             return bronze
@@ -28,39 +33,43 @@ export const getLeagueSrc = leagueType => {
     }
 }
 
-export const addPositionChangeIndicator = (currentRanking, previousRanking) => {
-    const finalRanking = currentRanking.map(
-        (currentPlayer, currentPosition) => {
-            const previousPosition = previousRanking?.findIndex(
-                player => player.btag == currentPlayer.btag
-            )
-            if (currentPosition > previousPosition) {
-                currentPlayer.positionChangeIndicator = '\u25BC'
-            }
-            if (currentPosition < previousPosition) {
-                currentPlayer.positionChangeIndicator = '\u25B2'
-            }
-            if (
-                !previousPosition ||
-                currentPosition == previousPosition ||
-                previousPosition == -1
-            ) {
-                // Not found in previous ranking
-                currentPlayer.positionChangeIndicator = ''
-            }
+export const addPositionChangeIndicator = (
+    current: RowWithBtag[] | null,
+    baseline: RowWithBtag[] | null
+): DecoratedRow[] | null => {
+    if (!current) return null
+    if (!Array.isArray(baseline) || baseline.length === 0) {
+        return current.map((row) => ({ ...row, positionChangeIndicator: 'none' }))
+    }
 
-            return currentPlayer
+    // Fast lookup: map each player's battle tag to their previous index
+    const previousIndexByBtag = new Map<string, number>()
+    baseline.forEach((row, index) => {
+        if (row?.btag) previousIndexByBtag.set(row.btag, index)
+    })
+
+    return current.map((row, currentIndex) => {
+        const btag = row?.btag
+        const previousIndex = btag ? previousIndexByBtag.get(btag) : undefined
+        if (typeof previousIndex !== 'number') {
+            // New player relative to baseline or missing btag → no indicator
+            return { ...row, positionChangeIndicator: 'none' }
         }
-    )
-
-    return finalRanking
+        const delta = previousIndex - currentIndex // positive → moved up
+        if (delta > 0) {
+            return { ...row, positionChangeIndicator: 'up', positionDelta: delta }
+        }
+        if (delta < 0) {
+            return { ...row, positionChangeIndicator: 'down', positionDelta: delta }
+        }
+        return { ...row, positionChangeIndicator: 'none' }
+    })
 }
 
-export const addOnlineIndicator = (lastPlayed, online) => {
+export const addOnlineIndicator = (lastPlayed: string, online: boolean) => {
     if (online) {
 		return '🟢'
 	}
-
     return lastPlayed
 }
 
