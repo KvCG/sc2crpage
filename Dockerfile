@@ -9,6 +9,7 @@ RUN npm ci
 
 # Copy the rest of the source code
 COPY src ./src
+COPY plugins ./plugins
 COPY tsconfig.node.json ./
 COPY tsconfig.json ./
 COPY vite.config.ts ./

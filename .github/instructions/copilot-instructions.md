@@ -101,6 +101,14 @@ Readability is mandatory. Generate code that is easy to read, easy to maintain, 
 - Favor readability over micro‑performance optimizations unless performance is a measured bottleneck.
 - Treat readability as a first‑class acceptance criterion in all suggested changes and PR reviews.
 
+### Separation of Concerns (High Priority)
+- Keep build tooling plugins separate from configuration files.
+  - Vite plugins live under `plugins/` (e.g., `plugins/clientBuildInfo.ts`).
+  - `vite.config.ts` should only assemble plugins and set Vite options.
+- Share cross-cutting runtime detection in `src/shared/` only (e.g., `src/shared/runtimeEnv.ts`).
+- Server-only helpers (e.g., git process calls) belong in `src/server/utils/` (e.g., `src/server/utils/gitInfo.ts`).
+- Do not mix runtime app logic with build-time tooling; prefer small, focused modules.
+
 Avoid:
 - Overly clever chaining or compressed syntax.
 - Cryptic abbreviations.
