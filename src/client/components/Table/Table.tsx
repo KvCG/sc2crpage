@@ -87,7 +87,7 @@ const RankingTableRow = ({ row, index, visibleColumns }: RowProps) => {
             {visibleColumns.zerg && <Table.Td>{gamesPerRace?.zergGamesPlayed}</Table.Td>}
             {visibleColumns.random && <Table.Td>{gamesPerRace?.randomGamesPlayed}</Table.Td>}
             {visibleColumns.total && <Table.Td>{totalGames}</Table.Td>}
-            {visibleColumns.lastPlayed && <Table.Td>{addOnlineIndicator(lastDatePlayed, online)}</Table.Td>}
+            {visibleColumns.lastPlayed && <Table.Td className={classes.lastPlayedColumn}>{addOnlineIndicator(lastDatePlayed, online)}</Table.Td>}
         </Table.Tr>
     )
 }
