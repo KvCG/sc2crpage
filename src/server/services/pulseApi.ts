@@ -14,6 +14,7 @@ import {
 } from '../utils/pulseApiHelper'
 import { DateTime } from 'luxon'
 import { get, withBasePath, endpoints } from './pulseHttpClient'
+import { metrics } from '../metrics/lite'
 
 
 /**
@@ -271,9 +272,11 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
     const cacheKey = 'snapShot'
     const cachedData = cache.get(cacheKey)
     if (cachedData) {
+        try { metrics.cache_hit_total++ } catch {}
         // If cache is valid, return it immediately.
         return cachedData
     }
+    try { metrics.cache_miss_total++ } catch {}
     if (inflightPromise) {
         // If a fetch is already in progress, return the same promise.
         // This prevents multiple concurrent fetches for the same data.
