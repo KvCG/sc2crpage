@@ -1,8 +1,0 @@
-{
-    "defaults": ["NeO11hub", "CarlosCartinCascante"],
-    "byPrefix": {
-        "test": ["NeO11hub", "CarlosCartinCascante"],
-        "docs": ["NeO11hub", "CarlosCartinCascante"],
-        "chore": ["NeO11hub", "CarlosCartinCascante"]
-    }
-}
