@@ -223,38 +223,33 @@ function extractRace(highestRatingObj: any): string | null {
 }
 
 /**
- * inflightPromise is used to prevent a "cache stampede" problem.
+ * getTop: fetch and return the latest player ranking snapshot.
  *
- * What is a cache stampede?
- * -------------------------
- * When the cache expires (or is empty), if multiple requests arrive at the same time,
- * each request would trigger a new fetch to the expensive data source (API, DB, etc.).
- * This can overwhelm your backend or external services, especially under high load.
+ * Plain-English overview:
+ * - SC2Pulse (the upstream API) can be slow or flaky. To keep our API fast,
+ *   we cache the last successful result for ~30 seconds. If a request comes in
+ *   during that window, we return the cached data immediately.
+ * - When the cache is empty or expired, we start ONE refresh. While that
+ *   refresh is running, any other requests will wait for the same work to
+ *   finish (instead of kicking off duplicate fetches). This is handled by the
+ *   `inflightPromise` variable.
+ * - We first read the local CSV to get the list of player IDs (fast). Then we
+ *   call SC2Pulse to get stats for those IDs. Because the upstream might fail,
+ *   we retry that remote fetch a few times using a simple loop (no recursion).
+ * - We only update the cache if the refresh succeeds. If there are no IDs or
+ *   all attempts fail, we return an empty array (we don’t serve stale data).
  *
- * How does inflightPromise solve this?
- * ------------------------------------
- * - When a request comes in and the cache is empty, we start fetching the data and assign
- *   the resulting Promise to inflightPromise.
- * - If another request comes in while the first fetch is still in progress, it will see
- *   that inflightPromise is not null and simply "await" the same Promise, instead of
- *   starting a new fetch.
- * - Once the fetch completes (success or error), inflightPromise is set back to null.
- * - This ensures that, at most, only one fetch is in progress at any time, and all
- *   concurrent requests share the same result.
- *
- * This pattern is especially useful in stateless environments like Express/Node.js,
- * where many requests can arrive in parallel.
+ * Why this design?
+ * - Caching keeps common requests fast and reduces pressure on SC2Pulse.
+ * - A single in-flight refresh prevents a “thundering herd” of duplicate calls.
+ * - Loop-based retries are easy to read and avoid subtle bugs with recursion
+ *   and in-flight state.
  */
+
+// Anti-stampede: share one ongoing refresh across concurrent callers.
+// A single in-flight promise is created per cold-cache window and reset in finally.
 let inflightPromise: Promise<any[]> | null = null
 
-/**
- * Main function to get the top player rankings.
- * Caches the result to avoid excessive API calls and refreshes automatically on expiration.
- * Uses an in-flight promise to prevent cache stampede.
- * @param {number} [retries=0] - Current retry count.
- * @param {number} [maxRetries=3] - Maximum number of retries.
- * @returns {Promise<any[]>} Array of player ranking objects.
- */
 export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
     const cacheKey = 'snapShot'
     const cachedData = cache.get(cacheKey)
@@ -272,41 +267,52 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
     inflightPromise = (async (): Promise<any[]> => {
         try {
             const characterIds = await getPlayersIds()
-            const allStats = await getPlayersStats(characterIds)
-            const statsByCharacterId = groupStatsByCharacterId(allStats)
+            if (!characterIds || characterIds.length === 0) {
+                return []
+            }
 
-            const finalRanking = await Promise.all(
-                characterIds.map(async (characterId: string) => {
-                    const statsForPlayer = statsByCharacterId[characterId] || []
-                    const gamesPerRace = await getPlayerGamesPerRace(statsForPlayer)
-                    const lastDatePlayed = await getPlayerLastDatePlayed(statsForPlayer)
-                    const online = isPlayerLikelyOnline(statsForPlayer)
+            for (let attempt = retries; attempt <= maxRetries; attempt++) {
+                try {
+                    const allStats = await getPlayersStats(characterIds)
+                    const statsByCharacterId = groupStatsByCharacterId(allStats)
 
-                    const highestRatingObj = getHighestRatingObj(statsForPlayer)
-                    const highestLeagueType = highestRatingObj?.leagueType ?? null
-                    const race = extractRace(highestRatingObj)
+                    const finalRanking = await Promise.all(
+                        characterIds.map(async (characterId: string) => {
+                            const statsForPlayer = statsByCharacterId[characterId] || []
+                            const gamesPerRace = await getPlayerGamesPerRace(statsForPlayer)
+                            const lastDatePlayed = await getPlayerLastDatePlayed(statsForPlayer)
+                            const online = isPlayerLikelyOnline(statsForPlayer)
 
-                    return {
-                        playerCharacterId: characterId,
-                        race,
-                        gamesPerRace,
-                        lastDatePlayed,
-                        online,
-                        ratingLast: highestRatingObj?.rating ?? null,
-                        leagueTypeLast: highestLeagueType
+                            const highestRatingObj = getHighestRatingObj(statsForPlayer)
+                            const highestLeagueType = highestRatingObj?.leagueType ?? null
+                            const race = extractRace(highestRatingObj)
+
+                            return {
+                                playerCharacterId: characterId,
+                                race,
+                                gamesPerRace,
+                                lastDatePlayed,
+                                online,
+                                ratingLast: highestRatingObj?.rating ?? null,
+                                leagueTypeLast: highestLeagueType
+                            }
+                        })
+                    )
+
+                    // Store in cache for 30 seconds (lru-cache handles TTL)
+                    cache.set(cacheKey, finalRanking)
+                    return finalRanking
+                } catch (err) {
+                    if (attempt === maxRetries) {
+                        console.error(`[getTop] Failed after ${maxRetries} retries:`, err)
+                        return []
                     }
-                })
-            )
-
-            // Store in cache for 30 seconds (lru-cache handles TTL)
-            cache.set(cacheKey, finalRanking)
-            return finalRanking
+                    // continue to next attempt without recursion
+                }
+            }
+            return []
         } catch (error) {
             console.error(`[getTop] Error:`, error)
-            if (retries < maxRetries) {
-                return getTop(retries + 1, maxRetries)
-            }
-            console.error(`[getTop] Failed after ${maxRetries} retries:`, error)
             return []
         } finally {
             // Always reset inflightPromise so future requests can trigger a new fetch if needed.
