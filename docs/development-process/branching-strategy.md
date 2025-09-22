@@ -6,8 +6,10 @@ This document outlines the trunk-based development approach for the SC2CR projec
 
 ## Core Branches
 
-- `dev` - Primary development branch, always integrating new features
-- `main` - Production branch, receives selective changes from `dev`
+- `dev` — Primary development branch (trunk), integrates ongoing work and experiments
+- `main` — Production branch, only receives selected, release-ready changes
+
+Important: We never merge `dev` into `main`. Releases are curated subsets of `dev`.
 
 ## Feature Development Workflow
 
@@ -28,33 +30,43 @@ This document outlines the trunk-based development approach for the SC2CR projec
 3. **Integration**
    - Create PR from `feature/description` to `dev`
    - After code review, merge to `dev`
-   - CI/CD automatically deploys `dev` to preview environments
+   - CI/CD deploys `dev` to the permanent dev environment (and per-PR previews)
 
 ## Release Process
 
-Our approach allows selective promotion of changes from `dev` to `main`:
+Curate a release by selecting only the commits you want from `dev`:
 
-1. **Prepare Release**
+1. **Prepare a curated set**
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b temp-release-prep
+   # Select commits relative to main
+   git rebase -i origin/main
+   # In the editor: pick only the commits you want, drop the rest, squash related ones
+   ```
+
+2. **Create release branch from main**
    ```bash
    git checkout main
    git pull origin main
-   git checkout -b release/version
-   ```
-
-2. **Select Changes**
-   ```bash
-   # Option 1: Cherry-pick specific commits
-   git cherry-pick <commit-hash>
-   
-   # Option 2: Interactive rebase to select commits
-   git rebase -i origin/dev
-   # In the editor, keep only commits for this release
+   git checkout -b release/1.x.x
+   git merge --no-ff temp-release-prep
    ```
 
 3. **Finalize Release**
-   - Create PR from `release/version` to `main`
-   - After approval, merge to `main`
-   - CI/CD automatically deploys to production
+   - Open PR from `release/1.x.x` → `main`
+   - After approval and verification, merge to `main`
+   - Tag the release and push tags; CI/CD deploys production
+   ```bash
+   git tag v1.x.x
+   git push origin main --tags
+   ```
+
+4. **Clean up**
+   ```bash
+   git branch -D temp-release-prep
+   ```
 
 ## Hotfix Process
 
@@ -81,6 +93,42 @@ For urgent production fixes:
    git cherry-pick <hotfix-commit>
    git push origin dev
    ```
+
+## Practical Examples
+
+### Example: FE + BE developed together, partial release
+
+```
+dev:  [A: BE endpoint] - [B: FE wires BE] - [C: Docs] - [D: WIP replay analyzer]
+main: [release v1.3.0]
+
+# Prepare curated release with A, B, C (skip D)
+git checkout dev && git pull
+git checkout -b temp-release-prep
+git rebase -i origin/main   # pick A, B, C; drop D
+
+git checkout main && git pull
+git checkout -b release/1.3.1
+git merge --no-ff temp-release-prep
+
+# Test, then merge PR to main, tag v1.3.1
+```
+
+### Example: Solo day-to-day without feature branch
+
+```
+git checkout dev && git pull
+# commit small changes directly, push, verify on dev environment
+```
+
+### Example: Long-running or risky work
+
+```
+git checkout dev && git pull
+git checkout -b feature/risk/experiment
+# work safely; keep rebasing/merging dev as needed
+git checkout dev && git merge feature/risk/experiment
+```
 
 ## Comparison with GitFlow
 

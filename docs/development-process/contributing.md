@@ -27,6 +27,50 @@ Key points:
 - Env via `process.env`; add new keys to `.env.example` and note in docs.
 - Tests (Vitest planned): co-locate. Prefer MSW for client and axios mocking for server.
 
+## Commit Convention
+We use Conventional Commits for clarity and automation readiness.
+
+Format:
+```
+<type>(<optional-scope>): <short summary>
+
+[optional body]
+
+[optional footer]
+```
+
+Types:
+- `feat`: new feature
+- `fix`: bug fix
+- `chore`: tooling, deps, scripts (no src behavior change)
+- `docs`: documentation only
+- `refactor`: code change that neither fixes a bug nor adds a feature
+- `perf`: performance improvements
+- `test`: add or update tests
+- `style`: formatting, missing semi-colons, etc. (no code change)
+- `revert`: revert a previous commit
+
+Scopes (suggested): `api`, `client`, `server`, `ranking`, `replays`, `tournament`, `docs`, `build`, `ci`.
+
+Backlog ID: include `[BL-###]` in the subject when applicable.
+
+Examples:
+```
+feat(api): add player MMR history endpoint [BL-012]
+fix(client): handle null MMR in ranking table [BL-013]
+docs: update branching strategy to curated releases
+chore(ci): run lint + typecheck on PR
+refactor(server): extract cache layer from pulse service
+```
+
+Breaking changes:
+- Indicate with `!` after type, or add a `BREAKING CHANGE:` footer.
+```
+feat(api)!: change ranking endpoint response shape
+
+BREAKING CHANGE: `rank` renamed to `mmrRank`, update clients
+```
+
 ## Behavior
 - Before coding: scan nearby files and align with patterns.
 - Keep diffs minimal; reuse scripts/config.
