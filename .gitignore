@@ -15,6 +15,9 @@ dist-ssr
 secrets
 src/data/
 
+# Test coverage output
+coverage/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
