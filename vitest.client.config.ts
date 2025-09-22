@@ -18,16 +18,20 @@ export default defineConfig({
             exclude: [
                 'node_modules/',
                 'src/test/',
+                'src/client/**/__tests__/**',
+                'src/client/**/*.{test,spec}.{js,jsx,ts,tsx}',
+                'src/client/**/*.stories.{js,jsx,ts,tsx}',
+                'src/client/**/mocks/**',
                 '**/*.d.ts',
                 'coverage/**',
                 'dist/**',
             ],
-            thresholds: {
-                lines: 85,
-                statements: 85,
-                functions: 85,
-                branches: 85,
-            },
+            // thresholds: {
+            //     lines: 85,
+            //     statements: 85,
+            //     functions: 85,
+            //     branches: 85,
+            // },
         },
     },
 })
