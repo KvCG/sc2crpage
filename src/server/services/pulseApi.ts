@@ -199,7 +199,10 @@ function groupStatsByCharacterId(allStats: any[]): Record<string, any[]> {
                 ...member,
                 lastPlayed: team.lastPlayed,
                 leagueType: team.league?.type,
-                rating: team.rating
+                rating: team.rating,
+                wins: team.wins ?? 0,
+                losses: team.losses ?? 0,
+                ties: team.ties ?? 0,
             })
         })
     })
@@ -300,6 +303,10 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
                             const highestRatingObj = getHighestRatingObj(statsForPlayer)
                             const highestLeagueType = highestRatingObj?.leagueType ?? null
                             const race = extractRace(highestRatingObj)
+                            const gamesThisSeason = statsForPlayer.reduce((total, member) => {
+                                const { wins = 0, losses = 0, ties = 0 } = member ?? {}
+                                return total + wins + losses + ties
+                            }, 0)
 
                             return {
                                 playerCharacterId: characterId,
@@ -308,7 +315,8 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
                                 lastDatePlayed,
                                 online,
                                 ratingLast: highestRatingObj?.rating ?? null,
-                                leagueTypeLast: highestLeagueType
+                                leagueTypeLast: highestLeagueType,
+                                gamesThisSeason,
                             }
                         })
                     )

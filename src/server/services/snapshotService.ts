@@ -2,6 +2,7 @@ import { formatData } from '../utils/formatData'
 import snapshotCache from '../utils/snapshotCache'
 import { getTop } from './pulseApi'
 import { DateTime } from 'luxon'
+import { filterRankingForDisplay } from '../utils/rankingFilters'
 
 const SNAPSHOT_KEY = 'dailySnapshot'
 
@@ -18,14 +19,7 @@ export async function getDailySnapshot(): Promise<SnapshotResponse> {
     // Compute from live data and cache for 24h
     const raw = await getTop()
     const ranked = await formatData(raw, 'ranking')
-    // Snapshots should exclude invalid/unranked entries
-    const filtered = (ranked ?? []).filter(
-        (row: any) =>
-            Number.isFinite(row?.ratingLast) &&
-            Number.isFinite(row?.leagueTypeLast) &&
-            typeof row?.race === 'string'
-    )
-    const data = filtered.length > 0 ? filtered : (ranked ?? [])
+    const data = filterRankingForDisplay(ranked)
     const nowCR = DateTime.now().setZone('America/Costa_Rica')
     const createdAt = nowCR.toISO() ?? new Date().toISOString()
     const snapshot = {
