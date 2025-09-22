@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { metrics, observePulseLatency } from '../metrics/lite'
+import type { InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 
 /**
  * SC2Pulse HTTP client
@@ -23,7 +25,41 @@ export const endpoints = {
 export const withBasePath = (path: string) => path
 
 // Shared axios instance
-const client = axios.create({ baseURL: BASE_URL })
+const client = axios.create({ baseURL: BASE_URL, timeout: Number(process.env.PULSE_TIMEOUT_MS || 8000) })
+
+// Propagate x-request-id and observability on responses/errors
+client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+    try {
+        // Inject x-request-id from current async context if available via headers pass-through
+        // In Express, we'll forward req headers manually at call sites when needed; keep generic here.
+        return config
+    } catch {
+        return config
+    }
+})
+
+client.interceptors.response.use(
+    (response: AxiosResponse) => {
+        metrics.pulse_req_total++
+        const rt = Number(response?.headers?.['request-duration-ms']) || 0
+        if (rt > 0) observePulseLatency(rt)
+        return response
+    },
+    (error: any) => {
+        const status = error?.response?.status as number | undefined
+        const code = error?.code as string | undefined
+        if (code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
+            metrics.pulse_err_total.timeout++
+        } else if (typeof status === 'number') {
+            if (status >= 500) metrics.pulse_err_total.http5xx++
+            else if (status >= 400) metrics.pulse_err_total.http4xx++
+            else metrics.pulse_err_total.other = (metrics.pulse_err_total.other || 0) + 1
+        } else {
+            metrics.pulse_err_total.network++
+        }
+        return Promise.reject(error)
+    }
+)
 
 // Simple rate limiter based on RPS; disabled in test env
 let nextAvailableAt = 0
@@ -45,17 +81,18 @@ const shouldRetry = (status?: number) =>
 export async function get<T = any>(
     path: string,
     params?: Record<string, any>,
+    options?: { headers?: Record<string, any> },
     retries = 0,
     maxRetries = 2
 ): Promise<T> {
     try {
         await schedule()
-        const res = await client.get(path, params ? { params } : {})
+        const res = await client.get(path, { params, headers: options?.headers })
         return res.data as T
     } catch (err: any) {
         const status = err?.response?.status as number | undefined
         if (shouldRetry(status) && retries < maxRetries) {
-            return get<T>(path, params, retries + 1, maxRetries)
+            return get<T>(path, params, options, retries + 1, maxRetries)
         }
         return Promise.reject({
             error: err?.message ?? 'Unknown error',
