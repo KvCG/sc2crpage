@@ -22,12 +22,9 @@ items:
     why: Cover routes/middleware/services, esp. SC2Pulse caching and error mapping.
     acceptance:
       - Vitest server suite covers pulseRoutes, pulseApi, error handlers
-      - v8 coverage >= 60% server-side
+      - v8 coverage  60% server-side
       - Tests run non-interactively via npm scripts
-    status: in-progress
-    notes:
-      - Initial server tests and fixtures added (routes, middleware, services)
-      - SC2Pulse caching and error mapping covered; non-interactive Vitest config
+    status: planned
     links:
       branch: test/server-suite
 
@@ -40,10 +37,7 @@ items:
     acceptance:
       - vitest.client.config.ts coverage.include limited to src/client/**
       - Pass with no tests enabled; sample test scaffold added
-    status: in-progress
-    notes:
-      - Coverage include restricted to src/client/** and passWithNoTests enabled
-      - MSW/RTL scaffolding planned next
+    status: planned
     links:
       branch: test/client-coverage-scope
 
@@ -83,7 +77,7 @@ items:
     priority: P3
     why: Enforce branch protections, required checks, secret scanning, and Dependabot.
     acceptance:
-      - Branch protections on dev/main (required CI, review, linear history)
+      - Branch protections on main/dev (required CI, review, linear history)
       - Dependabot alerts enabled and visible
       - Secret scanning + push protection on
       - Optional: CodeQL workflow
@@ -120,3 +114,18 @@ items:
     status: in-progress
     links:
       branch: docs/BL-008-backlog-steward-enforcement
+
+  - id: BL-009
+    title: Rebase chore/simple-ci-and-docs cleanly
+    type: techdebt
+    area: ops
+    priority: P0
+    why: Keep history linear and remove stale docs conflicts so CI/docs changes can be reviewed in isolation.
+    acceptance:
+      - Branch chore/simple-ci-and-docs rebased onto origin/main with docs conflicts resolved in favor of main
+      - Push succeeds with --force-with-lease
+      - PR to dev references [BL-009] and passes CI
+      - Minimal diff; no unrelated file churn
+    status: planned
+    links:
+      branch: chore/simple-ci-and-docs

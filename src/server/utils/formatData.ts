@@ -5,8 +5,8 @@ import {
     verifyPlayer,
 } from './userDataHelper'
 
-export const formatData = async (data, type) => {
-    let formattedData = []
+export const formatData = async (data: any, type: string) => {
+    let formattedData: any = []
     switch (type) {
         case 'search': {
             formattedData = formatSearchData(data)
@@ -25,9 +25,9 @@ export const formatData = async (data, type) => {
     return formattedData
 }
 
-const simplifyPlayerData = data => {
-    let players = []
-    data.forEach(current => {
+const simplifyPlayerData = (data: any[]) => {
+    const players: any[] = []
+    data.forEach((current: any) => {
         const {
             leagueMax,
             ratingMax,
@@ -61,13 +61,13 @@ const simplifyPlayerData = data => {
     return players
 }
 
-const formatSearchData = data => {
-    let players = simplifyPlayerData(data)
+const formatSearchData = (data: any[]) => {
+    const players = simplifyPlayerData(data)
 
     return players
 }
 
-const formatRankingData = async data => {
+const formatRankingData = async (data: any) => {
     if (!data) return null
     data = await Promise.all(
         (Array.isArray(data) ? data : [data]).map(async playerData => {
@@ -76,14 +76,14 @@ const formatRankingData = async data => {
         })
     )
     data = filterByHighestRatingLast(data)
-    return data.sort((a, b) => b.ratingLast - a.ratingLast)
+    return data.sort((a: any, b: any) => b.ratingLast - a.ratingLast)
 }
 
-const formatParticipantData = async data => {
+const formatParticipantData = async (data: any) => {
     if (!data) return null
 
-    let crossReferenceData = await Promise.all(
-        data?.map(async ({ participant }) => {
+    const crossReferenceData = await Promise.all(
+        data?.map(async ({ participant }: any) => {
             const verifiedPlayerData = await verifyChallongeParticipant(
                 getSlimParticipant(participant)
             )
@@ -94,7 +94,7 @@ const formatParticipantData = async data => {
     return crossReferenceData
 }
 
-const getSlimParticipant = participant => {
+const getSlimParticipant = (participant: any) => {
     if (!participant) return null
 
     const slimParticipant = {
@@ -114,7 +114,7 @@ const getSlimParticipant = participant => {
     return slimParticipant
 }
 
-const formatTournamentData = async data => {
+const formatTournamentData = async (data: any) => {
     if (!data) return null
     let { info, participants, matches } = data
     info = getSlimInfo(info)
@@ -125,7 +125,7 @@ const formatTournamentData = async data => {
     return { info, participants, matches, standings }
 }
 
-const getSlimInfo = data => {
+const getSlimInfo = (data: any) => {
     if (!data) return null
     const slimInfo = {
         id: data.id,
@@ -148,17 +148,17 @@ const getSlimInfo = data => {
     return slimInfo
 }
 
-const formatMatchData = (matches, participants) => {
+const formatMatchData = (matches: any[], participants: any[]) => {
     if (!matches || !participants) return null
-    return matches?.map(({ match }, index) => {
+    return matches?.map(({ match }: any, index: number) => {
         match.number = index + 1
-        let slimMatch = getSlimMatch(match)
+    let slimMatch = getSlimMatch(match)
         slimMatch = addMatchCategory(slimMatch, participants)
         return slimMatch
     })
 }
 
-const getSlimMatch = match => {
+const getSlimMatch = (match: any) => {
     if (!match) return null
     const slimMatch = {
         id: match.id,

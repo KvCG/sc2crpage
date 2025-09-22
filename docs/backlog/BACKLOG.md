@@ -39,6 +39,17 @@
   - Status: in-progress
   - Links: branch docs/BL-008-backlog-steward-enforcement
 
+- BL-009: Rebase chore/simple-ci-and-docs cleanly (ops)
+  - Type: techdebt
+  - Priority: P0
+  - Why: Keep history linear and remove stale docs conflicts so CI/docs changes can be reviewed in isolation.
+  - Acceptance Criteria:
+    - Branch `chore/simple-ci-and-docs` rebased onto `origin/main` with conflicts resolved by keeping `main` versions for `docs/backlog/**`.
+    - No remaining conflicts; push succeeds with `--force-with-lease`.
+    - PR opened to `dev` referencing [BL-009] with acceptance checklist; CI green.
+    - No unrelated file churn introduced (minimal diff principle).
+  - Status: planned
+  - Links: branch chore/simple-ci-and-docs
 ## NEXT (P1)
 
 - BL-002: Server test suite expansion (server)
@@ -47,10 +58,9 @@
   - Why: Cover routes/middleware/services, esp. SC2Pulse caching and error mapping.
   - Acceptance Criteria:
     - Vitest server suite covers pulseRoutes, pulseApi, error handlers.
-    - v8 coverage >= 60% server-side.
+    - v8 coverage ≥ 60% server-side.
     - Tests run non-interactively via npm scripts.
-  - Status: in-progress
-  - Notes: Initial server tests and fixtures added (routes, middleware, services). Vitest server config in place; SC2Pulse caching and error mapping covered. Tests run non-interactively.
+  - Status: planned
   - Links: branch test/server-suite
 
 - BL-003: Client coverage scoping and scaffolding (client)
@@ -60,8 +70,7 @@
   - Acceptance Criteria:
     - vitest.client.config.ts coverage.include limited to src/client/**
     - Pass with no tests enabled; sample test scaffold added.
-  - Status: in-progress
-  - Notes: Coverage include restricted to `src/client/**` and passWithNoTests enabled; preparing MSW/RTL test scaffolding.
+  - Status: planned
   - Links: branch test/client-coverage-scope
 
 ## LATER (P2)

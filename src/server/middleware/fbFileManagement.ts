@@ -1,12 +1,13 @@
 import { bucket } from '../services/firebase'
 import path from 'path'
-const fs = require('fs')
+import fs from 'fs'
 
 export async function uploadFile(
     buffer: Buffer,
     destination: string,
     contentType: string
 ): Promise<void> {
+    if (!bucket) return
     const file = bucket.file(destination)
 
     await file.save(buffer, {
@@ -32,35 +33,20 @@ export async function downloadFile(
         console.log(`Destination Path: ${destinationPath}`)
 
         // Get the file reference from Firebase Storage
-        const file = bucket.file(`${fbPath}/${fileName}`)
+    if (!bucket) return
+    const file = bucket.file(`${fbPath}/${fileName}`)
 
         // Download the file to the destination
         await file.download({ destination: destinationPath })
 
         console.log(`${fileName} has been downloaded to ${destinationPath}`)
     } catch (error) {
-        console.error(`Failed to download file: ${error.message}`)
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`Failed to download file: ${message}`)
     }
 }
 
 // Example usage
 // downloadFile('datafile.csv').catch(console.error)
 
-async function deleteFile(fileName: string): Promise<void> {
-    const file = bucket.file(fileName)
-    await file.delete()
-    console.log(`${fileName} deleted from Firebase Storage.`)
-}
-
-// Example usage
-// deleteFile('datafile.csv').catch(console.error);
-
-async function listFiles(): Promise<void> {
-    const [files] = await bucket.getFiles()
-    files.forEach(file => {
-        console.log(file.name)
-    })
-}
-
-// Example usage
-// listFiles().catch(console.error);
+// Example helper functions removed due to noUnusedLocals with strict TS config.
