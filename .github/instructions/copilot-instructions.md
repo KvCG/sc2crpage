@@ -8,9 +8,9 @@
 
 ## Architecture & Flow
 - **Client** (`src/client`): React/Vite app with Mantine UI library
-  - API integration: Custom hooks in `hooks/useFetch.tsx` 
+  - API integration: Custom hooks `hooks/useFetch.tsx`, `hooks/usePost.tsx`; API calls in `services/api.ts`
   - Config: Environment-aware API selection in `services/config.ts` with host-based switch to `src/client/config/{prod,dev,local}.config.json`
-  - Routing: React Router v6 with routes defined in main.tsx
+  - Routing: React Router v6 with routes in `App.tsx` (mounted via `main.tsx`)
 - **Server** (`src/server`): Express API with TypeScript
   - API Routes: Mounted via `routes/apiRoutes.ts` combining routes from `pulse`, `challonge`, `utility`, `google`, `replayAnalyzer`
   - Services: External API integrations in `services/` directory
@@ -36,12 +36,12 @@
   - SC2Pulse: `services/pulseApi.ts` implements player search and rankings
   - Challonge: `services/challongeApi.ts` for tournament data
   - Firebase: `services/firebase.ts` for ladder data storage
-  - Google: `services/googleApi.ts` for sheet integrations
+  - Google Drive: `services/googleApi.ts` for replay uploads/listing and analysis JSON retrieval
 - **Middleware**: Server serves static assets, mounts API routes, and falls back to SPA
 
 ## Client Patterns
 - **Config**: `services/config.ts` selects API endpoint based on hostname:
-  - Production: Render API
+  - Production: Render API (e.g., `sc2cr-latest.onrender.com`, Vercel domains)
   - Development: Fly.io dev API
   - Local: `http://localhost:3000/`
 - **Components**: Organized by feature in `components/` directory
@@ -80,14 +80,21 @@
 
 ## Documentation
 - **Main README**: Central hub with links to all documentation
-- **Environment Setup**: Detailed setup guide in `docs/environment-setup.md`
-- **Architecture**: Technical details in `docs/architecture.md`
-- **Environments**: Deployment information in `docs/environments.md`
-- **Contributing**: Guidelines in `.github/CONTRIBUTING.md`
-- **Branching**: Strategy in `.github/BRANCHING_STRATEGY.md`
-- **Documentation Index**: Simple reference in `docs/index.md` pointing back to README
+ - **Environment Setup**: `docs/technical-documentation/environment-setup.md`
+ - **Architecture**: `docs/technical-documentation/architecture.md`
+ - **Environments**: `docs/technical-documentation/environments.md`
+ - **Contributing**: `docs/development-process/contributing.md`
+ - **Branching**: `docs/development-process/branching-strategy.md`
 
 ## Unknowns / Gaps
 - Comprehensive test coverage strategy
 - Detailed offline development workflow
 - Feature roadmap beyond current backlog
+
+## Evolution & Maintenance Policy
+
+Treat this guide as living, with **single sources of truth**:
+- **Branching/Release:** `docs/development-process/contributing.md` and `docs/development-process/branching-strategy.md`. Keep these authoritative and update others to match.
+- **Environments & URLs:** `docs/technical-documentation/environments.md`. Update when API bases or routing change.
+- **Testing plan:** `docs/development-process/testing.md`. Keep first-targets and CI notes aligned with reality.
+- **Where to find things:** The root `README.md` links the canonical docs set—add new docs there.
