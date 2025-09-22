@@ -85,6 +85,13 @@
     padding-left: 0;
 }
 
+.lastPlayedColumn {
+    white-space: nowrap;
+    font-size: 0.8em;
+    line-height: 1;
+    font-weight: bolder
+}
+
 @media (max-width: 30em) {
     .posIndicator {
         position: sticky;
