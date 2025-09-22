@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useMediaQuery } from '@mantine/hooks'
 import { Table, Skeleton, Grid, Text } from '@mantine/core'
 import cx from 'clsx'
 import classes from './Table.module.css'
@@ -21,6 +22,20 @@ const defaultVisibleColumns: ColumnOptions = {
     zerg: false,
     random: false,
     total: true,
+}
+
+const compactVisibleColumns: ColumnOptions = {
+    top: true,
+    name: true,
+    mmr: true,
+    rank: false,
+    race: true,
+    lastPlayed: false,
+    terran: false,
+    protoss: false,
+    zerg: false,
+    random: false,
+    total: false,
 }
 
 type RowProps = { row: DecoratedRow; index: number; visibleColumns: ColumnOptions }
@@ -55,7 +70,7 @@ const RankingTableRow = ({ row, index, visibleColumns }: RowProps) => {
                 {deltaText}
             </Table.Td>
             {visibleColumns.top && <Table.Td className={classes.top}>{index + 1}</Table.Td>}
-            {visibleColumns.name && <Table.Td title={btag}>{getStandardName(row)}</Table.Td>}
+            {visibleColumns.name && <Table.Td className={classes.name} title={btag}>{getStandardName(row)}</Table.Td>}
             {visibleColumns.mmr && <Table.Td>{ratingLast}</Table.Td>}
             {visibleColumns.rank && (
                 <Table.Td>
@@ -79,11 +94,13 @@ const RankingTableRow = ({ row, index, visibleColumns }: RowProps) => {
 
 type TableProps = { data: DecoratedRow[] | null; loading: boolean }
 export function RankingTable({ data, loading }: TableProps) {
+    const isSmallScreen = useMediaQuery('(max-width: 48em)')
     const [tableData, setTableData] = useState<DecoratedRow[] | null>(data)
 
     const [visibleColumns, setVisibleColumns] = useState<ColumnOptions>(() => {
         const stored = localStorage.getItem('visibleColumns')
-        return stored ? (JSON.parse(stored) as ColumnOptions) : defaultVisibleColumns
+        if (stored) return JSON.parse(stored) as ColumnOptions
+        return isSmallScreen ? compactVisibleColumns : defaultVisibleColumns
     })
 
     useEffect(() => {
@@ -120,6 +137,7 @@ export function RankingTable({ data, loading }: TableProps) {
                 maw={700}
                 miw={250}
             >
+                <div className={classes.tableContainer}>
                 <Table
                     verticalSpacing="3"
                     striped
@@ -132,9 +150,9 @@ export function RankingTable({ data, loading }: TableProps) {
                 >
                     <Table.Thead className={classes.header}>
                         <Table.Tr>
-                            <Table.Th></Table.Th>
-                            {visibleColumns.top && <Table.Th>Top</Table.Th>}
-                            {visibleColumns.name && <Table.Th>Name</Table.Th>}
+                            <Table.Th className={classes.posIndicator}></Table.Th>
+                            {visibleColumns.top && <Table.Th className={classes.top}>Top</Table.Th>}
+                            {visibleColumns.name && <Table.Th className={classes.name}>Name</Table.Th>}
                             {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
                             {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
                             {visibleColumns.race && <Table.Th>Race</Table.Th>}
@@ -162,6 +180,7 @@ export function RankingTable({ data, loading }: TableProps) {
                         )}
                     </Table.Tbody>
                 </Table>
+                </div>
             </Skeleton>
         </Grid>
     )
