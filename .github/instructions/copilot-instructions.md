@@ -78,6 +78,12 @@
   - Errors: `{ error, code, context? }` structure
   - File Organization: Follow existing patterns in each directory
 
+## Testing
+  - Runner: Vitest (separate configs per side)
+  - Server: `npm run test:server` | coverage: `npm run test:coverage:server`
+  - Client: `npm run test:client` (jsdom; `passWithNoTests` true) | coverage: `npm run test:coverage:client`
+  - Both in parallel: `npm test` | watch: `npm run test:watch`
+
 ## Documentation
 - **Main README**: Central hub with links to all documentation
  - **Environment Setup**: `docs/technical-documentation/environment-setup.md`
