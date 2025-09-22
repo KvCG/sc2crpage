@@ -1,51 +1,49 @@
-# Testing Guide
+# Testing Guide (Vitest)
 
-Status: Vitest is planned but not configured yet in this repo (no vitest config or npm scripts exist). This guide outlines the intended setup and first targets so we can align code and CI next.
+This repo uses Vitest for both client (jsdom) and server (node) tests.
 
-## Planned Commands
+## Commands
 
-Suggested npm scripts to add:
 ```bash
-# Run all tests
+# All tests (client + server)
 npm test
-
-# Server-only
-npm run test:server
 
 # Client-only
 npm run test:client
 
-# Coverage
-npm run test:coverage
+# Server-only
+npm run test:server
+
+# Coverage reports (both sides)
+npm run coverage
 ```
 
-## Suggested Structure
+## Configuration
 
-- Server tests:
-  - Unit: `src/server/__tests__/unit/**/*.test.ts`
-  - Integration: `src/server/__tests__/integration/**/*.test.ts`
-- Client tests: `src/client/**/*.test.tsx`
-- Optional setup: `src/test/setup.ts` and `src/test/mocks/server.ts` (MSW)
+- Client config: `vitest.client.config.ts` (jsdom, RTL setup `src/test/setup.ts`).
+- Server config: `vitest.server.config.ts` (node env).
+- Global coverage thresholds: 85% lines/statements/functions/branches on both configs.
 
-## First Targets
+## Structure
 
-1. Cache behavior: `src/server/utils/cache.ts`
-2. SC2Pulse service: `src/server/services/pulseApi.ts`
-   - Cache hit/miss, in-flight promise sharing
-3. Data formatting: `src/server/utils/formatData.ts`
+- Client tests: `src/client/**/*.test.{ts,tsx}`
+- Server tests: `src/server/**/*.{test,spec}.{ts,tsx}`
+- Test setup: `src/test/setup.ts` (includes `@testing-library/jest-dom` and MSW)
+- MSW handlers: `src/test/mocks/server.ts`
 
-## Minimal Next Steps
+## Priorities (high ROI)
 
-- Add Vitest deps and config files:
-  - `vitest.config.ts` (node for server) and optional `vitest.client.config.ts` (jsdom)
-- Add npm scripts as above; scope coverage to relevant folders
-- Use MSW for API interactions as needed
+1. Client utils and hooks: pure logic and loading/error flows.
+2. Client API layer: request shape, encoding, and error propagation.
+3. Server utils: cache TTL (fake timers), UA parsing, time zone conversion.
+4. Key components: initial render, empty/loading/error states, accessible queries.
 
-## CI Note
+## Guidelines
 
-CI currently runs `npm run test -- --coverage || true` in `.github/workflows/Deploy.yml`. Once scripts/configs are added, remove the `|| true` to enforce failures.
+- Deterministic tests (<100ms typical), no real network or I/O.
+- Mock axios with `vi.mock('axios')`; use MSW for integration-like HTTP.
+- Prefer RTL semantic queries; avoid implementation details.
 
-## Open Questions
+## CI
 
-- Do we want a single root Vitest config or split client/server configs?
-- Any preferred E2E runner (Playwright/Cypress) to integrate later?
+Coverage thresholds are enforced via Vitest configs. Tests must pass on PRs before merge.
