@@ -115,16 +115,25 @@ PORT=3000
 
 ## 🤝 Contributing
 
-1. Create feature branches from `main`
-2. Open a draft PR to `dev` for early integration feedback
-3. When ready, rebase onto latest `main` and finalize PR
-4. After merge to `main`, sync `dev` branch:
+We use a trunk-based development approach with `dev` as our integration branch:
+
+1. Create feature branches from `dev`
+2. Make small, focused changes and open PRs back to `dev` 
+3. After review and testing, merge to `dev`
+4. For releases, selectively promote changes from `dev` to `main` using interactive rebase
 
 ```bash
+# Start work from dev branch
 git checkout dev
-git fetch origin
-git rebase origin/main
-git push --force-with-lease origin dev
+git pull origin dev
+git checkout -b feature/my-feature
+
+# When ready to release to production
+git checkout main
+git pull origin main
+git checkout -b release/my-feature
+git cherry-pick <commits-to-include>
+# Or: git rebase -i origin/dev # and select commits
 ```
 
 For detailed contribution guidelines, see [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).

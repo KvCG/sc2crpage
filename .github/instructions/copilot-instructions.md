@@ -63,8 +63,15 @@
 - **Configuration**: `MMR_RANGE_FOR_PREMIER_MATCH`, `MMR_RANGE_FOR_CLOSE_MATCH`, `PORT`
 
 ## Contributing Guidelines
-- **Branching**: Create feature branches from `main`, open PRs to `dev` first
-- **Workflow**: After merge to `main`, sync changes to `dev` branch
+- **Branching**: 
+  - Trunk-based development with `dev` as the integration branch
+  - Feature branches from `dev` for all development work
+  - PRs target `dev` for integration
+  - Selective promotion from `dev` to `main` for releases using interactive rebase
+- **Release Flow**:
+  - Use interactive rebase or cherry-pick to select which features to release
+  - Create release branch with selected features from `dev`
+  - Merge to `main` after testing
 - **Conventions**:
   - Components: PascalCase
   - Hooks/Utils: camelCase
