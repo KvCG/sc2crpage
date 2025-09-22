@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import clientBuildInfo from './plugins/clientBuildInfo'
 
-// https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [react()],
+    plugins: [react(), clientBuildInfo()],
     root: 'src/',
     publicDir: '../public/',
     build: {
@@ -11,15 +11,13 @@ export default defineConfig({
         emptyOutDir: true,
         sourcemap: true,
     },
-	server: {
-		proxy: {
-
-			'/api': {
-			  target: 'http://localhost:3000/api',
-			  changeOrigin: true,
-			  rewrite: path => path.replace(/^\/api/, '')
-			}
-		  }
-	}
-	
+    server: {
+        proxy: {
+            '/api': {
+                target: 'http://localhost:3000/api',
+                changeOrigin: true,
+                rewrite: path => path.replace(/^\/api/, ''),
+            },
+        },
+    },
 })

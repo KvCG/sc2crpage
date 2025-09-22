@@ -113,7 +113,22 @@ MMR_RANGE_FOR_CLOSE_MATCH=<number>
 PORT=3000
 ```
 
-## 🤝 Contributing
+## 🏷️ Build Info (Client & Server)
+
+Build metadata is enabled across all environments for traceability.
+
+- Client: Injects a readable HTML comment under `<head>` with pretty JSON `{ app: 'client', env, commit, commitMessage?, branch?, pr?, buildNum? }`.
+- Server: `GET /api/debug?type=buildInfo` returns pretty-printed JSON.
+
+Sourcing:
+- Local: uses git when available for `commit`, `branch`, `commitMessage`; falls back to `commit: 'local'`.
+- Dev/Prod: uses CI vars only (no git calls).
+
+Implementation:
+- Frontend plugin at `plugins/clientBuildInfo.ts` (loaded from `vite.config.ts`).
+- Server utility at `src/server/utils/buildInfo.ts` with git helpers in `src/server/utils/gitInfo.ts`.
+
+## �🤝 Contributing
 
 We use a streamlined trunk-based workflow with `dev` as the integration branch:
 

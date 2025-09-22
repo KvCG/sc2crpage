@@ -5,7 +5,7 @@ import {
     calculateRounds,
     filterMatches,
     formatFileSize,
-} from './common'
+} from '../utils/common'
 
 describe('common utils', () => {
     it('getStandardName returns name, btag prefix, or challongeUsername', () => {
@@ -17,7 +17,6 @@ describe('common utils', () => {
     })
 
     it('toCRtime formats date in es-CR locale deterministically', () => {
-        // Fixed date to avoid flakiness
         const dateStr = '2024-01-15T12:34:56Z'
         const formatted = toCRtime(dateStr)
         expect(typeof formatted).toBe('string')
@@ -34,14 +33,15 @@ describe('common utils', () => {
             { id: 2, round: 2, state: 'closed' },
             { id: 3, round: 1, state: 'closed' },
         ]
-        // Round only
-        expect(filterMatches(matches, 1, null).map(m => m.id)).toEqual([1, 3])
-        // State only
-        expect(filterMatches(matches, null, 'closed').map(m => m.id)).toEqual([
-            2, 3,
+        expect(filterMatches(matches, 1, null).map((m: any) => m.id)).toEqual([
+            1, 3,
         ])
-        // Both
-        expect(filterMatches(matches, 1, 'open').map(m => m.id)).toEqual([1])
+        expect(
+            filterMatches(matches, null, 'closed').map((m: any) => m.id)
+        ).toEqual([2, 3])
+        expect(filterMatches(matches, 1, 'open').map((m: any) => m.id)).toEqual(
+            [1]
+        )
     })
 
     it('formatFileSize formats bytes to KB/MB/GB with 2 decimals', () => {

@@ -7,10 +7,16 @@ import { createServer } from 'http'
 import crypto from 'crypto'
 import chokidar from 'chokidar'
 import 'dotenv/config'
+import { getBackendBuildInfo } from './utils/buildInfo'
+import { isLocalAppEnv } from '../shared/runtimeEnv'
 
 const app = express()
 const port = process.env.PORT || 3000
 const wsPort = 4000 // Port for WebSocket server
+// Detect local early; compute build info for all envs to keep behavior consistent
+const isLocal = isLocalAppEnv(process.env)
+const buildInfo = getBackendBuildInfo()
+if (!isLocal && buildInfo) console.log('[build]', JSON.stringify(buildInfo))
 
 // WebSocket server for development reloads
 if (process.env.NODE_ENV === 'development') {
@@ -62,13 +68,37 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     })
     next()
 })
+// Remove root debug handler; use canonical /api/build for debug
 app.use(express.static(path.join(__dirname, '../')))
 app.use(express.json({ limit: '30mb' }))
 app.use(express.urlencoded({ limit: '30mb', extended: true }))
 app.use('/api', apiRoutes)
+// General debug endpoint driven by query parameter
+app.get('/api/debug', (req: Request, res: Response) => {
+    const type = (req.query.type || req.query.debug) as string | undefined
+    if (!type) {
+        return res.status(400).json({ error: 'Missing query', expected: { type: 'buildInfo' } })
+    }
+    if (type === 'buildInfo') {
+        res.setHeader('content-type', 'application/json')
+        return res.end(JSON.stringify(buildInfo, null, 2))
+    }
+    return res.status(400).json({ error: 'Unsupported type', supported: ['buildInfo'] })
+})
+
+// Back-compat alias for build info (deprecated)
+app.get('/api/build', (req: Request, res: Response) => {
+    const q = (req.query.debug || req.query.type) as string | undefined
+    if (q && q !== 'buildInfo') {
+        return res.status(400).json({ error: 'Unsupported param', supported: ['buildInfo'] })
+    }
+    res.setHeader('content-type', 'application/json')
+    res.end(JSON.stringify(buildInfo, null, 2))
+})
 
 // Handle SPA routing
 app.get('*', (_req: Request, res: Response) => {
+    // SPA fallback
     res.sendFile(path.join(__dirname, '../index.html'))
 })
 
