@@ -7,11 +7,12 @@
 - Scope and any exclusions
 
 ## Acceptance Checklist
-- [ ] Branch created from `dev` (per docs/backlog/usage.md)
-- [ ] PR targets `dev` unless a release to `main`
+- [ ] Branch created from `dev` (default) or from `main` for hotfix
+- [ ] PR base is `dev` (default). Release PRs target `main`.
 - [ ] Includes a valid backlog ID in title and body (e.g., [BL-008])
 - [ ] CI green: eslint, tsc, tests, build
 - [ ] Minimal diff; unrelated changes excluded
+- [ ] For release PRs: curated changes only (interactive rebase or cherry-pick plan noted)
 - [ ] Updated docs/backlog entries if applicable
 
 ## Links
@@ -20,4 +21,5 @@
 - Item: BL-### (link to section in backlog.md or backlog.yaml)
 
 ## Notes for Reviewers
-- Risks, rollbacks, and targeted reviewers (CODEOWNERS applies)
+ - Risks, rollbacks, and targeted reviewers (CODEOWNERS applies)
+ - If release PR: list included commits/features and how curated
