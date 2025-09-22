@@ -91,7 +91,7 @@ If Firebase is configured, the server will auto-download the file on first run.
 
 **Note**: All Vercel previews (including from feature branches) are considered "dev" environments because they connect to the Fly.io dev API.
 
-For detailed environment configuration, see [docs/environments.md](docs/environments.md).
+For detailed environment configuration, see [docs/technical-documentation/environments.md](docs/technical-documentation/environments.md).
 
 ## 🔧 Environment Variables
 
@@ -136,7 +136,7 @@ git cherry-pick <commits-to-include>
 # Or: git rebase -i origin/dev # and select commits
 ```
 
-For detailed contribution guidelines, see [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
+For detailed contribution guidelines, see [docs/development-process/contributing.md](docs/development-process/contributing.md).
 
 ## 🔄 CI/CD
 
@@ -151,13 +151,20 @@ Unified workflow in `.github/workflows/Deploy.yml`:
 
 ## 📋 Documentation Index
 
-- **Architecture**: [docs/architecture.md](docs/architecture.md)
-- **Environments**: [docs/environments.md](docs/environments.md)
-- **Contributing**: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)
-- **Branching Strategy**: [.github/BRANCHING_STRATEGY.md](.github/BRANCHING_STRATEGY.md)
-- **Deployment**: [.github/DEPLOYMENT.md](.github/DEPLOYMENT.md)
-- **Testing**: [.github/TESTING.md](.github/TESTING.md)
-- **Backlog**: [docs/backlog/BACKLOG.md](docs/backlog/BACKLOG.md)
+### Technical Documentation
+- **Architecture**: [docs/technical-documentation/architecture.md](docs/technical-documentation/architecture.md)
+- **Environments**: [docs/technical-documentation/environments.md](docs/technical-documentation/environments.md)
+- **Environment Setup**: [docs/technical-documentation/environment-setup.md](docs/technical-documentation/environment-setup.md)
+
+### Process Documentation
+- **Contributing**: [docs/development-process/contributing.md](docs/development-process/contributing.md)
+- **Branching Strategy**: [docs/development-process/branching-strategy.md](docs/development-process/branching-strategy.md)
+- **Deployment**: [docs/development-process/deployment.md](docs/development-process/deployment.md)
+- **Testing**: [docs/development-process/testing.md](docs/development-process/testing.md)
+
+### Project Management
+- **Backlog**: [docs/backlog/backlog.md](docs/backlog/backlog.md)
+- **Backlog Usage**: [docs/backlog/usage.md](docs/backlog/usage.md)
 
 ## 📚 External Resources
 

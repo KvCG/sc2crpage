@@ -1,12 +1,9 @@
 # SC2CR Contribution Guide
-## Behavior
-- Before coding: scan nearby files and align with patterns.
-- Keep diffs minimal; reuse scripts/config.
-- After coding: run build/tests; summarize risks.
-- Unknowns: say "I don't know." project favors small, readable changes, minimal config, and a clean history.
+
+This project favors small, readable changes, minimal config, and a clean history.
 
 ## Branching & Release
-See [BRANCHING_STRATEGY.md](BRANCHING_STRATEGY.md) for detailed workflow.
+See [branching-strategy.md](branching-strategy.md) for detailed workflow.
 
 Key points:
 - `dev`: primary development branch (trunk)
@@ -33,8 +30,8 @@ Key points:
 ## Behavior
 - Before coding: scan nearby files and align with patterns.
 - Keep diffs minimal; reuse scripts/config.
-- After coding: run build/tests; summarize risks; provide `main→dev` sync commands when releasing.
-- Unknowns: say “I don’t know.”
+- After coding: run build/tests; summarize risks.
+- Unknowns: say "I don't know."
 
 ## Deliverables per Task
 - Code + tests + short doc/update note.

@@ -20,7 +20,7 @@ Client and API deploy separately:
 
 ## Environments & Config
 - Client API bases are managed in `src/client/config/*.config.json` and selected by `src/client/services/config.ts`.
-- See `docs/environments.md` for the mapping and URLs.
+- See `../environments.md` for the mapping and URLs.
 
 ## Commands
 ```bash
@@ -35,7 +35,7 @@ npm start
 ```
 
 ## Notes
-- All Vercel previews are “dev” because they talk to the Fly.io dev API.
+- All Vercel previews are "dev" because they talk to the Fly.io dev API.
 
 ## Post-Deploy Checks
 - API health: `GET https://sc2cr-latest.onrender.com/api/health` (prod) or Fly dev URL
