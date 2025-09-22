@@ -3,15 +3,13 @@
 This project favors small, readable changes, minimal config, and a clean history.
 
 ## Branching & Release
-- `main`: production (source of truth)
-- `dev`: persistent sandbox
-- `feature/*`: always branch from `main`
+See [branching-strategy.md](branching-strategy.md) for detailed workflow.
 
-Flow:
-1. Open a Draft PR from `feature/*` → `dev` for early integration.
-2. For release, rebase `feature/*` onto latest `main`, then open PR → `main` and merge after green CI.
-3. Immediately sync `main` → `dev`:
-   - `git checkout dev && git fetch origin && git rebase origin/main && git push --force-with-lease origin dev`
+Key points:
+- `dev`: primary development branch (trunk)
+- `main`: production branch
+- Feature branches branch from and merge back to `dev`
+- Selective promotion from `dev` to `main` for releases
 
 ## Deploys
 - Client: Vercel auto-deploys by branch (main=prod, dev=permanent preview; other branches get previews).
@@ -32,8 +30,8 @@ Flow:
 ## Behavior
 - Before coding: scan nearby files and align with patterns.
 - Keep diffs minimal; reuse scripts/config.
-- After coding: run build/tests; summarize risks; provide `main→dev` sync commands when releasing.
-- Unknowns: say “I don’t know.”
+- After coding: run build/tests; summarize risks.
+- Unknowns: say "I don't know."
 
 ## Deliverables per Task
 - Code + tests + short doc/update note.

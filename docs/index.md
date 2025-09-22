@@ -14,20 +14,20 @@ Please refer to the [main README](../README.md) for:
 - Environment configuration
 - Contributing guidelines
 
-## Specific Guides
+## Technical Documentation
 
-- **[Environment Setup](environment-setup.md)**: Detailed steps for setting up your development environment
-- **[Architecture](architecture.md)**: Technical architecture details
-- **[Environments](environments.md)**: Information about deployment environments
+- **[Environment Setup](technical-documentation/environment-setup.md)**: Detailed steps for setting up your development environment
+- **[Architecture](technical-documentation/architecture.md)**: Technical architecture details
+- **[Environments](technical-documentation/environments.md)**: Information about deployment environments
 
-## GitHub Documentation
+## Process Documentation
 
-- **[Contributing Guide](../.github/CONTRIBUTING.md)**: How to contribute to the project
-- **[Branching Strategy](../.github/BRANCHING_STRATEGY.md)**: Git workflow and branch naming
-- **[Deployment](../.github/DEPLOYMENT.md)**: How to deploy the application
-- **[Testing](../.github/TESTING.md)**: Testing guidelines and procedures
+- **[Contributing Guide](development-process/contributing.md)**: How to contribute to the project
+- **[Branching Strategy](development-process/branching-strategy.md)**: Git workflow and branch naming
+- **[Deployment](development-process/deployment.md)**: How to deploy the application
+- **[Testing](development-process/testing.md)**: Testing guidelines and procedures
 
-## Backlog
+## Project Management
 
-- **[Backlog](backlog/BACKLOG.md)**: Current development backlog
-- **[Backlog Usage](backlog/USAGE.md)**: How to use the backlog
+- **[Backlog](backlog/backlog.md)**: Current development backlog
+- **[Backlog Usage](backlog/usage.md)**: How to use the backlog
