@@ -14,9 +14,8 @@ if (hostName.includes('sc2cr-dev') || hostName.includes('project')) {
 }
 
 switch (hostName) {
-    case 'vercel.app':
+    case 'sc2cr.vercel.app':
     case 'sc2cr-latest.onrender.com':
-    case 'sc2cr.free.nf':
         config = prod
         break
     case 'sc2cr-dev':
