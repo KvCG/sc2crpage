@@ -55,9 +55,7 @@ const getPlayersStats = async (playerIds: string[]) => {
     if (!playerIds || playerIds.length === 0) return []
     const seasonId = await getCurrentSeason()
     const params = playerIds.map(id => `characterId=${id}`).join('&')
-    const races = ['TERRAN', 'PROTOSS', 'ZERG', 'RANDOM']
-        .map(r => `race=${r}`).join('&')
-    const url = `${withBasePath(endpoints.groupTeam)}?season=${seasonId}&queue=LOTV_1V1&${races}&${params}`
+    const url = `${withBasePath(endpoints.groupTeam)}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&${params}`
     try {
         const data = await get<any | any[]>(url)
         return Array.isArray(data) ? data : [data]
