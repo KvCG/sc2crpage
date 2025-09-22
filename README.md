@@ -115,28 +115,38 @@ PORT=3000
 
 ## 🤝 Contributing
 
-We use a trunk-based development approach with `dev` as our integration branch:
+We use a streamlined trunk-based workflow with `dev` as the integration branch:
 
-1. Create feature branches from `dev`
-2. Make small, focused changes and open PRs back to `dev` 
-3. After review and testing, merge to `dev`
-4. For releases, selectively promote changes from `dev` to `main` using interactive rebase
+- Day-to-day: work directly on `dev` or create feature branches from `dev`
+- Never merge `dev` into `main`
+- Releases: curate a subset of `dev` and merge via a `release/*` branch into `main`
 
 ```bash
-# Start work from dev branch
+# Start work from dev (optionally branch for isolation)
 git checkout dev
 git pull origin dev
 git checkout -b feature/my-feature
 
-# When ready to release to production
+# Prepare a curated release (pick only the changes you want)
+git checkout dev
+git pull origin dev
+git checkout -b temp-release-prep
+git rebase -i origin/main   # pick/squash/drop to curate
+
+# Create a release branch from main and merge curated changes
 git checkout main
 git pull origin main
-git checkout -b release/my-feature
-git cherry-pick <commits-to-include>
-# Or: git rebase -i origin/dev # and select commits
+git checkout -b release/1.x.x
+git merge --no-ff temp-release-prep
+
+# Open PR to main; after merge, tag
+git tag v1.x.x
+git push origin main --tags
 ```
 
-For detailed contribution guidelines, see [docs/development-process/contributing.md](docs/development-process/contributing.md).
+- Commit messages: follow Conventional Commits (e.g., `feat(api): ... [BL-012]`).
+- Details in [docs/development-process/contributing.md](docs/development-process/contributing.md) and
+  [docs/development-process/branching-strategy.md](docs/development-process/branching-strategy.md).
 
 ## 🔄 CI/CD
 
