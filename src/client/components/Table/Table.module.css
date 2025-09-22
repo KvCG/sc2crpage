@@ -54,9 +54,21 @@
     justify-content: center;
     margin: auto;
 }
+
+.tableContainer {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .posIndicator {
     width: 10px;
     padding-right: 0;
+    white-space: nowrap;
+    font-size: 0.8em;
+    line-height: 1;
+    font-weight: bolder;
+    opacity: 0.7;
 }
 
 .posIndicator[data-content='▲'] {
@@ -70,4 +82,33 @@
 .top {
     width: 10px;
     padding-left: 0;
+}
+
+@media (max-width: 30em) {
+    .rank {
+    }
+
+    .posIndicator {
+        position: sticky;
+        left: 0px;
+        z-index: 3;
+        width: 40px;
+        min-width: 40px;
+        background: var(--mantine-color-body);
+        opacity: 1;
+    }
+    .top {
+        position: sticky;
+        left: 40px;
+        z-index: 3;
+        width: 40px;
+        min-width: 40px;
+        background: var(--mantine-color-body);
+    }
+    .name {
+        position: sticky;
+        left: 80px;
+        z-index: 3;
+        background: var(--mantine-color-body);
+    }
 }
