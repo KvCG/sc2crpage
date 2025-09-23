@@ -48,10 +48,8 @@ Config files:
 ```
 LOG_LEVEL=info
 LOG_HTTP_SUCCESS=false
-LOG_HTTP_ERRORS=true
 PULSE_TIMEOUT_MS=8000
 ENABLE_REQ_OBS=true
-ENABLE_DEBUG_ENDPOINT=true
 ```
 
 ## Build Metadata & Debug

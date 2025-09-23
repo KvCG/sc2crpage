@@ -14,7 +14,7 @@ import {
 } from '../utils/pulseApiHelper'
 import { DateTime } from 'luxon'
 import { get, withBasePath, endpoints } from './pulseHttpClient'
-import { metrics } from '../metrics/lite'
+import { metrics, observePulseLatency } from '../metrics/lite'
 import { bumpCache } from '../observability/reqContext'
 
 
@@ -78,8 +78,7 @@ const getPlayersStats = async (playerIds: string[]) => {
             const t0 = Date.now()
             const data = await get<any | any[]>(url)
             const dt = Date.now() - t0
-            // Update rough latency distribution
-            try { const { observePulseLatency } = await import('../metrics/lite'); observePulseLatency(dt) } catch {}
+            observePulseLatency(dt)
             const arr = Array.isArray(data) ? data : [data]
             all.push(...arr)
         } catch (error) {
@@ -279,12 +278,12 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
     const cacheKey = 'snapShot'
     const cachedData = cache.get(cacheKey)
     if (cachedData) {
-        try { metrics.cache_hit_total++ } catch {}
+        metrics.cache_hit_total++
         bumpCache(true)
         // If cache is valid, return it immediately.
         return cachedData
     }
-    try { metrics.cache_miss_total++ } catch {}
+    metrics.cache_miss_total++
     bumpCache(false)
     if (inflightPromise) {
         // If a fetch is already in progress, return the same promise.
