@@ -113,6 +113,16 @@ MMR_RANGE_FOR_CLOSE_MATCH=<number>
 PORT=3000
 ```
 
+### Logging & Observability (Server)
+
+- Logging: pino (pretty in development). Control with `LOG_LEVEL` (default `info`).
+- HTTP logs: 2xx/3xx are silent by default (`LOG_HTTP_SUCCESS=false`); 4xx/5xx log at error.
+- Health: `/api/health` is quiet; add `?verbose=1` to emit a single info log.
+- Request store and metrics are in-memory only; fetch via:
+  - `GET /api/debug?type=metrics` → counters + `pulse_p95_ms`/`pulse_p99_ms`
+  - `GET /api/debug?type=req&id=<requestId>` → last stored entry
+
+
 ## 🏷️ Build Info (Client & Server)
 
 Build metadata is enabled across all environments for traceability.

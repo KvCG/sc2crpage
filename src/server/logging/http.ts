@@ -42,7 +42,7 @@ export const httpLogger = pinoHttp({
 })
 
 // Hook counters on finish
-export function httpMetricsMiddleware(req: any, res: any, next: any) {
+export function httpMetricsMiddleware(_req: any, res: any, next: any) {
   const started = Date.now()
   res.on('finish', () => {
     metrics.http_total++
