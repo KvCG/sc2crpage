@@ -56,18 +56,13 @@ const getCurrentSeason = async () => {
 const getPlayersStats = async (playerIds: string[]) => {
     if (!playerIds || playerIds.length === 0) return []
     const seasonId = await getCurrentSeason()
-    const params = playerIds.map(id => `characterId=${id}`).join('&')
-    const url = `${withBasePath(endpoints.groupTeam)}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&${params}`
-    try {
-        const data = await get<any | any[]>(url)
-        return Array.isArray(data) ? data : [data]
-    } catch (error) {
-        const axiosError = error as AxiosError
-        console.error(`[getPlayersStats] Error fetching stats: ${axiosError.message}`)
-        return []
+    // Each character can have up to 4 teams (one per race). API caps limit at 400.
+    // Use chunks of up to 100 character IDs to stay within 4*100 = 400.
+    const chunkSize = 100
+    const chunks: string[][] = []
+    for (let i = 0; i < playerIds.length; i += chunkSize) {
+        chunks.push(playerIds.slice(i, i + chunkSize))
     }
-<<<<<<< HEAD
-=======
 
     const all: any[] = []
     for (const chunk of chunks) {
@@ -87,7 +82,6 @@ const getPlayersStats = async (playerIds: string[]) => {
         }
     }
     return all
->>>>>>> cf608c2 (feat(request): add request context and observability integration)
 }
 
 /**
