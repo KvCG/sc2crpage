@@ -4,11 +4,16 @@ import path from 'path'
 import cors from 'cors'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
-import crypto from 'crypto'
 import chokidar from 'chokidar'
 import 'dotenv/config'
 import { getBackendBuildInfo } from './utils/buildInfo'
 import { isLocalAppEnv } from '../shared/runtimeEnv'
+import { httpLogger, httpMetricsMiddleware } from './logging/httpLogger'
+import { getReqObs, finalizeReq } from './observability/requestObservability'
+import { withRequestContext } from './observability/requestContext'
+import { extractRequestId, resolveOrCreateCorrelationId } from './utils/requestIdentity'
+import createDebugHandler from './routes/debugHandler'
+import logger from './logging/logger'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -55,17 +60,63 @@ if (process.env.NODE_ENV === 'development') {
 
 // Middleware and routes
 app.use(cors())
+app.use(httpLogger)
+app.use(withRequestContext)
+app.use(httpMetricsMiddleware)
 // Correlation + response time
 app.use((req: Request, res: Response, next: NextFunction) => {
+    // Start latency timer
     const start = Date.now()
-    const corr = (req.headers['x-correlation-id'] as string) || crypto.randomUUID?.() || crypto.randomBytes(16).toString('hex')
+    // Use client correlation ID if provided, else generate one
+    const corr = resolveOrCreateCorrelationId(req)
+    // Expose correlation and response metadata
     res.setHeader('x-correlation-id', corr)
     res.setHeader('x-powered-by', 'sc2cr')
     res.setHeader('x-response-start-ms', String(start))
-    res.on('finish', () => {
-        const ms = Date.now() - start
-        try { res.setHeader('x-response-time-ms', String(ms)) } catch {}
-    })
+    // Log request start
+    logger.debug({ route: req.url, method: req.method, corr }, 'request start')
+
+    // Prefer canonical request ID; fall back to corr
+    const requestId = extractRequestId(req, res) || corr
+    if (requestId) {
+        // Minimal object for observability helpers
+        const reqLike: any = { headers: { 'x-request-id': String(requestId) } }
+        getReqObs(reqLike)
+        res.on('finish', () => {
+            // Best-effort response time header
+            try {
+                res.setHeader('x-response-time-ms', String(Date.now() - start))
+            } catch {}
+            finalizeReq(reqLike)
+            // Log request end
+            logger.debug(
+                {
+                    route: req.url,
+                    method: req.method,
+                    corr,
+                    status: res.statusCode,
+                },
+                'request end'
+            )
+        })
+    } else {
+        // No request ID; still set timing and log
+        res.on('finish', () => {
+            try {
+                res.setHeader('x-response-time-ms', String(Date.now() - start))
+            } catch {}
+            logger.debug(
+                {
+                    route: req.url,
+                    method: req.method,
+                    corr,
+                    status: res.statusCode,
+                },
+                'request end'
+            )
+        })
+    }
+    // Continue to next middleware
     next()
 })
 // Remove root debug handler; use canonical /api/build for debug
@@ -73,32 +124,11 @@ app.use(express.static(path.join(__dirname, '../')))
 app.use(express.json({ limit: '30mb' }))
 app.use(express.urlencoded({ limit: '30mb', extended: true }))
 app.use('/api', apiRoutes)
-// General debug endpoint driven by query parameter
-app.get('/api/debug', (req: Request, res: Response) => {
-    const type = (req.query.type || req.query.debug) as string | undefined
-    if (!type) {
-        return res.status(400).json({ error: 'Missing query', expected: { type: 'buildInfo' } })
-    }
-    if (type === 'buildInfo') {
-        res.setHeader('content-type', 'application/json')
-        return res.end(JSON.stringify(buildInfo, null, 2))
-    }
-    return res.status(400).json({ error: 'Unsupported type', supported: ['buildInfo'] })
-})
-
-// Back-compat alias for build info (deprecated)
-app.get('/api/build', (req: Request, res: Response) => {
-    const q = (req.query.debug || req.query.type) as string | undefined
-    if (q && q !== 'buildInfo') {
-        return res.status(400).json({ error: 'Unsupported param', supported: ['buildInfo'] })
-    }
-    res.setHeader('content-type', 'application/json')
-    res.end(JSON.stringify(buildInfo, null, 2))
-})
+// General debug endpoint driven by query parameter (unguarded by design)
+app.get('/api/debug', createDebugHandler({ buildInfo }))
 
 // Handle SPA routing
 app.get('*', (_req: Request, res: Response) => {
-    // SPA fallback
     res.sendFile(path.join(__dirname, '../index.html'))
 })
 

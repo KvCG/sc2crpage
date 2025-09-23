@@ -1,23 +1,30 @@
 import { Router, Request, Response } from 'express'
+import logger from '../logging/logger'
+import { extractRequestId } from '../utils/requestIdentity'
 import { refreshDataCache } from '../utils/csvParser'
 
 const router = Router()
 
-router.get('/refreshCache', async (req: Request, res: Response) => {
+router.get('/refreshCache', async (_req: Request, res: Response) => {
     await refreshDataCache()
     res.status(200).json('Done!')
 })
 
 router.get('/health', async (req: Request, res: Response) => {
-    console.log(
-        `----${
-            new Date()
-                .toLocaleString('en-US', {
-                    timeZone: 'America/Costa_Rica',
-                })
-                .split(',')[1]
-        } ----`
-    )
+    const isDebugEnabled = (logger as any).isLevelEnabled?.('debug') || logger.level === 'debug'
+    if (isDebugEnabled) {
+        logger.debug(
+            {
+                route: '/api/health',
+                ua: req.headers?.['user-agent'],
+                ip: (req.headers?.['x-forwarded-for'] as string) || (req.ip as string),
+                id: extractRequestId(req, res) || '',
+            },
+            'health check'
+        )
+    } else {
+        logger.info('health ok')
+    }
     res.status(200).json({ status: 'ok' })
 })
 

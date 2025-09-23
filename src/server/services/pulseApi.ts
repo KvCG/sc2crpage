@@ -14,6 +14,8 @@ import {
 } from '../utils/pulseApiHelper'
 import { DateTime } from 'luxon'
 import { get, withBasePath, endpoints } from './pulseHttpClient'
+import { metrics, observePulseLatency } from '../metrics/lite'
+import { bumpCache } from '../observability/requestContext'
 
 
 /**
@@ -69,7 +71,10 @@ const getPlayersStats = async (playerIds: string[]) => {
         const limit = Math.min(chunk.length * 4, 400)
         const url = `${withBasePath(endpoints.groupTeam)}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&limit=${limit}&${params}`
         try {
+            const t0 = Date.now()
             const data = await get<any | any[]>(url)
+            const dt = Date.now() - t0
+            observePulseLatency(dt)
             const arr = Array.isArray(data) ? data : [data]
             all.push(...arr)
         } catch (error) {
@@ -271,9 +276,13 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
     const cacheKey = 'snapShot'
     const cachedData = cache.get(cacheKey)
     if (cachedData) {
+        metrics.cache_hit_total++
+        bumpCache(true)
         // If cache is valid, return it immediately.
         return cachedData
     }
+    metrics.cache_miss_total++
+    bumpCache(false)
     if (inflightPromise) {
         // If a fetch is already in progress, return the same promise.
         // This prevents multiple concurrent fetches for the same data.

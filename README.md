@@ -115,6 +115,16 @@ RANKING_MIN_GAMES=<number>
 PORT=3000
 ```
 
+### Logging & Observability (Server)
+
+- Logging: pino (pretty in development). Control with `LOG_LEVEL` (default `info`).
+- HTTP logs: 2xx/3xx are silent by default (`LOG_HTTP_SUCCESS=false`); 4xx/5xx log at error.
+- Health: `/api/health` is quiet; add `?verbose=1` to emit a single info log.
+- Request store and metrics are in-memory only; fetch via:
+  - `GET /api/debug?type=metrics` → counters + `pulse_p95_ms`/`pulse_p99_ms`
+  - `GET /api/debug?type=req&id=<requestId>` → last stored entry
+
+
 ## 🏷️ Build Info (Client & Server)
 
 Build metadata is enabled across all environments for traceability.
@@ -182,6 +192,7 @@ Unified workflow in `.github/workflows/Deploy.yml`:
 - **Architecture**: [docs/technical-documentation/architecture.md](docs/technical-documentation/architecture.md)
 - **Environments**: [docs/technical-documentation/environments.md](docs/technical-documentation/environments.md)
 - **Environment Setup**: [docs/technical-documentation/environment-setup.md](docs/technical-documentation/environment-setup.md)
+ - **Debugging & Observability**: [docs/technical-documentation/debugging.md](docs/technical-documentation/debugging.md)
 
 ### Process Documentation
 - **Contributing**: [docs/development-process/contributing.md](docs/development-process/contributing.md)
