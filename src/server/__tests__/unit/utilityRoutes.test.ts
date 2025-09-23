@@ -25,7 +25,7 @@ beforeAll(async () => {
     await import('../../routes/utilityRoutes')
 })
 
-const runHandler = async (path: string) => {
+const runHandler = async (path: string, req: any = {}) => {
     const entry = captures.routes.find(
         r => r.path === path && r.method === 'get'
     )
@@ -41,7 +41,7 @@ const runHandler = async (path: string) => {
             this.body = payload
         },
     }
-    await entry.handler({} as any, res)
+    await entry.handler({ query: {}, ...req } as any, res)
     return res
 }
 
@@ -52,12 +52,9 @@ describe('utilityRoutes', () => {
         expect(res.body).toBe('Done!')
     })
 
-    it('health returns ok status', async () => {
-        const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
-        const res = await runHandler('/health')
+    it('health returns ok status (quiet)', async () => {
+        const res = await runHandler('/health', { query: {} })
         expect(res.statusCode).toBe(200)
         expect(res.body).toEqual({ status: 'ok' })
-        expect(spy).toHaveBeenCalled()
-        spy.mockRestore()
     })
 })

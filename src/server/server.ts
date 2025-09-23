@@ -9,10 +9,10 @@ import chokidar from 'chokidar'
 import 'dotenv/config'
 import { getBackendBuildInfo } from './utils/buildInfo'
 import { isLocalAppEnv } from '../shared/runtimeEnv'
-import logger from './logging/logger'
 import { httpLogger, httpMetricsMiddleware } from './logging/http'
 import { metrics, estimateQuantile } from './metrics/lite'
 import { getReqObs, finalizeReq, getById } from './observability/reqObs'
+import { withRequestContext } from './observability/reqContext'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -60,6 +60,7 @@ if (process.env.NODE_ENV === 'development') {
 // Middleware and routes
 app.use(cors())
 app.use(httpLogger)
+app.use(withRequestContext)
 app.use(httpMetricsMiddleware)
 // Correlation + response time
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -68,7 +69,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('x-correlation-id', corr)
     res.setHeader('x-powered-by', 'sc2cr')
     res.setHeader('x-response-start-ms', String(start))
-    const obs = getReqObs(req)
+    getReqObs(req)
     res.on('finish', () => {
         const ms = Date.now() - start
         try { res.setHeader('x-response-time-ms', String(ms)) } catch {}
