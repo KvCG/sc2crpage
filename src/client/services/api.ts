@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 import config from './config'
-import resolveRequestId from '../utils/requestId'
+import resolveRequestId from '../utils/requestIdentity'
 
 const api: AxiosInstance = axios.create({
     baseURL: config.API_URL,
@@ -9,12 +9,12 @@ const api: AxiosInstance = axios.create({
 // Attach x-request-id header if present via URL param or storage
 api.interceptors.request.use((req) => {
     try {
-        const rid = resolveRequestId()
-        if (rid) {
+        const requestId = resolveRequestId()
+        if (requestId) {
             req.headers = req.headers || {}
             // Do not clobber if already explicitly set by caller
             if (!('x-request-id' in req.headers) && !('X-Request-Id' in req.headers)) {
-                ;(req.headers as any)['x-request-id'] = rid
+                ;(req.headers as any)['x-request-id'] = requestId
             }
         }
     } catch (_) {

@@ -2,18 +2,16 @@ import pinoHttp from 'pino-http'
 import type { IncomingMessage, ServerResponse } from 'http'
 import logger from './logger'
 import { metrics } from '../metrics/lite'
-import { extractRequestId } from '../utils/requestId'
-
-// Keep logs simple: log all requests except health pings
+import { extractRequestId, resolveOrCreateCorrelationId } from '../utils/requestIdentity'
 
 // HTTP logger middleware
-// - Assigns/returns a `x-request-id`
+// - Assigns/returns an `x-request-id`
 // - Ignores /api/health by default
 // - Logs 2xx/3xx at info, 4xx/5xx at error
 export const httpLogger = pinoHttp({
     logger,
     genReqId: function (req: IncomingMessage, res: ServerResponse) {
-        const id = extractRequestId(req, res) || Math.random().toString(16).slice(2)
+        const id = extractRequestId(req, res) || resolveOrCreateCorrelationId(req)
         res.setHeader('x-request-id', id)
         return id
     },
@@ -32,14 +30,13 @@ export const httpLogger = pinoHttp({
             return { status: res.statusCode }
         },
     },
-    customSuccessMessage: function () {
-        return undefined as any
-    },
     customErrorMessage: function (req: any, res: any) {
         return `${req.method} ${req.url} -> ${res.statusCode}`
     },
-    customLogLevel: function (res: any, err: any) {
-        if (err || res.statusCode >= 400) return 'error'
+    // pino-http@>=10 uses (req, res, err)
+    customLogLevel: function (_req: any, res: any, err: any) {
+        if (err) return 'error'
+        if (res && typeof res.statusCode === 'number' && res.statusCode >= 400) return 'error'
         return 'info'
     },
 })

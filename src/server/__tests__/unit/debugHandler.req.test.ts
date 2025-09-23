@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createDebugHandler } from '../../routes/debugHandler'
-import * as reqObs from '../../observability/reqObs'
+import * as reqObs from '../../observability/requestObservability'
 
 function mockReq(query: Record<string, any> = {}) {
     return { query } as any

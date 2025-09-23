@@ -42,10 +42,14 @@ Config files:
 - Client supports URL params to set a request ID used for all API calls:
   - Accepted keys: `rid`, `reqid`, `requestId`
   - Value is sent as `x-request-id` header via an axios request interceptor
-  - Stored in `sessionStorage` for the session (falls back to existing `x-request-id` in `localStorage` if present)
+  - No storage: the value is taken only from the current URL; change the URL to change the ID
 - Usage examples:
   - Open the app with `?rid=my-debug-id` to tag all subsequent API requests
   - The server echoes the ID in `x-request-id`, includes it in logs, and exposes request snapshots at `/api/debug?type=req&id=my-debug-id`
+
+Server correlation vs request ID:
+- The server generates a correlation ID (`x-correlation-id`) for every request and prefers the client `x-request-id` when present.
+- Fallback behavior: `const requestId = extractRequestId(req, res) || corr` (from server code), ensuring every request has at least a correlation ID for tracing.
 
 ### Debug Endpoint
 
