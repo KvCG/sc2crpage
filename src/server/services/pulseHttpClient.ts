@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { metrics, observePulseLatency } from '../metrics/lite'
-import { bumpPulseReq, bumpPulseErr } from '../observability/reqContext'
+import { bumpPulseReq, bumpPulseErr } from '../observability/requestContext'
 import type { InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 
 /**

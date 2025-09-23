@@ -15,7 +15,7 @@ import {
 import { DateTime } from 'luxon'
 import { get, withBasePath, endpoints } from './pulseHttpClient'
 import { metrics, observePulseLatency } from '../metrics/lite'
-import { bumpCache } from '../observability/reqContext'
+import { bumpCache } from '../observability/requestContext'
 
 
 /**

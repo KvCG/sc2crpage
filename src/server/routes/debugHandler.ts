@@ -1,6 +1,6 @@
 import { Request, Response } from 'express' // Express request/response types
 import { metrics, estimateQuantile } from '../metrics/lite' // App metrics and quantile estimator
-import { getReqObsById } from '../observability/reqObs' // Accessor for per-request observability data
+import { getReqObsById } from '../observability/requestObservability' // Accessor for per-request observability data
 
 // Factory that creates the debug handler with injected build info
 export function createDebugHandler(deps: { buildInfo: any }) {

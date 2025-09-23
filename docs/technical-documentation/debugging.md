@@ -2,6 +2,25 @@
 
 This guide summarizes the lightweight logging, metrics, and request tracing built into the API, and how to use URL-driven request IDs from the client.
 
+## Correlation vs Request ID
+
+- The server always computes a correlation ID (`corr`) and prefers a client-provided request ID when present.
+- Code reference (server): `const requestId = extractRequestId(req, res) || corr`
+- `corr` is taken from `x-correlation-id` if provided, otherwise randomly generated.
+- Headers set on every response:
+	- `x-correlation-id`: correlation value (always present)
+	- `x-response-start-ms`: request start timestamp
+	- `x-response-time-ms`: total duration (set on finish, best-effort)
+	- `x-powered-by`: `sc2cr`
+
+Why two IDs?
+- `x-request-id` is the canonical trace key across FE/BE when you explicitly pass one (via URL `rid|reqid|requestId`).
+- `x-correlation-id` guarantees an ID exists even when the request ID is missing; use it to trace logs for ad-hoc requests.
+
+Tips:
+- For reproducible debugging, open the app with `?rid=<id>`; the FE sends `x-request-id: <id>` on all API calls.
+- If `x-request-id` wasn’t set, copy `x-correlation-id` from the response to search logs or to set `?rid=` in a follow-up.
+
 ## Request IDs via URL
 
 - Add one of these query params to the app URL: `rid`, `reqid`, or `requestId`.

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import logger from '../logging/logger'
-import { extractRequestId } from '../utils/requestId'
+import { extractRequestId } from '../utils/requestIdentity'
 import { refreshDataCache } from '../utils/csvParser'
 
 const router = Router()
@@ -16,8 +16,8 @@ router.get('/health', async (req: Request, res: Response) => {
         logger.debug(
             {
                 route: '/api/health',
-                ua: req.headers['user-agent'],
-                ip: (req.headers['x-forwarded-for'] as string) || (req.ip as string),
+                ua: req.headers?.['user-agent'],
+                ip: (req.headers?.['x-forwarded-for'] as string) || (req.ip as string),
                 id: extractRequestId(req, res) || '',
             },
             'health check'
