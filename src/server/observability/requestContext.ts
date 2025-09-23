@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'async_hooks'
-import { getReqObs } from './requestObservability'
+import { getReqObsById } from './requestObservability'
 import { extractRequestId } from '../utils/requestIdentity'
 
 type RequestContext = { requestId?: string }
@@ -17,8 +17,7 @@ export function getRequestId(): string | undefined {
 function getObsForCurrentRequest() {
     const id = getRequestId()
     if (!id) return undefined
-    const reqLike: any = { headers: { 'x-request-id': id } }
-    return getReqObs(reqLike)
+    return getReqObsById(id)
 }
 
 export function bumpPulseReq() {
