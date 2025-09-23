@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { metrics, observePulseLatency } from '../metrics/lite'
 import { bumpPulseReq, bumpPulseErr } from '../observability/requestContext'
-import type { InternalAxiosRequestConfig, AxiosResponse } from 'axios'
+import type { AxiosResponse } from 'axios'
 
 /**
  * SC2Pulse HTTP client
@@ -31,10 +31,6 @@ const client = axios.create({ baseURL: BASE_URL, timeout: PULSE_TIMEOUT })
 
 // Propagate request metrics with defensive guards for tests where axios is mocked
 const anyClient: any = client as any
-if (anyClient.interceptors?.request?.use) {
-    anyClient.interceptors.request.use((config: InternalAxiosRequestConfig) => config)
-}
-
 if (anyClient.interceptors?.response?.use) {
     anyClient.interceptors.response.use(
         (response: AxiosResponse) => {
@@ -58,7 +54,8 @@ if (anyClient.interceptors?.response?.use) {
                     metrics.pulse_err_total.http4xx++
                     bumpPulseErr('http4xx')
                 } else {
-                    metrics.pulse_err_total.other = (metrics.pulse_err_total.other || 0) + 1
+                    if (metrics.pulse_err_total.other === undefined) metrics.pulse_err_total.other = 0
+                    metrics.pulse_err_total.other++
                     bumpPulseErr('other')
                 }
             } else {

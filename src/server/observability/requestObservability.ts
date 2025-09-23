@@ -28,6 +28,10 @@ function ensureEntry(id: string): ReqObs {
     if (obs) return obs
     obs = { id, startMs: Date.now(), pulseCalls: 0, pulseErrs: {}, cacheHits: 0, cacheMisses: 0 }
     store.byId.set(id, obs)
+    const old = store.ring[store.head]
+    if (old && old.id) {
+        store.byId.delete(old.id)
+    }
     store.ring[store.head] = obs
     store.head = (store.head + 1) % OBS_RING_SIZE
     return obs
