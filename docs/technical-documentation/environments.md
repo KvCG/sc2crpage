@@ -20,13 +20,13 @@ Config files:
 
 ## Logging & Observability (Server)
 
-- Logger: pino (pretty in development)
+- Logger: pino (pretty stream in development)
   - `LOG_LEVEL` (default `info`)
   - Redacts `authorization` and cookies
 - HTTP logging: pino-http
-  - `LOG_HTTP_SUCCESS=false` silences 2xx/3xx by default
-  - 4xx/5xx logged at `error` with `{ method, url, status, responseTimeMs, requestId }`
-  - `/api/health` is quiet by default; `?verbose=1` emits a single info log
+  - Logs 2xx/3xx at `info`, 4xx/5xx at `error`
+  - `/api/health`: minimal `info` log by default; when `LOG_LEVEL=debug`, logs extra fields `{ route, ua, ip, id }`
+  - All other routes logged; request ID is included and echoed as `x-request-id`
 - Request store (pull-based only): last ~200 requests in-memory
   - Fields per request: `durationMs`, `pulseCalls`, `pulseErrs`, `cacheHits`, `cacheMisses`
   - No background logs; data is retrieved via debug endpoint
@@ -36,6 +36,16 @@ Config files:
 - Pulse client
   - `PULSE_TIMEOUT_MS` (default `8000`)
   - Axios interceptors increment counters; errors classified as `timeout|http4xx|http5xx|network|other`
+
+### Request ID Propagation (Client → Server)
+
+- Client supports URL params to set a request ID used for all API calls:
+  - Accepted keys: `rid`, `reqid`, `requestId`
+  - Value is sent as `x-request-id` header via an axios request interceptor
+  - Stored in `sessionStorage` for the session (falls back to existing `x-request-id` in `localStorage` if present)
+- Usage examples:
+  - Open the app with `?rid=my-debug-id` to tag all subsequent API requests
+  - The server echoes the ID in `x-request-id`, includes it in logs, and exposes request snapshots at `/api/debug?type=req&id=my-debug-id`
 
 ### Debug Endpoint
 
@@ -47,7 +57,6 @@ Config files:
 
 ```
 LOG_LEVEL=info
-LOG_HTTP_SUCCESS=false
 PULSE_TIMEOUT_MS=8000
 ENABLE_REQ_OBS=true
 ```

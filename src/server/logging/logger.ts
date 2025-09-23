@@ -11,15 +11,20 @@ const REDACT_PATHS = [
     'headers.cookie',
 ]
 
-export const logger = pino({
-    level: LOG_LEVEL,
-    redact: { paths: REDACT_PATHS, remove: true },
-    transport: isDev
-        ? {
-              target: 'pino-pretty',
-              options: { colorize: true, translateTime: 'SYS:standard' },
-          }
-        : undefined,
-})
+let stream: any | undefined
+if (isDev) {
+    // Use pretty stream in dev to avoid worker-thread transport files
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const pretty = require('pino-pretty')
+    stream = pretty({ colorize: true, translateTime: 'SYS:standard' })
+}
+
+export const logger = pino(
+    {
+        level: LOG_LEVEL,
+        redact: { paths: REDACT_PATHS, remove: true },
+    },
+    stream
+)
 
 export default logger

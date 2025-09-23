@@ -11,8 +11,10 @@ import { getBackendBuildInfo } from './utils/buildInfo'
 import { isLocalAppEnv } from '../shared/runtimeEnv'
 import { httpLogger, httpMetricsMiddleware } from './logging/http'
 import { getReqObs, finalizeReq } from './observability/reqObs'
-import { withRequestContext, extractRequestId } from './observability/reqContext'
+import { withRequestContext } from './observability/reqContext'
+import { extractRequestId } from './utils/requestId'
 import createDebugHandler from './routes/debugHandler'
+import logger from './logging/logger'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -69,17 +71,20 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('x-correlation-id', corr)
     res.setHeader('x-powered-by', 'sc2cr')
     res.setHeader('x-response-start-ms', String(start))
-    const rid = extractRequestId(req, res) || corr
-    if (rid) {
-        const reqLike: any = { headers: { 'x-request-id': String(rid) } }
+    logger.debug({ route: req.url, method: req.method, corr }, 'request start')
+    const requestId = extractRequestId(req, res) || corr
+    if (requestId) {
+        const reqLike: any = { headers: { 'x-request-id': String(requestId) } }
         getReqObs(reqLike)
         res.on('finish', () => {
             try { res.setHeader('x-response-time-ms', String(Date.now() - start)) } catch {}
             finalizeReq(reqLike)
+            logger.debug({ route: req.url, method: req.method, corr, status: res.statusCode }, 'request end')
         })
     } else {
         res.on('finish', () => {
             try { res.setHeader('x-response-time-ms', String(Date.now() - start)) } catch {}
+            logger.debug({ route: req.url, method: req.method, corr, status: res.statusCode }, 'request end')
         })
     }
     next()
@@ -92,19 +97,8 @@ app.use('/api', apiRoutes)
 // General debug endpoint driven by query parameter (unguarded by design)
 app.get('/api/debug', createDebugHandler({ buildInfo }))
 
-// Back-compat alias for build info (deprecated)
-app.get('/api/build', (req: Request, res: Response) => {
-    const q = (req.query.debug || req.query.type) as string | undefined
-    if (q && q !== 'buildInfo') {
-        return res.status(400).json({ error: 'Unsupported param', supported: ['buildInfo'] })
-    }
-    res.setHeader('content-type', 'application/json')
-    res.end(JSON.stringify(buildInfo, null, 2))
-})
-
 // Handle SPA routing
 app.get('*', (_req: Request, res: Response) => {
-    // SPA fallback
     res.sendFile(path.join(__dirname, '../index.html'))
 })
 
