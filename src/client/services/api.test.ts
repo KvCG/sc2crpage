@@ -4,7 +4,12 @@ import axios from 'axios'
 vi.mock('axios', () => {
     const get = vi.fn()
     const post = vi.fn()
-    const create = vi.fn(() => ({ get, post }))
+    const interceptors = {
+        request: { use: vi.fn() },
+        response: { use: vi.fn() },
+    }
+    const instance = { get, post, interceptors }
+    const create = vi.fn(() => instance)
     return { default: { create }, create, get, post }
 })
 
