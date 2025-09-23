@@ -1,9 +1,11 @@
+// Add comments to explain the metrics being tracked
+
 export const metrics = {
-    http_total: 0,
-    http_5xx_total: 0,
-    pulse_req_total: 0,
-    cache_hit_total: 0,
-    cache_miss_total: 0,
+    http_total: 0, // Total number of HTTP requests
+    http_5xx_total: 0, // Total number of HTTP 5xx errors
+    pulse_req_total: 0, // Total number of pulse requests
+    cache_hit_total: 0, // Total number of cache hits
+    cache_miss_total: 0, // Total number of cache misses
     pulse_err_total: {
         timeout: 0,
         http4xx: 0,

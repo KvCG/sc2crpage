@@ -190,6 +190,7 @@ Unified workflow in `.github/workflows/Deploy.yml`:
 - **Architecture**: [docs/technical-documentation/architecture.md](docs/technical-documentation/architecture.md)
 - **Environments**: [docs/technical-documentation/environments.md](docs/technical-documentation/environments.md)
 - **Environment Setup**: [docs/technical-documentation/environment-setup.md](docs/technical-documentation/environment-setup.md)
+ - **Debugging & Observability**: [docs/technical-documentation/debugging.md](docs/technical-documentation/debugging.md)
 
 ### Process Documentation
 - **Contributing**: [docs/development-process/contributing.md](docs/development-process/contributing.md)
