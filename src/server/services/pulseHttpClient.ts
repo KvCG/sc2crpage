@@ -29,43 +29,40 @@ export const withBasePath = (path: string) => path
 const PULSE_TIMEOUT = Number(process.env.PULSE_TIMEOUT_MS || 8000)
 const client = axios.create({ baseURL: BASE_URL, timeout: PULSE_TIMEOUT })
 
-// Propagate request metrics with defensive guards for tests where axios is mocked
-const anyClient: any = client as any
-if (anyClient.interceptors?.response?.use) {
-    anyClient.interceptors.response.use(
-        (response: AxiosResponse) => {
-            metrics.pulse_req_total++
-            bumpPulseReq()
-            const rt = Number(response?.headers?.['request-duration-ms']) || 0
-            if (rt > 0) observePulseLatency(rt)
-            return response
-        },
-        (error: any) => {
-            const status = error?.response?.status as number | undefined
-            const code = error?.code as string | undefined
-            if (code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
-                metrics.pulse_err_total.timeout++
-                bumpPulseErr('timeout')
-            } else if (typeof status === 'number') {
-                if (status >= 500) {
-                    metrics.pulse_err_total.http5xx++
-                    bumpPulseErr('http5xx')
-                } else if (status >= 400) {
-                    metrics.pulse_err_total.http4xx++
-                    bumpPulseErr('http4xx')
-                } else {
-                    if (metrics.pulse_err_total.other === undefined) metrics.pulse_err_total.other = 0
-                    metrics.pulse_err_total.other++
-                    bumpPulseErr('other')
-                }
+// Propagate request metrics
+client.interceptors.response.use(
+    (response: AxiosResponse) => {
+        metrics.pulse_req_total++
+        bumpPulseReq()
+        const rt = Number(response?.headers?.['request-duration-ms']) || 0
+        if (rt > 0) observePulseLatency(rt)
+        return response
+    },
+    (error: any) => {
+        const status = error?.response?.status as number | undefined
+        const code = error?.code as string | undefined
+        if (code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
+            metrics.pulse_err_total.timeout++
+            bumpPulseErr('timeout')
+        } else if (typeof status === 'number') {
+            if (status >= 500) {
+                metrics.pulse_err_total.http5xx++
+                bumpPulseErr('http5xx')
+            } else if (status >= 400) {
+                metrics.pulse_err_total.http4xx++
+                bumpPulseErr('http4xx')
             } else {
-                metrics.pulse_err_total.network++
-                bumpPulseErr('network')
+                if (metrics.pulse_err_total.other === undefined) metrics.pulse_err_total.other = 0
+                metrics.pulse_err_total.other++
+                bumpPulseErr('other')
             }
-            return Promise.reject(error)
+        } else {
+            metrics.pulse_err_total.network++
+            bumpPulseErr('network')
         }
-    )
-}
+        return Promise.reject(error)
+    }
+)
 
 // Simple rate limiter based on RPS; disabled in test env
 let nextAvailableAt = 0
