@@ -26,7 +26,8 @@ export const endpoints = {
 export const withBasePath = (path: string) => path
 
 // Shared axios instance
-const client = axios.create({ baseURL: BASE_URL, timeout: Number(process.env.PULSE_TIMEOUT_MS || 8000) })
+const PULSE_TIMEOUT = Number(process.env.PULSE_TIMEOUT_MS || 8000)
+const client = axios.create({ baseURL: BASE_URL, timeout: PULSE_TIMEOUT })
 
 // Propagate request metrics with defensive guards for tests where axios is mocked
 const anyClient: any = client as any
@@ -50,10 +51,16 @@ if (anyClient.interceptors?.response?.use) {
                 metrics.pulse_err_total.timeout++
                 bumpPulseErr('timeout')
             } else if (typeof status === 'number') {
-                if (status >= 500) metrics.pulse_err_total.http5xx++
-                else if (status >= 400) metrics.pulse_err_total.http4xx++
-                else metrics.pulse_err_total.other = (metrics.pulse_err_total.other || 0) + 1
-                bumpPulseErr(status >= 500 ? 'http5xx' : status >= 400 ? 'http4xx' : 'other')
+                if (status >= 500) {
+                    metrics.pulse_err_total.http5xx++
+                    bumpPulseErr('http5xx')
+                } else if (status >= 400) {
+                    metrics.pulse_err_total.http4xx++
+                    bumpPulseErr('http4xx')
+                } else {
+                    metrics.pulse_err_total.other = (metrics.pulse_err_total.other || 0) + 1
+                    bumpPulseErr('other')
+                }
             } else {
                 metrics.pulse_err_total.network++
                 bumpPulseErr('network')
