@@ -13,10 +13,12 @@ INVARIANTS (non-negotiables):
 - Dates/times assume America/Costa_Rica; use metric units when applicable.
 
 TASK:
-Update docs to describe how to manage releases, apply tags, generate change notes, and maintain the branching strategy.
+Investigate and propose a structured process for managing releases, applying tags, generating change notes, and maintaining a branching strategy.  
+Update the documentation with initial recommendations and placeholders for refinement as the process matures.
 
 CONTEXT:
 - Git strategy requires: release tags, automated changelog generation
+- Current Git strategy is green/immature. We want to move towards a clear release/tagging/changelog process
 - Target readers: developers and ops responsible for deployments.
 
 OUTPUT FORMAT:
