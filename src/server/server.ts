@@ -1,3 +1,4 @@
+// src/server/server.ts
 import express, { Request, Response, NextFunction } from 'express'
 import apiRoutes from './routes/apiRoutes'
 import path from 'path'
@@ -11,9 +12,13 @@ import { isLocalAppEnv } from '../shared/runtimeEnv'
 import { httpLogger, httpMetricsMiddleware } from './logging/httpLogger'
 import { getReqObs, finalizeReq } from './observability/requestObservability'
 import { withRequestContext } from './observability/requestContext'
-import { extractRequestId, resolveOrCreateCorrelationId } from './utils/requestIdentity'
+import {
+    extractRequestId,
+    resolveOrCreateCorrelationId,
+} from './utils/requestIdentity'
 import createDebugHandler from './routes/debugHandler'
 import logger from './logging/logger'
+import { getDailySnapshot } from './services/snapshotService'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -140,5 +145,22 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 // Start the Express server
 app.listen(port, () => {
-    console.log(`Express server running at http://localhost:${port}`)
+    logger.info({ port }, `Express server running at http://localhost:${port}`)
+    // Warm up snapshot on startup (non-blocking)
+    ;(async () => {
+        try {
+            const snap = await getDailySnapshot()
+            logger.info(
+                {
+                    size: Array.isArray(snap?.data)
+                        ? snap.data.length
+                        : undefined,
+                    expiry: snap?.expiry,
+                },
+                'snapshot loaded into cache on startup'
+            )
+        } catch (err) {
+            logger.warn({ err }, 'snapshot load failed on startup')
+        }
+    })()
 })
