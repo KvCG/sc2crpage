@@ -1,6 +1,6 @@
 # PR Title
 
-- Use: [BL-###] concise summary
+Same as commit or branch
 
 ## Summary
 - What changed and why
@@ -14,12 +14,3 @@
 - [ ] Minimal diff; unrelated changes excluded
 - [ ] For release PRs: curated changes only (interactive rebase or cherry-pick plan noted)
 - [ ] Updated docs/backlog entries if applicable
-
-## Links
-- Backlog: docs/backlog/backlog.md
-- USAGE: docs/backlog/usage.md
-- Item: BL-### (link to section in backlog.md or backlog.yaml)
-
-## Notes for Reviewers
- - Risks, rollbacks, and targeted reviewers (CODEOWNERS applies)
- - If release PR: list included commits/features and how curated
