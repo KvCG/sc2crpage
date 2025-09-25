@@ -84,6 +84,29 @@
   - Errors: `{ error, code, context? }` structure
   - File Organization: Follow existing patterns in each directory
 
+## Code Readability & Best Practices
+
+Readability is mandatory. Generate code that is easy to read, easy to maintain, and consistent with existing project patterns.
+
+- Prefer clarity over brevity:
+  - Do not produce overly clever or compressed one‑liners.
+  - Avoid nested ternaries or expressions that obscure intent.
+- Be explicit:
+  - Use descriptive names for variables, functions, and files.
+  - Keep indentation/formatting consistent; adhere to ESLint/Prettier.
+  - Write small, focused functions with single responsibility.
+  - Replace magic numbers/strings with constants or configuration.
+- Comments should explain why, not what.
+- Tests must reflect readability: clear assertions, minimal mocking, descriptive names.
+- Favor readability over micro‑performance optimizations unless performance is a measured bottleneck.
+- Treat readability as a first‑class acceptance criterion in all suggested changes and PR reviews.
+
+Avoid:
+- Overly clever chaining or compressed syntax.
+- Cryptic abbreviations.
+- Mixing multiple responsibilities in a single function/file.
+- "Write‑once, read‑never" code.
+
 ## Testing
   - Runner: Vitest (separate configs per side)
   - Server: `npm run test:server` | coverage: `npm run test:coverage:server`

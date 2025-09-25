@@ -20,12 +20,40 @@ Key points:
    - Note: tests are planned; scripts/config may be added later to enforce.
 
 ## Authoring Rules
-- Prioritize readability/maintainability; avoid bloat.
 - Comment non-trivial logic (intent, not restating code).
 - Follow patterns: Express routes → services → utils; client services/hooks/components.
 - Error contract: `{ error, code, context }`. Logging: structured.
 - Env via `process.env`; add new keys to `.env.example` and note in docs.
 - Tests (Vitest planned): co-locate. Prefer MSW for client and axios mocking for server.
+
+## Code Readability & Best Practices
+
+All code must be easy to read, easy to maintain, and consistent with existing project patterns. Readability is a non‑negotiable acceptance criterion for every PR, alongside correctness and tests.
+
+- Prefer clarity over brevity:
+   - No overly clever or compressed one‑liners.
+   - Avoid nested ternaries or over‑optimized expressions that obscure intent.
+- Favor explicitness:
+   - Use descriptive variable and function names.
+   - Maintain consistent indentation/formatting (respect ESLint/Prettier).
+   - Write small, focused functions that do one thing well.
+   - Avoid magic numbers/strings; use constants or config.
+- Commenting:
+   - Write comments that explain why code exists, not what obvious code does.
+   - Document trade‑offs and non‑obvious decisions.
+- Tests reflect readability:
+   - Descriptive test names; clear, direct assertions.
+   - Keep mocking minimal and focused; avoid unnecessary indirection.
+- Performance vs readability:
+   - Readability trumps micro‑optimizations unless performance is a known bottleneck and measured.
+- PR review policy:
+   - Reviewers must evaluate readability as a first‑class criterion. Changes that reduce clarity should be revised before merging.
+
+Avoid:
+- Overly clever chaining or compressed syntax.
+- Cryptic abbreviations in naming.
+- Mixing multiple responsibilities in a single function/file.
+- "Write‑once, read‑never" code.
 
 ## Commit Convention
 We use Conventional Commits for clarity and automation readiness.

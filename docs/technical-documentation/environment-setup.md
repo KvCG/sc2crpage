@@ -45,6 +45,9 @@ REPLAY_ANALYZER_URL=<url>
 MMR_RANGE_FOR_PREMIER_MATCH=400
 MMR_RANGE_FOR_CLOSE_MATCH=200
 
+# Optional: Minimum games to appear in rankings (default 10)
+RANKING_MIN_GAMES=10
+
 # Server port (default 3000)
 PORT=3000
 ```
