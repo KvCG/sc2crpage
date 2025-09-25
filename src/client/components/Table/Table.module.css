@@ -62,7 +62,8 @@
 }
 
 .posIndicator {
-    width: 10px;
+    width: auto;
+    min-width: 20px;
     padding-right: 0;
     white-space: nowrap;
     font-size: 0.8em;
@@ -72,11 +73,11 @@
 }
 
 .posIndicator[data-content='▲'] {
-    color: green;
+    color: rgba(34, 139, 34, 0.85); /* subdued green */
 }
 
 .posIndicator[data-content='▼'] {
-    color: red;
+    color: rgba(220, 53, 69, 0.85); /* subdued red */
 }
 
 .top {
