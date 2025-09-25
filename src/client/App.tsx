@@ -1,6 +1,5 @@
 import { Header } from './components/Header/Header.tsx'
 import { Route, Routes } from 'react-router-dom'
-import { Community } from './pages/Community.tsx'
 import '@mantine/core/styles.css'
 import './App.css'
 import { Ranking } from './pages/Ranking.tsx'
@@ -19,7 +18,7 @@ const App: React.FC = () => {
             <Container>
                 <Routes>
                     <Route path="/" element={<Ranking />} />
-                    <Route path="/tournament" element={<Tournament />} />
+                    {/* <Route path="/tournament" element={<Tournament />} /> */}
                     <Route path="/search" element={<Search />} />
                     <Route path="/replays" element={<Replay />} />
                     <Route path="/replayInformation" element={<ReplayInformation />} />
