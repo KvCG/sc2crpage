@@ -110,6 +110,8 @@ REPLAY_ANALYZER_URL=<url>
 # Tunables
 MMR_RANGE_FOR_PREMIER_MATCH=<number>
 MMR_RANGE_FOR_CLOSE_MATCH=<number>
+# Minimum games to appear in rankings (default 10)
+RANKING_MIN_GAMES=<number>
 PORT=3000
 ```
 
