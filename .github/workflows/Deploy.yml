@@ -116,5 +116,3 @@ jobs:
                     --image registry.fly.io/${{ secrets.FLY_APP_NAME_DEV }}:${{ needs.docker_publish.outputs.tag }} \
                     --strategy immediate \
                     --wait-timeout 600
-              env:
-                  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
