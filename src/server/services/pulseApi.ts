@@ -14,7 +14,7 @@ import {
 } from '../utils/pulseApiHelper'
 import { DateTime } from 'luxon'
 import { get, withBasePath, endpoints } from './pulseHttpClient'
-import { metrics, observePulseLatency } from '../metrics/lite'
+import { metrics } from '../metrics/lite'
 import { bumpCache } from '../observability/requestContext'
 
 
@@ -71,10 +71,7 @@ const getPlayersStats = async (playerIds: string[]) => {
         const limit = Math.min(chunk.length * 4, 400)
         const url = `${withBasePath(endpoints.groupTeam)}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&limit=${limit}&${params}`
         try {
-            const t0 = Date.now()
             const data = await get<any | any[]>(url)
-            const dt = Date.now() - t0
-            observePulseLatency(dt)
             const arr = Array.isArray(data) ? data : [data]
             all.push(...arr)
         } catch (error) {

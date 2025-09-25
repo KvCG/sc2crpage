@@ -21,8 +21,17 @@ router.get('/top', async (req: Request, res: Response) => {
     logger.info({ route: '/api/top', details }, 'fetch live ranking')
     res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
     const rankingData = await getTop()
-    const formattedData = await formatData(rankingData, 'ranking')
-    res.json(filterRankingForDisplay(formattedData))
+    let formattedData = await formatData(rankingData, 'ranking')
+    // Ensure integrity: keep only ranked entries (rating, league, race present)
+    const filtered = (formattedData ?? []).filter(
+        (row: any) =>
+            Number.isFinite(row?.ratingLast) &&
+            Number.isFinite(row?.leagueTypeLast) &&
+            typeof row?.race === 'string'
+    )
+    // If filtering removes everything (edge case), fall back to unfiltered
+    formattedData = filtered.length > 0 ? filtered : (formattedData ?? [])
+    res.json(formattedData)
 })
 
 router.get('/search', async (req: Request, res: Response) => {
