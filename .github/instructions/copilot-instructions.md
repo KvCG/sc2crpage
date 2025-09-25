@@ -47,6 +47,12 @@
 - **Components**: Organized by feature in `components/` directory
 - **Pages**: Main application views in `pages/` directory
 - **Hooks**: Custom data fetching in `hooks/` directory
+ - **Ranking Snapshot & Position Indicators**:
+  - Backend exposes a daily baseline at `GET /api/snapshot` with shape `{ data: RankingRow[], createdAt: ISO, expiry: number }`.
+  - FE caches this baseline in `localStorage` under key `dailySnapshot` and uses the server-provided `expiry` for validity checks.
+   - Live data comes from `GET /api/top` (via `useFetch('ranking')`).
+   - `utils/rankingHelper.addPositionChangeIndicator(current, baseline)` decorates current rows with `positionChangeIndicator` arrows based on `btag` positions; index 0 is correctly handled.
+   - Page `pages/Ranking.tsx` loads/refreshes baseline then computes indicators on live data.
 
 ## CI/CD
 - **Workflow**: `.github/workflows/Deploy.yml` handles checks, Docker builds, and deployments
@@ -99,7 +105,7 @@
 
 ## Evolution & Maintenance Policy
 
-Treat this guide as living, with **single sources of truth**:
+Treat this guide as living document, with **single sources of truth**:
 - **Branching/Release:** `docs/development-process/contributing.md` and `docs/development-process/branching-strategy.md`. Keep these authoritative and update others to match.
 - **Environments & URLs:** `docs/technical-documentation/environments.md`. Update when API bases or routing change.
 - **Testing plan:** `docs/development-process/testing.md`. Keep first-targets and CI notes aligned with reality.

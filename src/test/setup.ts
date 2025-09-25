@@ -30,3 +30,18 @@ vi.mock('luxon', () => ({
         })),
     },
 }))
+
+// Mock matchMedia for Mantine components in jsdom
+Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(), // deprecated
+        removeListener: vi.fn(), // deprecated
+        dispatchEvent: vi.fn(),
+    })),
+})

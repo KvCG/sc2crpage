@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useMediaQuery } from '@mantine/hooks'
 import { Table, Skeleton, Grid, Text } from '@mantine/core'
 import cx from 'clsx'
 import classes from './Table.module.css'
@@ -7,6 +8,7 @@ import { raceAssets } from '../../constants/races'
 import { getStandardName } from '../../utils/common'
 import { RacesTable } from '../RaceTable/RacesTable'
 import { RankingTableColumnFilters, ColumnOptions } from './TableColumnFilters'
+import type { DecoratedRow } from '../../utils/rankingHelper'
 
 const defaultVisibleColumns: ColumnOptions = {
     top: true,
@@ -22,14 +24,29 @@ const defaultVisibleColumns: ColumnOptions = {
     total: true,
 }
 
-const RankingTableRow = ({ row, index, visibleColumns }) => {
+const compactVisibleColumns: ColumnOptions = {
+    top: true,
+    name: true,
+    mmr: true,
+    rank: false,
+    race: true,
+    lastPlayed: false,
+    terran: false,
+    protoss: false,
+    zerg: false,
+    random: false,
+    total: false,
+}
+
+type RowProps = { row: DecoratedRow; index: number; visibleColumns: ColumnOptions }
+const RankingTableRow = ({ row, index, visibleColumns }: RowProps) => {
     const {
         btag,
         ratingLast,
         race,
         leagueTypeLast,
         positionChangeIndicator,
-        name,
+        positionDelta,
         lastDatePlayed,
         gamesPerRace,
 		online
@@ -41,13 +58,19 @@ const RankingTableRow = ({ row, index, visibleColumns }) => {
         (gamesPerRace?.zergGamesPlayed ?? 0) +
         (gamesPerRace?.randomGamesPlayed ?? 0)
 
+    const arrow = positionChangeIndicator === 'up' ? '▲' : positionChangeIndicator === 'down' ? '▼' : ''
+    const deltaText = positionChangeIndicator !== 'none' && typeof positionDelta === 'number' && Math.abs(positionDelta) > 0
+        ? ` ${Math.abs(positionDelta)}`
+        : ''
+
     return (
         <Table.Tr key={btag}>
-            <Table.Td className={classes.posIndicator} data-content={positionChangeIndicator}>
-                {positionChangeIndicator}
+            <Table.Td className={classes.posIndicator} data-content={arrow}>
+                {arrow}
+                {deltaText}
             </Table.Td>
             {visibleColumns.top && <Table.Td className={classes.top}>{index + 1}</Table.Td>}
-            {visibleColumns.name && <Table.Td title={btag}>{getStandardName(row)}</Table.Td>}
+            {visibleColumns.name && <Table.Td className={classes.name} title={btag}>{getStandardName(row)}</Table.Td>}
             {visibleColumns.mmr && <Table.Td>{ratingLast}</Table.Td>}
             {visibleColumns.rank && (
                 <Table.Td>
@@ -55,8 +78,8 @@ const RankingTableRow = ({ row, index, visibleColumns }) => {
                 </Table.Td>
             )}
             {visibleColumns.race && (
-                <Table.Td className={cx(raceAssets[race]?.className)}>
-                    <img className={classes.rank} src={raceAssets[race]?.assetPath} alt={race} />
+                <Table.Td className={cx(raceAssets[race as keyof typeof raceAssets]?.className)}>
+                    <img className={classes.rank} src={raceAssets[race as keyof typeof raceAssets]?.assetPath} alt={race} />
                 </Table.Td>
             )}
             {visibleColumns.terran && <Table.Td>{gamesPerRace?.terranGamesPlayed}</Table.Td>}
@@ -69,12 +92,15 @@ const RankingTableRow = ({ row, index, visibleColumns }) => {
     )
 }
 
-export function RankingTable({ data, loading }) {
-    const [tableData, setTableData] = useState(data)
+type TableProps = { data: DecoratedRow[] | null; loading: boolean }
+export function RankingTable({ data, loading }: TableProps) {
+    const isSmallScreen = useMediaQuery('(max-width: 48em)')
+    const [tableData, setTableData] = useState<DecoratedRow[] | null>(data)
 
     const [visibleColumns, setVisibleColumns] = useState<ColumnOptions>(() => {
         const stored = localStorage.getItem('visibleColumns')
-        return stored ? (JSON.parse(stored) as ColumnOptions) : defaultVisibleColumns
+        if (stored) return JSON.parse(stored) as ColumnOptions
+        return isSmallScreen ? compactVisibleColumns : defaultVisibleColumns
     })
 
     useEffect(() => {
@@ -88,8 +114,8 @@ export function RankingTable({ data, loading }) {
     return (
         <Grid gutter="md">
             <Grid.Col span={12}>
-                {!loading && tableData?.length > 0 && (
-                    <Text align="center" mb="md">
+                {!loading && Array.isArray(tableData) && tableData.length > 0 && (
+                    <Text ta="center" mb="md">
                         Select a race to filter the table. Click again to remove.
                     </Text>
                 )}
@@ -97,7 +123,7 @@ export function RankingTable({ data, loading }) {
             </Grid.Col>
 
             <Grid.Col span={12}>
-                {!loading && tableData?.length > 0 && (
+                {!loading && Array.isArray(tableData) && tableData.length > 0 && (
                     <RankingTableColumnFilters
                         columns={visibleColumns}
                         onColumnChange={setVisibleColumns}
@@ -111,6 +137,7 @@ export function RankingTable({ data, loading }) {
                 maw={700}
                 miw={250}
             >
+                <div className={classes.tableContainer}>
                 <Table
                     verticalSpacing="3"
                     striped
@@ -123,9 +150,9 @@ export function RankingTable({ data, loading }) {
                 >
                     <Table.Thead className={classes.header}>
                         <Table.Tr>
-                            <Table.Th></Table.Th>
-                            {visibleColumns.top && <Table.Th>Top</Table.Th>}
-                            {visibleColumns.name && <Table.Th>Name</Table.Th>}
+                            <Table.Th className={classes.posIndicator}></Table.Th>
+                            {visibleColumns.top && <Table.Th className={classes.top}>Top</Table.Th>}
+                            {visibleColumns.name && <Table.Th className={classes.name}>Name</Table.Th>}
                             {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
                             {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
                             {visibleColumns.race && <Table.Th>Race</Table.Th>}
@@ -141,7 +168,7 @@ export function RankingTable({ data, loading }) {
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {tableData?.map((row, index) =>
+                        {tableData?.map((row: DecoratedRow, index: number) =>
                             row.ratingLast ? (
                                 <RankingTableRow
                                     key={row.btag}
@@ -153,6 +180,7 @@ export function RankingTable({ data, loading }) {
                         )}
                     </Table.Tbody>
                 </Table>
+                </div>
             </Skeleton>
         </Grid>
     )
