@@ -19,6 +19,8 @@ import {
 import createDebugHandler from './routes/debugHandler'
 import logger from './logging/logger'
 import { getDailySnapshot } from './services/snapshotService'
+import { PlayerAnalyticsScheduler } from './services/playerAnalyticsScheduler'
+import analyticsRoutes from './routes/analytics'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -129,6 +131,7 @@ app.use(express.static(path.join(__dirname, '../')))
 app.use(express.json({ limit: '30mb' }))
 app.use(express.urlencoded({ limit: '30mb', extended: true }))
 app.use('/api', apiRoutes)
+app.use('/api/analytics', analyticsRoutes)
 // General debug endpoint driven by query parameter (unguarded by design)
 app.get('/api/debug', createDebugHandler({ buildInfo }))
 
@@ -146,6 +149,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // Start the Express server
 app.listen(port, () => {
     logger.info({ port }, `Express server running at http://localhost:${port}`)
+    
     // Warm up snapshot on startup (non-blocking)
     ;(async () => {
         try {
@@ -163,4 +167,13 @@ app.listen(port, () => {
             logger.warn({ err }, 'snapshot load failed on startup')
         }
     })()
+
+    // Start analytics scheduler if enabled
+    const schedulerConfig = PlayerAnalyticsScheduler.getConfig()
+    if (schedulerConfig.enabled) {
+        PlayerAnalyticsScheduler.start()
+        logger.info({ config: schedulerConfig }, 'Player analytics scheduler started')
+    } else {
+        logger.info('Player analytics scheduler disabled via configuration')
+    }
 })
