@@ -4,6 +4,7 @@ import challongeRoutes from './challongeRoutes'
 import utilityRoutes from './utilityRoutes'
 import googleRoutes from './googleRoutes'
 import replayAnalyzerRoutes from './replayAnalyzerRoutes'
+import analyticsRoutes from './analyticsRoutes'
 
 const router = Router()
 
@@ -12,5 +13,6 @@ router.use('/', challongeRoutes)
 router.use('/', utilityRoutes)
 router.use('/', googleRoutes)
 router.use('/', replayAnalyzerRoutes)
+router.use('/', analyticsRoutes)
 
 export default router
