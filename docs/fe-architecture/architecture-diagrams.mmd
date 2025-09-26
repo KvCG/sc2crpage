@@ -1,0 +1,56 @@
+---
+title: SC2CR Front-End Architecture Diagrams
+---
+
+## Current Architecture
+```mermaid
+flowchart TD
+    API[SC2CR API] -->|fetch| Hooks
+    Hooks --> Components
+    Components --> Pages
+    Pages --> Router
+    Router --> UI
+    subgraph Issues
+      A1[Coupled Components]
+      A2[Duplicated API Calls]
+      A3[No Persisted Cache]
+      A4[No Hidden Admin Routes]
+    end
+```
+
+## Target Architecture
+```mermaid
+flowchart TD
+    API[SC2CR API] -->|fetch| APIClient
+    APIClient -->|cache| CachingLayer
+    CachingLayer -->|data| Hooks
+    Hooks -->|state| StateProvider
+    StateProvider -->|props| Components
+    Components --> Pages
+    Pages --> Router
+    Router --> UI
+    AdminPanel -.->|hidden route| Router
+    Router -->|role-based| AdminPanel
+```
+
+## Data Flow & Caching
+```mermaid
+flowchart TD
+    API[SC2CR API] --> APIClient
+    APIClient --> CachingLayer
+    CachingLayer --> Hooks
+    Hooks --> StateProvider
+    StateProvider --> Components
+    Components --> Pages
+    CachingLayer -->|persist| LocalStorage
+```
+
+## Admin & Observability
+```mermaid
+flowchart TD
+    UI -->|log| ConsoleWrap
+    UI -->|error| Sentry
+    UI -->|metrics| HealthPanel
+    Router -->|hidden| AdminPanel
+    AdminPanel -->|feature flag| RoleProvider
+```
