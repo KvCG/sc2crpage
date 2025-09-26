@@ -1,0 +1,26 @@
+[
+    {
+        "playerCharacterId": "201",
+        "btag": "RandomPlayer#4321",
+        "name": "RandomPlayer",
+        "race": "RANDOM",
+        "ratingLast": 3200,
+        "leagueTypeLast": "PLATINUM",
+        "gamesPerRace": 85,
+        "lastDatePlayed": "15/01/2024",
+        "online": true,
+        "gamesThisSeason": 85
+    },
+    {
+        "playerCharacterId": "202", 
+        "btag": "OfflinePlayer#8765",
+        "name": "OfflinePlayer",
+        "race": "ZERG",
+        "ratingLast": 2100,
+        "leagueTypeLast": "GOLD", 
+        "gamesPerRace": 45,
+        "lastDatePlayed": "01/12/2023",
+        "online": false,
+        "gamesThisSeason": 45
+    }
+]

@@ -1,0 +1,24 @@
+[
+    {
+        "character": {
+            "id": "501",
+            "realm": 1,
+            "name": "ExactMatch",
+            "battlenetId": 272
+        },
+        "account": {
+            "battleTag": "ExactMatch#3333"
+        },
+        "teams": [
+            {
+                "league": {
+                    "type": "GRANDMASTER"
+                },
+                "rating": 5200,
+                "wins": 150,
+                "losses": 20,
+                "ties": 2
+            }
+        ]
+    }
+]

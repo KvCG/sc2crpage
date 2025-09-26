@@ -14,8 +14,8 @@ describe('snapshotService', () => {
         vi.resetModules()
         hoisted.getTopMock.mockReset()
         hoisted.formatMock.mockReset()
-        const cache = (await import('../../utils/snapshotCache')).default
-        cache.clear()
+        const { snapshotCache } = await import('../../utils/cache')
+        snapshotCache.clear()
     })
 
     it('computes and caches snapshot for 24h key', async () => {
