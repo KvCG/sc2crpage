@@ -2,7 +2,7 @@ export const getClientInfo = userAgent => {
     const regex =
         /(?:Android [\d\.]+|iPhone OS [\d_]+|Windows NT [\d\.]+|Mac OS X [\d_]+|CrOS [\d\.]+|Linux)|(?:iPhone|iPad|iPod|Android|Windows Phone|Macintosh|Windows|Linux|Mobile)|(?:Chrome\/[\d\.]+|Safari\/[\d\.]+|Firefox\/[\d\.]+|Opera\/[\d\.]+|Edg\/[\d\.]+|MSIE [\d\.]+|Trident\/[\d\.]+)/g
 
-    const matches = [...userAgent.matchAll(regex)]
+    const matches = [...userAgent?.matchAll(regex)]
 
     let os =
         matches.find(match => match[0].includes('Android'))?.[0] ||
