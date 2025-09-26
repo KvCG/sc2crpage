@@ -30,6 +30,7 @@
         "csv-parser": "^3.0.0",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",
+        "express-rate-limit": "^8.1.0",
         "firebase-admin": "^12.4.0",
         "googleapis": "^144.0.0",
         "lru-cache": "^11.1.0",
@@ -39,7 +40,8 @@
         "pino-http": "^10.5.0",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
-        "react-router-dom": "^6.26.1"
+        "react-router-dom": "^6.26.1",
+        "zod": "^4.1.11"
     },
     "devDependencies": {
         "@eslint/js": "^9.9.0",
@@ -68,12 +70,12 @@
         "postcss": "^8.4.41",
         "postcss-preset-mantine": "^1.17.0",
         "postcss-simple-vars": "^7.0.1",
+        "supertest": "^7.0.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.5.3",
         "typescript-eslint": "^8.0.1",
         "vite": "^5.4.1",
         "vitest": "^2.0.5",
-        "ws": "^8.18.0",
-        "supertest": "^7.0.0"
+        "ws": "^8.18.0"
     }
 }
