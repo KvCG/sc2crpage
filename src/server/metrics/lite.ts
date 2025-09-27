@@ -64,18 +64,27 @@ export function observeAnalyticsLatency(ms: number) {
     metrics.analytics_latency_bins[idx]++
 }
 
-export function estimateAnalyticsQuantile(q: number): number {
-    const counts = metrics.analytics_latency_bins
-    const total = counts.reduce((a, b) => a + b, 0)
-    if (total === 0) return 0
-    const target = Math.ceil(total * q)
-    let cum = 0
-    for (let i = 0; i < counts.length; i++) {
-        cum += counts[i]
-        if (cum >= target) {
+/**
+ * Estimates the latency quantile for analytics requests.
+ * @param quantile - The quantile to estimate (e.g., 0.5 for p50).
+ * @returns The upper bound of the latency bin corresponding to the quantile.
+ */
+export function estimateAnalyticsQuantile(quantile: number): number {
+    const latencyBins = metrics.analytics_latency_bins
+    const totalCount = latencyBins.reduce((sum, count) => sum + count, 0)
+    if (totalCount === 0) return 0
+
+    const targetCount = Math.ceil(totalCount * quantile)
+    let cumulative = 0
+
+    for (let i = 0; i < latencyBins.length; i++) {
+        cumulative += latencyBins[i]
+        if (cumulative >= targetCount) {
+            // Return the upper bound for this bin, or 6000ms for the last bin
             return i < ANALYTICS_BOUNDS.length ? ANALYTICS_BOUNDS[i] : 6000
         }
     }
+    // Fallback in case all bins are empty (should not happen)
     return 6000
 }
 
@@ -100,23 +109,41 @@ export function incrementAnalyticsFeatureDisabled() {
     metrics.analytics_feature_disabled_total++
 }
 
-export function incrementAnalyticsError(errorType: 'validation' | 'service' | 'network' | 'other') {
+export function incrementAnalyticsError(
+    errorType: 'validation' | 'service' | 'network' | 'other'
+) {
     metrics.analytics_err_total[errorType]++
 }
 
 // Analytics performance summary
 export function getAnalyticsMetricsSummary() {
     const totalRequests = metrics.analytics_req_total
-    const cacheHitRate = totalRequests > 0 ? (metrics.analytics_cache_hit_total / totalRequests) * 100 : 0
-    
+
+    const cacheHitRate =
+        totalRequests > 0
+            ? (metrics.analytics_cache_hit_total / totalRequests) * 100
+            : 0
+
+    const totalErrors = Object.values(metrics.analytics_err_total).reduce(
+        (sum, count) => sum + count,
+        0
+    )
+
+    const errorRate =
+        totalRequests > 0 ? (totalErrors / totalRequests) * 100 : 0
+
+    const p50Latency = estimateAnalyticsQuantile(0.5)
+    const p95Latency = estimateAnalyticsQuantile(0.95)
+    const p99Latency = estimateAnalyticsQuantile(0.99)
+
     return {
         totalRequests,
         cacheHitRate: Math.round(cacheHitRate * 100) / 100,
         rateLimitBlocked: metrics.analytics_rate_limit_total,
         featureDisabledBlocked: metrics.analytics_feature_disabled_total,
-        errorRate: totalRequests > 0 ? (Object.values(metrics.analytics_err_total).reduce((a, b) => a + b, 0) / totalRequests) * 100 : 0,
-        p50Latency: estimateAnalyticsQuantile(0.5),
-        p95Latency: estimateAnalyticsQuantile(0.95),
-        p99Latency: estimateAnalyticsQuantile(0.99)
+        errorRate: Math.round(errorRate * 100) / 100,
+        p50Latency,
+        p95Latency,
+        p99Latency,
     }
 }
