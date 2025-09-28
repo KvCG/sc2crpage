@@ -2,6 +2,7 @@ import { google } from 'googleapis'
 import { DateTime } from 'luxon'
 import logger from '../logging/logger'
 import { SnapshotResponse } from './snapshotService'
+import { detectAppEnv } from '../../shared/runtimeEnv'
 
 /**
  * Player Analytics Persistence Service
@@ -16,8 +17,8 @@ import { SnapshotResponse } from './snapshotService'
  * - JSON file format for easy inspection and restoration
  */
 
-const ANALYTICS_FOLDER_NAME = 'PlayerAnalytics'
-const SNAPSHOTS_SUBFOLDER = 'Snapshots'
+const ANALYTICS_FOLDER_NAME = 'PlayerAnalytics_' + detectAppEnv()
+const SNAPSHOTS_SUBFOLDER = 'Snapshots_' + detectAppEnv()
 const RETENTION_DAYS = 90
 
 export interface BackupMetadata {
@@ -133,7 +134,7 @@ export class PlayerAnalyticsPersistence {
         const yearFolder = await this.getOrCreateFolder(year, snapshotsFolder)
         
         // Month folder (09-September)
-        const month = date.toFormat('MM-MMMM')
+        const month = date.toFormat('dd-MMMM')
         const monthFolder = await this.getOrCreateFolder(month, yearFolder)
         
         return monthFolder
