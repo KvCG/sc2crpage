@@ -59,7 +59,7 @@ export class PlayerAnalyticsScheduler {
                 ? moversIntervalHours : 3
         }
 
-        logger.info({
+        logger.debug({
             config: this.config,
             feature: 'scheduler'
         }, 'Player analytics scheduler configuration loaded')
@@ -106,7 +106,6 @@ export class PlayerAnalyticsScheduler {
         const config = this.getConfig()
         
         if (!config.enabled) {
-            logger.info({ feature: 'scheduler' }, 'Player analytics scheduler disabled by configuration')
             return
         }
 
@@ -324,5 +323,12 @@ export class PlayerAnalyticsScheduler {
         const nowCR = DateTime.now().setZone('America/Costa_Rica')
         operation.lastRun = nowCR
         operation.nextRun = this.calculateNextRun(operation.intervalHours, operation.lastRun)
+
+        logger.info({
+            operation: operationName,
+            feature: 'scheduler',
+            nextRun: operation.nextRun.toISO(),
+            lastRun: operation.lastRun.toISO()
+        }, 'Force-run of scheduled operation completed')
     }
 }
