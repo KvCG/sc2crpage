@@ -225,6 +225,7 @@ export class AnalyticsService {
                 gamesPerRace: player.gamesPerRace || {},
                 winRate: player.winRate,
                 rank: player.rank,
+                lastPlayed: player.lastPlayed || null,
             }))
         }
     }
@@ -417,7 +418,7 @@ export class AnalyticsService {
 
         players.forEach(player => {
             const hours = OnlineStatusCalculator.getHoursSinceLastActivity(
-                player.lastDatePlayed
+                player.lastPlayed
             )
 
             if (hours !== null) {
@@ -442,8 +443,8 @@ export class AnalyticsService {
         const dailyActivity = Array(7).fill(0)
 
         players.forEach(player => {
-            if (player.lastDatePlayed) {
-                const date = DateTime.fromISO(player.lastDatePlayed)
+            if (player.lastPlayed) {
+                const date = DateTime.fromISO(player.lastPlayed)
                 if (date.isValid) {
                     hourlyActivity[date.hour]++
                     dailyActivity[date.weekday - 1]++

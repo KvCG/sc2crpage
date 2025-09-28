@@ -361,7 +361,13 @@ export class PlayerAnalyticsPersistence {
                     feature: 'persistence'
                 }, 'Completed cleanup of old backups')
             }
-
+            if(deletedCount === 0) {
+                logger.info({
+                    deletedCount,
+                    retentionDays: RETENTION_DAYS,
+                    feature: 'persistence'
+                }, 'No old backups to delete')
+            }
             return deletedCount
 
         } catch (error) {

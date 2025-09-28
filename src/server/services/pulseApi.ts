@@ -293,6 +293,7 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
                                 ratingLast: highestRatingObj?.rating ?? null,
                                 leagueTypeLast: highestLeagueType,
                                 gamesThisSeason,
+                                lastPlayed: highestRatingObj?.lastPlayed ?? null,
                             }
                         })
                     )                    // Store in cache for 30 seconds (lru-cache handles TTL)
