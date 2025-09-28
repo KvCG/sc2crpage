@@ -16,11 +16,11 @@ import {
     extractRequestId,
     resolveOrCreateCorrelationId,
 } from './utils/requestIdentity'
-import createDebugHandler from './routes/debugHandler'
+import createDebugHandler from './services/debugService'
 import logger from './logging/logger'
 import { getDailySnapshot } from './services/snapshotService'
 import { PlayerAnalyticsScheduler } from './services/playerAnalyticsScheduler'
-import analyticsRoutes from './routes/analytics'
+
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -131,7 +131,6 @@ app.use(express.static(path.join(__dirname, '../')))
 app.use(express.json({ limit: '30mb' }))
 app.use(express.urlencoded({ limit: '30mb', extended: true }))
 app.use('/api', apiRoutes)
-app.use('/api/analytics', analyticsRoutes)
 // General debug endpoint driven by query parameter (unguarded by design)
 app.get('/api/debug', createDebugHandler({ buildInfo }))
 
