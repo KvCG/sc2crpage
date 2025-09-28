@@ -16,9 +16,11 @@ import {
     extractRequestId,
     resolveOrCreateCorrelationId,
 } from './utils/requestIdentity'
-import createDebugHandler from './routes/debugHandler'
+import createDebugHandler from './services/debugService'
 import logger from './logging/logger'
 import { getDailySnapshot } from './services/snapshotService'
+import { PlayerAnalyticsScheduler } from './services/playerAnalyticsScheduler'
+
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -146,6 +148,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // Start the Express server
 app.listen(port, () => {
     logger.info({ port }, `Express server running at http://localhost:${port}`)
+    
     // Warm up snapshot on startup (non-blocking)
     ;(async () => {
         try {
@@ -163,4 +166,13 @@ app.listen(port, () => {
             logger.warn({ err }, 'snapshot load failed on startup')
         }
     })()
+
+    // Start analytics scheduler if enabled
+    const schedulerConfig = PlayerAnalyticsScheduler.getConfig()
+    if (schedulerConfig.enabled) {
+        PlayerAnalyticsScheduler.start()
+        logger.info({ config: schedulerConfig }, 'Player analytics scheduler started')
+    } else {
+        logger.info('Player analytics scheduler disabled via configuration')
+    }
 })

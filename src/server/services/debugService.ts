@@ -1,5 +1,5 @@
 import { Request, Response } from 'express' // Express request/response types
-import { metrics, estimateQuantile } from '../metrics/lite' // App metrics and quantile estimator
+import { metrics, estimateQuantile, getAnalyticsMetricsSummary } from '../metrics/lite' // App metrics and quantile estimator
 import { getReqObsById } from '../observability/requestObservability' // Accessor for per-request observability data
 
 // Factory that creates the debug handler with injected build info
@@ -20,6 +20,8 @@ export function createDebugHandler(deps: { buildInfo: any }) {
 
         // Return current metrics snapshot
         if (type === 'metrics') {
+            const analyticsMetrics = getAnalyticsMetricsSummary()
+            
             const body = {
                 http_total: metrics.http_total, // All HTTP requests
                 http_5xx_total: metrics.http_5xx_total, // 5xx responses
@@ -29,6 +31,15 @@ export function createDebugHandler(deps: { buildInfo: any }) {
                 cache_miss_total: metrics.cache_miss_total, // Cache misses
                 pulse_p95_ms: estimateQuantile(0.95), // 95th percentile latency (ms)
                 pulse_p99_ms: estimateQuantile(0.99), // 99th percentile latency (ms)
+                // Analytics metrics
+                analytics_req_total: analyticsMetrics.totalRequests,
+                analytics_cache_hit_rate: analyticsMetrics.cacheHitRate,
+                analytics_rate_limited: analyticsMetrics.rateLimitBlocked,
+                analytics_feature_disabled: analyticsMetrics.featureDisabledBlocked,
+                analytics_error_rate: analyticsMetrics.errorRate,
+                analytics_p50_ms: analyticsMetrics.p50Latency,
+                analytics_p95_ms: analyticsMetrics.p95Latency,
+                analytics_p99_ms: analyticsMetrics.p99Latency
             }
             return res.json(body)
         }

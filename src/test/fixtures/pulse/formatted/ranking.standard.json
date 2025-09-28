@@ -1,0 +1,38 @@
+[
+    {
+        "playerCharacterId": "101",
+        "btag": "TestPlayer#1234", 
+        "name": "TestPlayer",
+        "race": "PROTOSS",
+        "ratingLast": 4200,
+        "leagueTypeLast": "MASTER",
+        "gamesPerRace": 190,
+        "lastDatePlayed": "15/01/2024",
+        "online": true,
+        "gamesThisSeason": 190
+    },
+    {
+        "playerCharacterId": "102",
+        "btag": "ZergRush#5678",
+        "name": "ZergRush", 
+        "race": "ZERG",
+        "ratingLast": 5100,
+        "leagueTypeLast": "GRANDMASTER",
+        "gamesPerRace": 205,
+        "lastDatePlayed": "15/01/2024",
+        "online": true,
+        "gamesThisSeason": 205
+    },
+    {
+        "playerCharacterId": "103",
+        "btag": "TerranMarine#9012",
+        "name": "TerranMarine",
+        "race": "TERRAN", 
+        "ratingLast": 3850,
+        "leagueTypeLast": "DIAMOND",
+        "gamesPerRace": 203,
+        "lastDatePlayed": "15/01/2024",
+        "online": true,
+        "gamesThisSeason": 203
+    }
+]

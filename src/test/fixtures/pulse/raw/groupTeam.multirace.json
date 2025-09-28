@@ -1,0 +1,92 @@
+[
+    {
+        "members": [
+            {
+                "character": {
+                    "id": "101",
+                    "realm": 1,
+                    "name": "TestPlayer",
+                    "battlenetId": 272
+                },
+                "account": {
+                    "battleTag": "TestPlayer#1234"
+                },
+                "raceGames": {
+                    "PROTOSS": 150,
+                    "ZERG": 25,
+                    "TERRAN": 10,
+                    "RANDOM": 5
+                },
+                "wins": 125,
+                "losses": 65,
+                "ties": 0
+            }
+        ],
+        "lastPlayed": "2024-01-15T14:30:00Z",
+        "league": {
+            "type": "MASTER"
+        },
+        "rating": 4200,
+        "leagueType": "MASTER"
+    },
+    {
+        "members": [
+            {
+                "character": {
+                    "id": "102", 
+                    "realm": 1,
+                    "name": "ZergRush",
+                    "battlenetId": 272
+                },
+                "account": {
+                    "battleTag": "ZergRush#5678"
+                },
+                "raceGames": {
+                    "ZERG": 200,
+                    "PROTOSS": 0,
+                    "TERRAN": 5,
+                    "RANDOM": 0
+                },
+                "wins": 140,
+                "losses": 65,
+                "ties": 0
+            }
+        ],
+        "lastPlayed": "2024-01-15T16:45:00Z",
+        "league": {
+            "type": "GRANDMASTER"
+        },
+        "rating": 5100,
+        "leagueType": "GRANDMASTER"
+    },
+    {
+        "members": [
+            {
+                "character": {
+                    "id": "103",
+                    "realm": 1, 
+                    "name": "TerranMarine",
+                    "battlenetId": 272
+                },
+                "account": {
+                    "battleTag": "TerranMarine#9012"
+                },
+                "raceGames": {
+                    "TERRAN": 180,
+                    "PROTOSS": 15,
+                    "ZERG": 8,
+                    "RANDOM": 0
+                },
+                "wins": 110,
+                "losses": 93,
+                "ties": 0
+            }
+        ],
+        "lastPlayed": "2024-01-15T12:15:00Z",
+        "league": {
+            "type": "DIAMOND"
+        },
+        "rating": 3850,
+        "leagueType": "DIAMOND"
+    }
+]

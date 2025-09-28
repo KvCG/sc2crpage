@@ -1,0 +1,948 @@
+openapi: 3.1.0
+info:
+    title: SC2CR API
+    version: 0.1.0
+    description: >
+        Canonical OpenAPI for SC2CR. Keep it aligned with code and docs.
+
+servers:
+    - url: http://localhost:3000
+      description: localhost
+    - url: https://sc2cr-dev.fly.dev
+      description: Dev
+    - url: https://sc2cr-latest.onrender.com
+      description: Prod
+
+paths:
+    /api/top:
+        get:
+            summary: Get top player rankings
+            description: Returns the current top player rankings, filtered for display.
+            tags: [Pulse]
+            responses:
+                '200':
+                    description: List of top player rankings
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PlayerRankingResponse'
+                            examples:
+                                example:
+                                    value:
+                                        - id: '12345'
+                                          name: 'Maru'
+                                          ratingLast: 4200
+                                          leagueTypeLast: 7
+                                          race: 'Terran'
+                                          region: 'KR'
+                                        - id: '67890'
+                                          name: 'Serral'
+                                          ratingLast: 4150
+                                          leagueTypeLast: 7
+                                          race: 'Zerg'
+                                          region: 'EU'
+                '500':
+                    description: Failed to fetch top rankings
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        error: 'Failed to fetch rankings'
+                                        status: 500
+                                        success: false
+                                        message: 'Internal server error'
+
+    /api/search:
+        get:
+            summary: Search for a player
+            description: Search for players by name or ID.
+            tags: [Pulse]
+            parameters:
+                - in: query
+                  name: term
+                  required: true
+                  schema:
+                      type: string
+                  description: The search term for the player.
+            responses:
+                '200':
+                    description: List of matching players
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PlayerSearchResponse'
+                            examples:
+                                example:
+                                    value:
+                                        - id: '12345'
+                                          name: 'Maru'
+                                          race: 'Terran'
+                                          rating: 4200
+                                          league: 'Grandmaster'
+                                          region: 'KR'
+                                        - id: '67890'
+                                          name: 'Serral'
+                                          race: 'Zerg'
+                                          rating: 4150
+                                          league: 'Grandmaster'
+                                          region: 'EU'
+                '400':
+                    description: Invalid search term
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        error: 'Invalid search term'
+                                        status: 400
+                                        success: false
+                                        message: 'Search term is required'
+                '500':
+                    description: Failed to search players
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        error: 'Failed to search players'
+                                        status: 500
+                                        success: false
+                                        message: 'Internal server error'
+
+    /api/snapshot:
+        get:
+            summary: Get daily snapshot of player rankings
+            description: Returns a daily snapshot of player rankings.
+            tags: [Pulse]
+            responses:
+                '200':
+                    description: Daily snapshot of player rankings
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PulseSnapshotResponse'
+                            examples:
+                                example:
+                                    value:
+                                        success: true
+                                        data:
+                                            date: '2025-09-27'
+                                            data:
+                                                - id: '12345'
+                                                  name: 'Maru'
+                                                  ratingLast: 4200
+                                                  leagueTypeLast: 7
+                                                  race: 'Terran'
+                                                  region: 'KR'
+                                                - id: '67890'
+                                                  name: 'Serral'
+                                                  ratingLast: 4150
+                                                  leagueTypeLast: 7
+                                                  race: 'Zerg'
+                                                  region: 'EU'
+                '500':
+                    description: Failed to fetch snapshot
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        error: 'Failed to fetch snapshot'
+                                        status: 500
+                                        success: false
+                                        message: 'Internal server error'
+
+    /api/player-analytics:
+        get:
+            summary: Get player analytics
+            description: Provides comprehensive analytics data for players.
+            tags: [Analytics]
+            parameters:
+                - in: query
+                  name: timeframe
+                  schema:
+                      type: string
+                      enum: [current, daily]
+                      default: current
+                  description: Timeframe for analytics data.
+                - in: query
+                  name: includeInactive
+                  schema:
+                      type: boolean
+                      default: false
+                  description: Whether to include inactive players.
+                - in: query
+                  name: minimumGames
+                  schema:
+                      type: integer
+                      default: 20
+                  description: Minimum number of games played.
+                - in: query
+                  name: race
+                  schema:
+                      type: [string, 'null'] # OAS 3.1 nullability
+                  description: Filter analytics by player race.
+            responses:
+                '200':
+                    description: Player analytics data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PlayerAnalyticsResponse'
+                            examples:
+                                example:
+                                    value:
+                                        success: true
+                                        data:
+                                            metadata:
+                                                totalPlayers: 1500
+                                                generatedAt: '2025-09-27T12:00:00Z'
+                                            activityPatterns:
+                                                - hour: 18
+                                                  onlinePlayers: 320
+                                                - hour: 19
+                                                  onlinePlayers: 350
+                                            raceDistribution:
+                                                Terran: 500
+                                                Zerg: 500
+                                                Protoss: 500
+                                            rankingMovements:
+                                                - playerId: '12345'
+                                                  movement: 2
+                                                - playerId: '67890'
+                                                  movement: -1
+                                            leagueStats:
+                                                Grandmaster: 50
+                                                Master: 200
+                                                Diamond: 400
+                '500':
+                    description: Failed to generate player analytics
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'Failed to generate player analytics'
+                                        message: 'Database connection failed'
+
+    /api/player-analytics/activity:
+        get:
+            summary: Get player activity analysis
+            description: Provides detailed activity analysis for players.
+            tags: [Analytics]
+            parameters:
+                - in: query
+                  name: includeInactive
+                  schema:
+                      type: boolean
+                      default: false
+                  description: Whether to include inactive players.
+                - in: query
+                  name: groupBy
+                  schema:
+                      type: string
+                      enum: [race, league, activity]
+                      default: activity
+                  description: Grouping for activity analysis.
+                - in: query
+                  name: timeframe
+                  schema:
+                      type: string
+                      enum: [current, daily]
+                      default: current
+                  description: Timeframe for analytics data.
+                - in: query
+                  name: minimumGames
+                  schema:
+                      type: integer
+                      default: 20
+                  description: Minimum number of games played.
+            responses:
+                '200':
+                    description: Player activity analysis data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PlayerAnalyticsResponse'
+                            examples:
+                                example:
+                                    value:
+                                        success: true
+                                        data:
+                                            metadata:
+                                                totalPlayers: 1500
+                                                generatedAt: '2025-09-27T12:00:00Z'
+                                            activityPatterns:
+                                                - hour: 18
+                                                  onlinePlayers: 320
+                                                - hour: 19
+                                                  onlinePlayers: 350
+                                            raceDistribution:
+                                                Terran: 500
+                                                Zerg: 500
+                                                Protoss: 500
+                                            rankingMovements:
+                                                - playerId: '12345'
+                                                  movement: 2
+                                                - playerId: '67890'
+                                                  movement: -1
+                                            leagueStats:
+                                                Grandmaster: 50
+                                                Master: 200
+                                                Diamond: 400
+                '500':
+                    description: Failed to generate activity analysis
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'Failed to generate activity analysis'
+                                        message: 'Database connection failed'
+
+    /api/scheduler/force-run:
+        post:
+            summary: Force run a scheduled operation
+            description: Force run a specific scheduled operation.
+            tags: [Scheduler]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ForceRunOperationBody'
+                        examples:
+                            example:
+                                value:
+                                    operation: 'snapshot'
+            responses:
+                '200':
+                    description: Operation forced successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ForceRunSuccessResponse'
+                            examples:
+                                example:
+                                    value:
+                                        success: true
+                                        data:
+                                            operation: 'snapshot'
+                                            executed: true
+                                            timestamp: '2025-09-27T12:34:56Z'
+                '400':
+                    description: Invalid operation
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'Invalid operation. Must be one of: snapshot, activity, movers'
+                '500':
+                    description: Failed to force run operation
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'Failed to force run operation'
+
+    /api/scheduler:
+        get:
+            summary: Get scheduler status
+            description: Get scheduler status and configuration.
+            tags: [Scheduler]
+            responses:
+                '200':
+                    description: Scheduler status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SchedulerStatusResponse'
+                            examples:
+                                example:
+                                    value:
+                                        success: true
+                                        data:
+                                            running: true
+                '500':
+                    description: Failed to get scheduler status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'Failed to get scheduler status'
+
+    /api/persistence:
+        get:
+            summary: Get persistence layer status
+            description: Get persistence layer status.
+            tags: [Persistence]
+            responses:
+                '200':
+                    description: Persistence status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PersistenceStatusResponse'
+                            examples:
+                                example:
+                                    value:
+                                        success: true
+                                        data:
+                                            healthy: true
+                                            backupCount: 5
+                '500':
+                    description: Failed to get persistence status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'Failed to get persistence status'
+
+    /api/persistence/backups:
+        get:
+            summary: List available backups
+            description: List available persistence backups.
+            tags: [Persistence]
+            parameters:
+                - in: query
+                  name: maxAge
+                  schema:
+                      type: integer
+                      default: 168
+                      minimum: 0
+                  description: Maximum age of backups in hours
+            responses:
+                '200':
+                    description: List of backups
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PersistenceBackupsResponse'
+                            examples:
+                                example:
+                                    value:
+                                        success: true
+                                        data:
+                                            backups:
+                                                - fileId: 'backup-20250926-230000'
+                                                  createdAt: '2025-09-26T23:00:00Z'
+                                                  size: 123456
+                                            count: 1
+                                            maxAge: 168
+                '500':
+                    description: Failed to list backups
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'Failed to list backups'
+
+    /api/persistence/restore:
+        post:
+            summary: Restore from backup
+            description: Restore persistence layer from backup.
+            tags: [Persistence]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PersistenceRestoreRequestBody'
+                        examples:
+                            example:
+                                value:
+                                    fileId: 'backup-20250926-230000'
+            responses:
+                '200':
+                    description: Restore successful
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PersistenceRestoreResponse'
+                            examples:
+                                example:
+                                    value:
+                                        success: true
+                                        data:
+                                            restored: true
+                                            snapshot:
+                                                createdAt: '2025-09-26T23:00:00Z'
+                                                playerCount: 1500
+                                            timestamp: '2025-09-27T12:34:56Z'
+                '404':
+                    description: No backup found or restore failed
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'No backup found or restore failed'
+                '500':
+                    description: Failed to restore from backup
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                            examples:
+                                error:
+                                    value:
+                                        success: false
+                                        error: 'Failed to restore from backup'
+
+components:
+    schemas:
+        # -------- Pulse (Top/Search/Snapshot) --------
+        PlayerRanking:
+            type: object
+            properties:
+                id:
+                    type: string
+                    example: '12345'
+                name:
+                    type: string
+                    example: 'Maru'
+                ratingLast:
+                    type: integer
+                    example: 4200
+                leagueTypeLast:
+                    type: integer
+                    example: 7
+                race:
+                    type: string
+                    example: 'Terran'
+                region:
+                    type: string
+                    example: 'KR'
+            required: [id, name, ratingLast, leagueTypeLast, race, region]
+
+        PlayerRankingResponse:
+            type: array
+            items:
+                $ref: '#/components/schemas/PlayerRanking'
+            example:
+                - id: '12345'
+                  name: 'Maru'
+                  ratingLast: 4200
+                  leagueTypeLast: 7
+                  race: 'Terran'
+                  region: 'KR'
+                - id: '67890'
+                  name: 'Serral'
+                  ratingLast: 4150
+                  leagueTypeLast: 7
+                  race: 'Zerg'
+                  region: 'EU'
+
+        PulseSnapshot:
+            type: object
+            properties:
+                date:
+                    type: string
+                    format: date
+                    example: '2025-09-27'
+                data:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PlayerRanking'
+            required: [date, data]
+            example:
+                date: '2025-09-27'
+                data:
+                    - id: '12345'
+                      name: 'Maru'
+                      ratingLast: 4200
+                      leagueTypeLast: 7
+                      race: 'Terran'
+                      region: 'KR'
+                    - id: '67890'
+                      name: 'Serral'
+                      ratingLast: 4150
+                      leagueTypeLast: 7
+                      race: 'Zerg'
+                      region: 'EU'
+
+        PulseSnapshotResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                data:
+                    $ref: '#/components/schemas/PulseSnapshot'
+            required: [success, data]
+            example:
+                success: true
+                data:
+                    date: '2025-09-27'
+                    data:
+                        - id: '12345'
+                          name: 'Maru'
+                          ratingLast: 4200
+                          leagueTypeLast: 7
+                          race: 'Terran'
+                          region: 'KR'
+                        - id: '67890'
+                          name: 'Serral'
+                          ratingLast: 4150
+                          leagueTypeLast: 7
+                          race: 'Zerg'
+                          region: 'EU'
+
+        PlayerSearchQuery:
+            type: object
+            properties:
+                term:
+                    type: string
+                    description: The search term for the player.
+            required: [term]
+            example:
+                term: 'Maru'
+
+        PlayerSearchResult:
+            type: object
+            properties:
+                id:
+                    type: string
+                    example: '12345'
+                name:
+                    type: string
+                    example: 'Maru'
+                race:
+                    type: string
+                    example: 'Terran'
+                rating:
+                    type: integer
+                    example: 4200
+                league:
+                    type: string
+                    example: 'Grandmaster'
+                region:
+                    type: string
+                    example: 'KR'
+            required: [id, name, race, rating, league, region]
+
+        PlayerSearchResponse:
+            type: array
+            items:
+                $ref: '#/components/schemas/PlayerSearchResult'
+            example:
+                - id: '12345'
+                  name: 'Maru'
+                  race: 'Terran'
+                  rating: 4200
+                  league: 'Grandmaster'
+                  region: 'KR'
+                - id: '67890'
+                  name: 'Serral'
+                  race: 'Zerg'
+                  rating: 4150
+                  league: 'Grandmaster'
+                  region: 'EU'
+
+        # -------- Analytics --------
+        PlayerAnalyticsQuery:
+            type: object
+            properties:
+                timeframe:
+                    type: string
+                    enum: [current, daily]
+                    default: current
+                    description: Timeframe for analytics data.
+                includeInactive:
+                    type: boolean
+                    default: false
+                    description: Whether to include inactive players.
+                minimumGames:
+                    type: integer
+                    default: 20
+                    description: Minimum number of games played.
+                race:
+                    type: [string, 'null']
+                    description: Filter analytics by player race.
+            example:
+                timeframe: 'current'
+                includeInactive: false
+                minimumGames: 20
+                race: 'Terran'
+
+        PlayerAnalyticsMetadata:
+            type: object
+            properties:
+                totalPlayers:
+                    type: integer
+                    example: 1500
+                generatedAt:
+                    type: string
+                    format: date-time
+                    example: '2025-09-27T12:00:00Z'
+            required: [totalPlayers, generatedAt]
+
+        PlayerAnalyticsData:
+            type: object
+            properties:
+                metadata:
+                    $ref: '#/components/schemas/PlayerAnalyticsMetadata'
+                activityPatterns:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            hour:
+                                type: integer
+                                minimum: 0
+                                maximum: 23
+                                example: 18
+                            onlinePlayers:
+                                type: integer
+                                example: 320
+                        required: [hour, onlinePlayers]
+                raceDistribution:
+                    type: object
+                    properties:
+                        Terran: { type: integer, example: 500 }
+                        Zerg: { type: integer, example: 500 }
+                        Protoss: { type: integer, example: 500 }
+                    additionalProperties:
+                        type: integer
+                rankingMovements:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            playerId: { type: string, example: '12345' }
+                            movement: { type: integer, example: 2 }
+                        required: [playerId, movement]
+                leagueStats:
+                    type: object
+                    properties:
+                        Grandmaster: { type: integer, example: 50 }
+                        Master: { type: integer, example: 200 }
+                        Diamond: { type: integer, example: 400 }
+                    additionalProperties:
+                        type: integer
+            required:
+                - metadata
+                - activityPatterns
+                - raceDistribution
+                - rankingMovements
+                - leagueStats
+
+        PlayerAnalyticsResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                data:
+                    $ref: '#/components/schemas/PlayerAnalyticsData'
+            required: [success, data]
+            example:
+                success: true
+                data:
+                    metadata:
+                        totalPlayers: 1500
+                        generatedAt: '2025-09-27T12:00:00Z'
+                    activityPatterns:
+                        - hour: 18
+                          onlinePlayers: 320
+                    raceDistribution:
+                        Terran: 500
+                        Zerg: 500
+                        Protoss: 500
+                    rankingMovements:
+                        - playerId: '12345'
+                          movement: 2
+                    leagueStats:
+                        Grandmaster: 50
+                        Master: 200
+                        Diamond: 400
+
+        # -------- Scheduler / Persistence --------
+        ForceRunOperationBody:
+            type: object
+            properties:
+                operation:
+                    type: string
+                    enum: [snapshot, activity, movers]
+                    description: The operation to force run.
+            required: [operation]
+            example:
+                operation: 'snapshot'
+
+        ForceRunSuccessResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                data:
+                    type: object
+                    properties:
+                        operation:
+                            type: string
+                            enum: [snapshot, activity, movers]
+                            example: 'snapshot'
+                        executed:
+                            type: boolean
+                            example: true
+                        timestamp:
+                            type: string
+                            format: date-time
+                            example: '2025-09-27T12:34:56Z'
+                    required: [operation, executed, timestamp]
+            required: [success, data]
+            example:
+                success: true
+                data:
+                    operation: 'snapshot'
+                    executed: true
+                    timestamp: '2025-09-27T12:34:56Z'
+
+        SchedulerStatusResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                data:
+                    type: object
+                    description: Scheduler status and configuration
+                    properties:
+                        running:
+                            type: boolean
+                            example: true
+                    required: [running]
+            required: [success, data]
+
+        PersistenceStatusResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                data:
+                    type: object
+                    description: Persistence layer status
+                    properties:
+                        healthy:
+                            type: boolean
+                            example: true
+                        backupCount:
+                            type: integer
+                            example: 5
+                    required: [healthy, backupCount]
+            required: [success, data]
+
+        BackupFile:
+            type: object
+            properties:
+                fileId:
+                    type: string
+                    example: 'backup-20250926-230000'
+                createdAt:
+                    type: string
+                    format: date-time
+                    example: '2025-09-26T23:00:00Z'
+                size:
+                    type: integer
+                    example: 123456
+            required: [fileId, createdAt, size]
+
+        PersistenceBackupsResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                data:
+                    type: object
+                    properties:
+                        backups:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/BackupFile'
+                        count:
+                            type: integer
+                            example: 1
+                        maxAge:
+                            type: integer
+                            example: 168
+                    required: [backups, count]
+            required: [success, data]
+
+        PersistenceRestoreRequestBody:
+            type: object
+            properties:
+                fileId:
+                    type: string
+                    description: The backup file ID to restore
+                    example: 'backup-20250926-230000'
+            required: [fileId]
+
+        PersistenceRestoreResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                data:
+                    type: object
+                    properties:
+                        restored:
+                            type: boolean
+                            example: true
+                        snapshot:
+                            type: object
+                            properties:
+                                createdAt:
+                                    type: string
+                                    format: date-time
+                                    example: '2025-09-26T23:00:00Z'
+                                playerCount:
+                                    type: integer
+                                    example: 1500
+                            required: [createdAt, playerCount]
+                        timestamp:
+                            type: string
+                            format: date-time
+                            example: '2025-09-27T12:34:56Z'
+                    required: [restored, timestamp]
+            required: [success, data]
