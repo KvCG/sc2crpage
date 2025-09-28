@@ -35,6 +35,7 @@ export interface TeamStats {
 }
 
 export interface RankingPlayer {
+    lastPlayed: any
     playerCharacterId: string
     btag?: string
     name?: string
@@ -418,7 +419,8 @@ export class DataDerivationsService {
                 gamesThisSeason: derivedStats.gamesThisSeason || 0,
                 gamesPerRace: derivedStats.gamesPerRace || { TERRAN: 0, PROTOSS: 0, ZERG: 0, RANDOM: 0 },
                 lastDatePlayed: derivedStats.lastDatePlayed || null,
-                online: derivedStats.online || false
+                online: derivedStats.online || false,
+                lastPlayed: derivedStats.lastDatePlayed || null
             }
 
             ranking.push(player)
