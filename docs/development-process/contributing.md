@@ -20,7 +20,6 @@ Key points:
    - Note: tests are planned; scripts/config may be added later to enforce.
 
 ## Authoring Rules
-- Prioritize readability/maintainability; avoid bloat.
 - Comment non-trivial logic (intent, not restating code).
 - Follow patterns: Express routes → services → utils; client services/hooks/components.
 - Error contract: `{ error, code, context }`. Logging: structured.
