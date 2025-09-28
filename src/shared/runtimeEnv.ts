@@ -8,7 +8,12 @@ export function detectAppEnv(
     if (env.RENDER || env.RENDER_EXTERNAL_URL) return 'prod'
     if (env.FLY_ALLOC_ID) return 'dev'
     // Vercel indicates managed deploy (prod or preview) for client builds
-    if (env.VERCEL || env.NODE_ENV === 'production') return 'prod'
+    if (env.VERCEL) {
+        // Vercel Preview deployments have VERCEL_ENV === 'preview'
+        if (env.VERCEL_ENV === 'preview') return 'dev'
+        return 'prod'
+    }
+    if (env.NODE_ENV === 'production') return 'prod'
     return 'local'
 }
 

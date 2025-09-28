@@ -1,0 +1,20 @@
+[
+    {
+        "battlenetId": 272,
+        "region": "US",
+        "season": 2024,
+        "year": 2024
+    },
+    {
+        "battlenetId": 271,
+        "region": "US", 
+        "season": 2023,
+        "year": 2023
+    },
+    {
+        "battlenetId": 270,
+        "region": "EU",
+        "season": 2023,
+        "year": 2023
+    }
+]

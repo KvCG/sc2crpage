@@ -1,0 +1,46 @@
+[
+    {
+        "members": [
+            {
+                "character": {
+                    "id": "301",
+                    "realm": 1,
+                    "name": "BrokenData",
+                    "battlenetId": 272
+                },
+                "account": {
+                    "battleTag": "BrokenData#0000"
+                },
+                "raceGames": {},
+                "wins": null,
+                "losses": null,
+                "ties": null
+            }
+        ],
+        "lastPlayed": null,
+        "league": null,
+        "rating": null,
+        "leagueType": null
+    },
+    {
+        "members": [
+            {
+                "character": {
+                    "id": "302",
+                    "realm": 1,
+                    "name": "IncompletePlayer",
+                    "battlenetId": 272
+                },
+                "account": null,
+                "wins": 10,
+                "losses": 5
+            }
+        ],
+        "lastPlayed": "invalid-date",
+        "league": {
+            "type": "UNKNOWN"
+        },
+        "rating": "not-a-number",
+        "leagueType": "UNKNOWN"
+    }
+]
