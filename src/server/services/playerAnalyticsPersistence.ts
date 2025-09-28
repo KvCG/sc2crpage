@@ -291,8 +291,7 @@ export class PlayerAnalyticsPersistence {
                 alt: 'media'
             })
 
-            const backupData = JSON.parse(response.data as string)
-            
+            const backupData = JSON.parse(JSON.stringify(response.data))
             if (!backupData.snapshot || !backupData.metadata) {
                 throw new Error('Invalid backup file format')
             }
