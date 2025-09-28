@@ -10,10 +10,13 @@ export type ReqObs = {
 
 type RequestLike = { headers?: Record<string, unknown>; id?: string | number }
 
+import logger from '../logging/logger'
 import { extractRequestId } from '../utils/requestIdentity'
 
 const REQUEST_OBS_ENABLED: boolean =
     String(process.env.ENABLE_REQ_OBS ?? 'true').toLowerCase() === 'true'
+
+    logger.info(`[RequestObservability] Request observability is ${REQUEST_OBS_ENABLED ? 'ENABLED' : 'DISABLED'}`)
 
 const OBS_RING_SIZE = 200
 

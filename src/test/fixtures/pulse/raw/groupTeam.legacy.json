@@ -1,0 +1,58 @@
+[
+    {
+        "members": [
+            {
+                "character": {
+                    "id": "201",
+                    "realm": 1,
+                    "name": "RandomPlayer",
+                    "battlenetId": 272
+                },
+                "account": {
+                    "battleTag": "RandomPlayer#4321"
+                },
+                "randomGamesPlayed": 85,
+                "zergGamesPlayed": 0,
+                "protossGamesPlayed": 0,
+                "terranGamesPlayed": 0,
+                "wins": 50,
+                "losses": 35,
+                "ties": 0
+            }
+        ],
+        "lastPlayed": "2024-01-15T18:20:00Z",
+        "league": {
+            "type": "PLATINUM"
+        },
+        "rating": 3200,
+        "leagueType": "PLATINUM"
+    },
+    {
+        "members": [
+            {
+                "character": {
+                    "id": "202",
+                    "realm": 1,
+                    "name": "OfflinePlayer",
+                    "battlenetId": 272
+                },
+                "account": {
+                    "battleTag": "OfflinePlayer#8765"
+                },
+                "zergGamesPlayed": 45,
+                "protossGamesPlayed": 0,
+                "terranGamesPlayed": 0,
+                "randomGamesPlayed": 0,
+                "wins": 25,
+                "losses": 20,
+                "ties": 0
+            }
+        ],
+        "lastPlayed": "2023-12-01T08:30:00Z",
+        "league": {
+            "type": "GOLD"
+        },
+        "rating": 2100,
+        "leagueType": "GOLD"
+    }
+]

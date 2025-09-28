@@ -1,0 +1,32 @@
+[
+    {
+        "playerCharacterId": "401",
+        "btag": "SearchResult1#1111",
+        "name": "SearchResult1",
+        "currentStats": {
+            "rating": 4100,
+            "league": "MASTER",
+            "wins": 85,
+            "losses": 40,
+            "ties": 1
+        },
+        "leagueMax": "MASTER",
+        "ratingMax": 4100,
+        "totalGamesPlayed": 126
+    },
+    {
+        "playerCharacterId": "402",
+        "btag": "SearchResult2#2222",
+        "name": "SearchResult2", 
+        "currentStats": {
+            "rating": 3750,
+            "league": "DIAMOND",
+            "wins": 65,
+            "losses": 55,
+            "ties": 0
+        },
+        "leagueMax": "DIAMOND",
+        "ratingMax": 3750,
+        "totalGamesPlayed": 120
+    }
+]

@@ -1,0 +1,46 @@
+[
+    {
+        "character": {
+            "id": "401",
+            "realm": 1,
+            "name": "SearchResult1",
+            "battlenetId": 272
+        },
+        "account": {
+            "battleTag": "SearchResult1#1111"
+        },
+        "teams": [
+            {
+                "league": {
+                    "type": "MASTER"
+                },
+                "rating": 4100,
+                "wins": 85,
+                "losses": 40,
+                "ties": 1
+            }
+        ]
+    },
+    {
+        "character": {
+            "id": "402", 
+            "realm": 1,
+            "name": "SearchResult2",
+            "battlenetId": 272
+        },
+        "account": {
+            "battleTag": "SearchResult2#2222"
+        },
+        "teams": [
+            {
+                "league": {
+                    "type": "DIAMOND"
+                },
+                "rating": 3750,
+                "wins": 65,
+                "losses": 55,
+                "ties": 0
+            }
+        ]
+    }
+]

@@ -44,8 +44,8 @@ function runRoute(
 describe('pulseRoutes /snapshot', () => {
     beforeEach(async () => {
         vi.resetModules()
-        const cache = (await import('../../utils/snapshotCache')).default
-        cache.clear()
+        const { snapshotCache } = await import('../../utils/cache')
+        snapshotCache.clear()
     })
 
     it('returns snapshot with attribution header', async () => {

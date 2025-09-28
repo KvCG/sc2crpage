@@ -3,6 +3,12 @@
  * Provides functions to fetch, process, and cache player and ranking data from the SC2Pulse API.
  * Includes helpers for player stats aggregation, race extraction, online status, and cache management.
  * 
+ * REFACTORING NOTE (Phase 1 Complete):
+ * - This service maintains backward compatibility while infrastructure for analytics features is established
+ * - Business logic extraction to dataDerivations.ts service is available but not yet integrated
+ * - Future phases will gradually migrate to the new service for better maintainability and testability
+ * - See dataDerivations.ts for the new approach to data processing and business rules
+ * 
  * @module pulseApi
  */
 
@@ -16,6 +22,7 @@ import { DateTime } from 'luxon'
 import { get, withBasePath, endpoints } from './pulseHttpClient'
 import { metrics } from '../metrics/lite'
 import { bumpCache } from '../observability/requestContext'
+
 
 
 /**
@@ -82,31 +89,7 @@ const getPlayersStats = async (playerIds: string[]) => {
     return all
 }
 
-/**
- * Aggregates the number of games played per race for a list of members.
- * @param {Array} members - Array of member objects.
- * @returns {Promise<{zergGamesPlayed: number, protossGamesPlayed: number, terranGamesPlayed: number, randomGamesPlayed: number}>}
- */
-const getPlayerGamesPerRace = async (
-    members: Array<{ zergGamesPlayed?: number, protossGamesPlayed?: number, terranGamesPlayed?: number, randomGamesPlayed?: number, raceGames?: any }>
-) => {
-    const gamesPerRace = {
-        zergGamesPlayed: 0,
-        protossGamesPlayed: 0,
-        terranGamesPlayed: 0,
-        randomGamesPlayed: 0,
-    }
 
-    members.forEach(member => {
-        // Prefer direct fields, fallback to raceGames object if present
-        gamesPerRace.zergGamesPlayed += member.zergGamesPlayed ?? member.raceGames?.ZERG ?? 0
-        gamesPerRace.protossGamesPlayed += member.protossGamesPlayed ?? member.raceGames?.PROTOSS ?? 0
-        gamesPerRace.terranGamesPlayed += member.terranGamesPlayed ?? member.raceGames?.TERRAN ?? 0
-        gamesPerRace.randomGamesPlayed += member.randomGamesPlayed ?? member.raceGames?.RANDOM ?? 0
-    })
-
-    return gamesPerRace
-}
 
 /**
  * Gets the last date a player played, formatted for Costa Rica time.
@@ -146,33 +129,6 @@ const getPlayerLastDatePlayed = async (
 }
 
 /**
- * Determines if a player is likely online based on their last played time.
- * @param {Array} playerStats - Array of objects with a lastPlayed property.
- * @returns {boolean} True if the player is likely online, false otherwise.
- */
-const isPlayerLikelyOnline = (
-    playerStats: Array<{ lastPlayed: string }>
-): boolean => {
-    if (!playerStats || playerStats.length === 0) return false
-
-    try {
-        const mostRecent = playerStats.reduce((a, b) =>
-            new Date(b.lastPlayed) > new Date(a.lastPlayed) ? b : a
-        )
-
-        const lastPlayed = toCostaRicaTime(mostRecent.lastPlayed)
-        const now = DateTime.now().setZone('America/Costa_Rica')
-
-        const diffMinutes = now.diff(lastPlayed, 'minutes').minutes
-
-        return diffMinutes <= 30 //Its a long time but SC2Pulse api is slow and games could take longer
-    } catch (error) {
-        console.error('[isPlayerLikelyOnline] Error:', error)
-        return false
-    }
-}
-
-/**
  * Reads the CSV file and returns an array of player character IDs.
  * @returns {Promise<string[]>} Array of player character IDs.
  */
@@ -184,61 +140,6 @@ const getPlayersIds = async (): Promise<string[]> => {
         console.error(`[getPlayersIds] Error reading CSV: ${(error as Error).message}`)
         return []
     }
-}
-
-/**
- * Groups stats by characterId for fast lookup.
- * @param {any[]} allStats - Array of team stats objects.
- * @returns {Record<string, any[]>} Object mapping characterId to an array of stats.
- */
-function groupStatsByCharacterId(allStats: any[]): Record<string, any[]> {
-    const statsByCharacterId: Record<string, any[]> = {}
-    allStats.forEach(team => {
-        team.members.forEach((member: any) => {
-            const charId = String(member.character?.id)
-            if (!statsByCharacterId[charId]) statsByCharacterId[charId] = []
-            statsByCharacterId[charId].push({
-                ...member,
-                lastPlayed: team.lastPlayed,
-                leagueType: team.league?.type,
-                rating: team.rating,
-                wins: team.wins ?? 0,
-                losses: team.losses ?? 0,
-                ties: team.ties ?? 0,
-            })
-        })
-    })
-    return statsByCharacterId
-}
-
-/**
- * Finds the member/team with the highest rating.
- * @param {any[]} statsForPlayer - Array of stats for a player.
- * @returns {any} The member/team object with the highest rating.
- */
-function getHighestRatingObj(statsForPlayer: any[]): any {
-    return statsForPlayer.reduce((best, curr) =>
-        curr.rating > (best?.rating ?? -Infinity) ? curr : best, null)
-}
-
-/**
- * Extracts the race from the member with the highest rating.
- * @param {any} highestRatingObj - The member/team object with the highest rating.
- * @returns {string|null} The race string ("ZERG", "TERRAN", "PROTOSS", "RANDOM") or null.
- */
-function extractRace(highestRatingObj: any): string | null {
-    if (highestRatingObj?.raceGames) {
-        return Object.keys(highestRatingObj.raceGames)[0] ?? null
-    } else if (typeof highestRatingObj?.zergGamesPlayed === 'number' && highestRatingObj.zergGamesPlayed > 0) {
-        return 'ZERG'
-    } else if (typeof highestRatingObj?.protossGamesPlayed === 'number' && highestRatingObj.protossGamesPlayed > 0) {
-        return 'PROTOSS'
-    } else if (typeof highestRatingObj?.terranGamesPlayed === 'number' && highestRatingObj.terranGamesPlayed > 0) {
-        return 'TERRAN'
-    } else if (typeof highestRatingObj?.randomGamesPlayed === 'number' && highestRatingObj.randomGamesPlayed > 0) {
-        return 'RANDOM'
-    }
-    return null
 }
 
 /**
@@ -294,21 +195,90 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
                 return []
             }
 
-            for (let attempt = retries; attempt <= maxRetries; attempt++) {
+                for (let attempt = retries; attempt <= maxRetries; attempt++) {
                 try {
                     const allStats = await getPlayersStats(characterIds)
-                    const statsByCharacterId = groupStatsByCharacterId(allStats)
+                    
+                    // Use original logic for now to maintain compatibility
+                    const statsByCharacterId: Record<string, any[]> = {}
+                    allStats.forEach(team => {
+                        team.members.forEach((member: any) => {
+                            const charId = String(member.character?.id)
+                            if (!statsByCharacterId[charId]) statsByCharacterId[charId] = []
+                            statsByCharacterId[charId].push({
+                                ...member,
+                                lastPlayed: team.lastPlayed,
+                                leagueType: team.league?.type,
+                                rating: team.rating,
+                                wins: team.wins ?? 0,
+                                losses: team.losses ?? 0,
+                                ties: team.ties ?? 0,
+                            })
+                        })
+                    })
 
                     const finalRanking = await Promise.all(
                         characterIds.map(async (characterId: string) => {
                             const statsForPlayer = statsByCharacterId[characterId] || []
-                            const gamesPerRace = await getPlayerGamesPerRace(statsForPlayer)
-                            const lastDatePlayed = await getPlayerLastDatePlayed(statsForPlayer)
-                            const online = isPlayerLikelyOnline(statsForPlayer)
+                            
+                            // Use original games per race aggregation logic
+                            const gamesPerRace = {
+                                zergGamesPlayed: 0,
+                                protossGamesPlayed: 0,
+                                terranGamesPlayed: 0,
+                                randomGamesPlayed: 0,
+                            }
 
-                            const highestRatingObj = getHighestRatingObj(statsForPlayer)
+                            statsForPlayer.forEach(member => {
+                                // Prefer direct fields, fallback to raceGames object if present
+                                gamesPerRace.zergGamesPlayed += member.zergGamesPlayed ?? member.raceGames?.ZERG ?? 0
+                                gamesPerRace.protossGamesPlayed += member.protossGamesPlayed ?? member.raceGames?.PROTOSS ?? 0
+                                gamesPerRace.terranGamesPlayed += member.terranGamesPlayed ?? member.raceGames?.TERRAN ?? 0
+                                gamesPerRace.randomGamesPlayed += member.randomGamesPlayed ?? member.raceGames?.RANDOM ?? 0
+                            })
+                            
+                            const lastDatePlayed = await getPlayerLastDatePlayed(statsForPlayer)
+                            
+                            // Use original online logic
+                            let online = false
+                            if (statsForPlayer && statsForPlayer.length > 0) {
+                                try {
+                                    const mostRecent = statsForPlayer.reduce((a, b) =>
+                                        new Date(b.lastPlayed) > new Date(a.lastPlayed) ? b : a
+                                    )
+
+                                    if (mostRecent.lastPlayed) {
+                                        const lastPlayed = toCostaRicaTime(mostRecent.lastPlayed)
+                                        const now = DateTime.now().setZone('America/Costa_Rica')
+                                        const diffMinutes = now.diff(lastPlayed, 'minutes').minutes
+                                        online = diffMinutes <= 30
+                                    }
+                                } catch (error) {
+                                    console.error('[isPlayerLikelyOnline] Error:', error)
+                                }
+                            }
+
+                            const highestRatingObj = statsForPlayer.reduce((best, curr) =>
+                                curr.rating > (best?.rating ?? -Infinity) ? curr : best, null)
+                            
                             const highestLeagueType = highestRatingObj?.leagueType ?? null
-                            const race = extractRace(highestRatingObj)
+                            
+                            // Use original race extraction logic
+                            let race = null
+                            if (highestRatingObj) {
+                                if (highestRatingObj?.raceGames) {
+                                    race = Object.keys(highestRatingObj.raceGames)[0] ?? null
+                                } else if (typeof highestRatingObj?.zergGamesPlayed === 'number' && highestRatingObj.zergGamesPlayed > 0) {
+                                    race = 'ZERG'
+                                } else if (typeof highestRatingObj?.protossGamesPlayed === 'number' && highestRatingObj.protossGamesPlayed > 0) {
+                                    race = 'PROTOSS'
+                                } else if (typeof highestRatingObj?.terranGamesPlayed === 'number' && highestRatingObj.terranGamesPlayed > 0) {
+                                    race = 'TERRAN'
+                                } else if (typeof highestRatingObj?.randomGamesPlayed === 'number' && highestRatingObj.randomGamesPlayed > 0) {
+                                    race = 'RANDOM'
+                                }
+                            }
+                            
                             const gamesThisSeason = statsForPlayer.reduce((total, member) => {
                                 const { wins = 0, losses = 0, ties = 0 } = member ?? {}
                                 return total + wins + losses + ties
@@ -325,9 +295,7 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
                                 gamesThisSeason,
                             }
                         })
-                    )
-
-                    // Store in cache for 30 seconds (lru-cache handles TTL)
+                    )                    // Store in cache for 30 seconds (lru-cache handles TTL)
                     cache.set(cacheKey, finalRanking)
                     return finalRanking
                 } catch (err) {
