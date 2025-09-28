@@ -33,9 +33,12 @@ export const Ranking = () => {
                 data: finalRanking,
                 expiry: new Date().getTime() + ttl,
             }
+			console.log("changed data")
             saveData(depth, wrapper)
             setCurrentData(finalRanking)
         }
+		
+		
     }, [data])
 
     const renderResults = () => {

@@ -1,6 +1,8 @@
 export const saveData = (key, data) => {
     if (!data || !data.data || !data.data?.length) return
     localStorage.setItem(key, JSON.stringify(data))
+	console.log('saved data');
+	
 }
 
 export const saveSnapShot = (key, data) => {
