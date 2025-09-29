@@ -186,6 +186,19 @@ export class PulseAdapter {
     }
 
     /**
+     * Fetch Ranked teams for a list of player IDs.
+     * @param {string[]} playerIds - Array of player character IDs.
+     * @param {string} seasonId - The current season ID.
+     * @returns {Promise<any[]>} Array of team objects.
+     */
+    async fetchRankedTeams(playerIds: string[], seasonId: number): Promise<any[]> {
+        const params = playerIds.map(id => `characterId=${id}`).join('&')
+        const limit = Math.min(playerIds.length * 4, 400)
+        const url = `${withBasePath(httpEndpoints.characterTeams)}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&limit=${limit}&${params}`
+        return await httpGet<any | any[]>(url)
+    }
+
+    /**
      * Convert various error types to standardized PulseApiError format
      */
     private standardizeError(error: unknown, context: Record<string, any> = {}): PulseApiError {

@@ -20,6 +20,8 @@ import { DateTime } from 'luxon'
 import { get, withBasePath, endpoints } from './pulseHttpClient'
 import { metrics } from '../metrics/lite'
 import { bumpCache } from '../observability/requestContext'
+import { pulseAdapter } from './pulseAdapter'
+import { RankedTeamConsolidator } from './dataDerivations'
 
 /**
  * Searches for a player by name or BattleTag.
@@ -153,7 +155,7 @@ const getPlayersIds = async (): Promise<string[]> => {
 // A single in-flight promise is created per cold-cache window and reset in finally.
 let inflightPromise: Promise<any[]> | null = null
 
-export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
+export const getTop = async (): Promise<any[]> => {
     const cacheKey = 'snapShot'
     const cachedData = cache.get(cacheKey)
     if (cachedData) {
@@ -174,187 +176,23 @@ export const getTop = async (retries = 0, maxRetries = 3): Promise<any[]> => {
     inflightPromise = (async (): Promise<any[]> => {
         try {
             const characterIds = await getPlayersIds()
+            const currentSeason = await getCurrentSeason()
             if (!characterIds || characterIds.length === 0) {
                 return []
             }
 
-            for (let attempt = retries; attempt <= maxRetries; attempt++) {
-                try {
-                    const allStats = await getPlayersStats(characterIds)
+            try {
+                const allRankedTeams = await pulseAdapter.fetchRankedTeams(
+                    characterIds,
+                    currentSeason
+                )
 
-                    // Use original logic for now to maintain compatibility
-                    const statsByCharacterId: Record<string, any[]> = {}
-                    allStats.forEach(team => {
-                        team.members.forEach((member: any) => {
-                            const charId = String(member.character?.id)
-                            if (!statsByCharacterId[charId])
-                                statsByCharacterId[charId] = []
-                            statsByCharacterId[charId].push({
-                                ...member,
-                                lastPlayed: team.lastPlayed,
-                                leagueType: team.league?.type,
-                                rating: team.rating,
-                                wins: team.wins ?? 0,
-                                losses: team.losses ?? 0,
-                                ties: team.ties ?? 0,
-                            })
-                        })
-                    })
+                const singleTeamPerPlayer = RankedTeamConsolidator.consolidateRankedTeams(allRankedTeams)
 
-                    const finalRanking = await Promise.all(
-                        characterIds.map(async (characterId: string) => {
-                            const statsForPlayer =
-                                statsByCharacterId[characterId] || []
-
-                            // Use original games per race aggregation logic
-                            const gamesPerRace = {
-                                zergGamesPlayed: 0,
-                                protossGamesPlayed: 0,
-                                terranGamesPlayed: 0,
-                                randomGamesPlayed: 0,
-                            }
-
-                            statsForPlayer.forEach(member => {
-                                // Prefer direct fields, fallback to raceGames object if present
-                                gamesPerRace.zergGamesPlayed +=
-                                    member.zergGamesPlayed ??
-                                    member.raceGames?.ZERG ??
-                                    0
-                                gamesPerRace.protossGamesPlayed +=
-                                    member.protossGamesPlayed ??
-                                    member.raceGames?.PROTOSS ??
-                                    0
-                                gamesPerRace.terranGamesPlayed +=
-                                    member.terranGamesPlayed ??
-                                    member.raceGames?.TERRAN ??
-                                    0
-                                gamesPerRace.randomGamesPlayed +=
-                                    member.randomGamesPlayed ??
-                                    member.raceGames?.RANDOM ??
-                                    0
-                            })
-
-                            const lastDatePlayed =
-                                await getPlayerLastDatePlayed(statsForPlayer)
-
-                            // Use original online logic
-                            let online = false
-                            if (statsForPlayer && statsForPlayer.length > 0) {
-                                try {
-                                    const mostRecent = statsForPlayer.reduce(
-                                        (a, b) =>
-                                            new Date(b.lastPlayed) >
-                                            new Date(a.lastPlayed)
-                                                ? b
-                                                : a
-                                    )
-
-                                    if (mostRecent.lastPlayed) {
-                                        const lastPlayed = toCostaRicaTime(
-                                            mostRecent.lastPlayed
-                                        )
-                                        const now =
-                                            DateTime.now().setZone(
-                                                'America/Costa_Rica'
-                                            )
-                                        const diffMinutes = now.diff(
-                                            lastPlayed,
-                                            'minutes'
-                                        ).minutes
-                                        online = diffMinutes <= 30
-                                    }
-                                } catch (error) {
-                                    console.error(
-                                        '[isPlayerLikelyOnline] Error:',
-                                        error
-                                    )
-                                }
-                            }
-
-                            const highestRatingObj = statsForPlayer.reduce(
-                                (best, curr) =>
-                                    curr.rating > (best?.rating ?? -Infinity)
-                                        ? curr
-                                        : best,
-                                null
-                            )
-
-                            const highestLeagueType =
-                                highestRatingObj?.leagueType ?? null
-
-                            // Use original race extraction logic
-                            let race = null
-                            if (highestRatingObj) {
-                                if (highestRatingObj?.raceGames) {
-                                    race =
-                                        Object.keys(
-                                            highestRatingObj.raceGames
-                                        )[0] ?? null
-                                } else if (
-                                    typeof highestRatingObj?.zergGamesPlayed ===
-                                        'number' &&
-                                    highestRatingObj.zergGamesPlayed > 0
-                                ) {
-                                    race = 'ZERG'
-                                } else if (
-                                    typeof highestRatingObj?.protossGamesPlayed ===
-                                        'number' &&
-                                    highestRatingObj.protossGamesPlayed > 0
-                                ) {
-                                    race = 'PROTOSS'
-                                } else if (
-                                    typeof highestRatingObj?.terranGamesPlayed ===
-                                        'number' &&
-                                    highestRatingObj.terranGamesPlayed > 0
-                                ) {
-                                    race = 'TERRAN'
-                                } else if (
-                                    typeof highestRatingObj?.randomGamesPlayed ===
-                                        'number' &&
-                                    highestRatingObj.randomGamesPlayed > 0
-                                ) {
-                                    race = 'RANDOM'
-                                }
-                            }
-
-                            const gamesThisSeason = statsForPlayer.reduce(
-                                (total, member) => {
-                                    const {
-                                        wins = 0,
-                                        losses = 0,
-                                        ties = 0,
-                                    } = member ?? {}
-                                    return total + wins + losses + ties
-                                },
-                                0
-                            )
-
-                            return {
-                                playerCharacterId: characterId,
-                                race,
-                                gamesPerRace,
-                                lastDatePlayed,
-                                online,
-                                ratingLast: highestRatingObj?.rating ?? null,
-                                leagueTypeLast: highestLeagueType,
-                                gamesThisSeason,
-                                lastPlayed:
-                                    highestRatingObj?.lastPlayed ?? null,
-                            }
-                        })
-                    ) // Store in cache for 30 seconds (lru-cache handles TTL)
-                    cache.set(cacheKey, finalRanking)
-                    return finalRanking
-                } catch (err) {
-                    if (attempt === maxRetries) {
-                        console.error(
-                            `[getTop] Failed after ${maxRetries} retries:`,
-                            err
-                        )
-                        return []
-                    }
-                    // continue to next attempt without recursion
-                }
+                cache.set(cacheKey, singleTeamPerPlayer)
+                return singleTeamPerPlayer
+            } catch (err) {
+                // continue to next attempt without recursion
             }
             return []
         } catch (error) {

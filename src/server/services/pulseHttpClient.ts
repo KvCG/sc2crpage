@@ -20,6 +20,7 @@ export const endpoints = {
     searchCharacter: 'character/search',
     listSeasons: 'season/list/all',
     groupTeam: 'group/team',
+    characterTeams: 'character-teams'
 } as const
 
 // Allows future prefixing if needed; currently returns the path unchanged
