@@ -9,6 +9,7 @@ esbuild
         outfile: path.resolve(__dirname, '../dist/webserver/server.cjs'),
         target: 'node20',
         format: 'cjs',
+        sourcemap: true
     })
     .catch(() => {
         process.exit(1)

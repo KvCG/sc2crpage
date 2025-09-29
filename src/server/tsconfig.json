@@ -9,9 +9,10 @@
         "noUnusedLocals": true, // Report errors on unused local variables
         "noUnusedParameters": true, // Report errors on unused function parameters
         "noFallthroughCasesInSwitch": true, // Report errors on fallthrough cases in switch statements
-		"pretty": true,
-		"esModuleInterop":true,
-	},
+        "pretty": true,
+        "esModuleInterop": true,
+        "sourceMap": true
+    },
     "include": ["../../src/server/**/*"], // Include server-side TypeScript files
     "exclude": ["../../node_modules"] // Exclude node_modules folder
 }

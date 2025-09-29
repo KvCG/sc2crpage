@@ -4,6 +4,7 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
+        "fedev": "vite --config vite.config.ts",
         "dev": "concurrently --names \"FE,BE\" -c \"auto,green\" \"vite\" \"nodemon\"",
         "build": "tsc -b & npm run build:client && npm run build:server",
         "build:server": "node scripts/build.cjs",
