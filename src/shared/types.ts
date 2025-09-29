@@ -22,16 +22,17 @@ export interface RankingPlayer {
 }
 
 export interface RankedPlayer {
-    rating: number[]
-    wins: number[]
-    ties: number[]
-    losses: number[]
-    leagueType: number[]
-    globalRank: number[]
-    regionRank: number[]
-    leagueRank: number[]
-    lastPlayed: string[]
+    rating: number[] | number
+    wins: number[] | number
+    ties: number[] | number
+    losses: number[] | number
+    leagueType: number[] | number
+    globalRank: number[] | number
+    regionRank: number[] | number
+    leagueRank: number[] | number
+    lastPlayed: string[] | string
     members: Member
+    mainRace?: string 
 }
 
 export interface Account {

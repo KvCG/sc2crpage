@@ -410,8 +410,8 @@ export class RankedTeamConsolidator {
                         raceGames: {
                             ...tempRankedPlayer.members.raceGames,
                             ...team.members[0].raceGames,
-                        },
-                    },
+                        } as RaceGames,
+                    } as Member,
                 } as RankedPlayer
             } else {
                 consolidatedPlayerMap[btag] = {
@@ -430,6 +430,84 @@ export class RankedTeamConsolidator {
         })
 
         return Object.values(consolidatedPlayerMap)
+    }
+
+    static getMainTeam(consolidatedPlayer: RankedPlayer[]): RankedPlayer[] { // main race calculation
+        const singleTeamList = [] as RankedPlayer[]
+        consolidatedPlayer.map(player => {
+            let raceGames = player.members.raceGames
+            if (raceGames) {
+                const entries = Object.entries(raceGames)
+                let maxGames = -1
+                let maxRace: string | undefined = undefined // the race that has more playes games.
+                let maxIndex = -1
+                let totalGames = 0
+                entries.forEach(([key, value], idx) => {
+                    if (typeof value === 'number' && value > maxGames) {
+                        totalGames += value
+                        maxGames = value
+                        maxRace = key
+                        maxIndex = idx
+                    }
+                })
+                const mainRating = player.rating as number[]
+                const mainGlobalRank = player.globalRank as number[]
+                const mainRegionRank = player.regionRank as number[]
+                const mainLeagueRank = player.leagueRank as number[]
+                const mainWins = player.wins as number[]
+                const mainLosses = player.losses as number[]
+                const mainTies = player.ties as number[]
+                const mainLeagueType = player.leagueType as number[]
+                const mainLastPlayed = player.lastPlayed as string[]
+                raceGames = { [maxRace as string]: maxGames }
+                const mainMembers = { ...player.members, raceGames }
+               
+                if (typeof maxRace === 'string') {
+                    switch (maxRace) {
+                        case 'ZERG':
+                            delete mainMembers?.protossGamesPlayed
+                            delete mainMembers?.terranGamesPlayed
+                            delete mainMembers?.randomGamesPlayed
+                            break
+                        case 'PROTOSS':
+                            delete mainMembers?.zergGamesPlayed
+                            delete mainMembers?.terranGamesPlayed
+                            delete mainMembers?.randomGamesPlayed
+                            break
+                        case 'TERRAN':
+                            delete mainMembers?.protossGamesPlayed
+                            delete mainMembers?.zergGamesPlayed
+                            delete mainMembers?.randomGamesPlayed
+                            break
+                        case 'RANDOM':
+                            delete mainMembers?.protossGamesPlayed
+                            delete mainMembers?.terranGamesPlayed
+                            delete mainMembers?.zergGamesPlayed
+                            break
+                        default:
+                            break
+                    }
+                }
+
+                const mainTeam: RankedPlayer = {
+                    globalRank: mainGlobalRank[maxIndex],
+                    regionRank: mainRegionRank[maxIndex],
+                    lastPlayed: mainLastPlayed[maxIndex],
+                    leagueRank: mainLeagueRank[maxIndex],
+                    leagueType: mainLeagueType[maxIndex],
+                    losses: mainLosses[maxIndex],
+                    ties: mainTies[maxIndex],
+                    wins: mainWins[maxIndex],
+                    rating: mainRating[maxIndex],
+                    members: mainMembers,
+                    mainRace: maxRace
+                }
+
+                singleTeamList.push(mainTeam)
+            }
+        })
+
+        return singleTeamList
     }
 }
 

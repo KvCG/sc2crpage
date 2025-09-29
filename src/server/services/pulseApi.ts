@@ -188,9 +188,10 @@ export const getTop = async (): Promise<any[]> => {
                 )
 
                 const singleTeamPerPlayer = RankedTeamConsolidator.consolidateRankedTeams(allRankedTeams)
+                const mainTeamList = RankedTeamConsolidator.getMainTeam(singleTeamPerPlayer)
 
-                cache.set(cacheKey, singleTeamPerPlayer)
-                return singleTeamPerPlayer
+                cache.set(cacheKey, mainTeamList)
+                return mainTeamList
             } catch (err) {
                 // continue to next attempt without recursion
             }
