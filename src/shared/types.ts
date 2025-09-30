@@ -32,7 +32,10 @@ export interface RankedPlayer {
     leagueRank: number[] | number
     lastPlayed: string[] | string
     members: Member
-    mainRace?: string 
+    mainRace?: string
+    totalGames?: number
+    online: boolean
+    positionChangeIndicator?: 'up' | 'down' | 'none' 
 }
 
 export interface Account {

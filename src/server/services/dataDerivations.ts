@@ -14,16 +14,8 @@
 
 import { DateTime } from 'luxon'
 
-import {
-    Account,
-    Clan,
-    Member,
-    RaceGames,
-    RankedPlayer,
-    RankingPlayer,
-    Team,
-    TeamStats,
-} from '../../shared/types' // Ensure types are imported
+import { Account, Clan, Member, RaceGames, RankedPlayer, RankingPlayer, Team, TeamStats } from '../../shared/types' // Ensure types are imported
+import { toCostaRicaTime } from '../utils/pulseApiHelper'
 
 export interface PositionChange {
     positionChangeIndicator: 'up' | 'down' | 'none'
@@ -47,9 +39,7 @@ export class RaceExtractor {
             if (races.length === 0) return null
 
             // Find race with most games
-            const [mostPlayedRace] = races.reduce((max, current) =>
-                current[1] > max[1] ? current : max
-            )
+            const [mostPlayedRace] = races.reduce((max, current) => (current[1] > max[1] ? current : max))
             return mostPlayedRace
         }
 
@@ -65,9 +55,7 @@ export class RaceExtractor {
         if (maxGames === 0) return null
 
         // Return race with most games
-        const raceEntry = Object.entries(raceGames).find(
-            ([_, games]) => games === maxGames
-        )
+        const raceEntry = Object.entries(raceGames).find(([_, games]) => games === maxGames)
         return raceEntry ? raceEntry[0] : null
     }
 
@@ -99,39 +87,26 @@ export class RaceExtractor {
 
         return games
     }
-
-    /**
-     * Calculate total games from member data
-     */
-    static getTotalGames(member: Member): number {
-        return (member.wins || 0) + (member.losses || 0) + (member.ties || 0)
-    }
 }
 
 /**
  * Online status determination utilities
  */
 export class OnlineStatusCalculator {
-    private static readonly ONLINE_THRESHOLD_HOURS = 24
-
     /**
      * Determine if a player is likely online based on last played timestamp
      */
-    static isPlayerOnline(
-        lastPlayed: string | null,
-        currentTime: DateTime = DateTime.now()
-    ): boolean {
+    static isPlayerOnline(lastPlayed: string): boolean {
         if (!lastPlayed) return false
 
         try {
-            const lastPlayedTime = DateTime.fromISO(lastPlayed)
-            if (!lastPlayedTime.isValid) return false
-
-            const hoursSinceLastPlayed = currentTime.diff(
-                lastPlayedTime,
-                'hours'
-            ).hours
-            return hoursSinceLastPlayed <= this.ONLINE_THRESHOLD_HOURS
+            let online = false
+            const lastCRPlayed = toCostaRicaTime(lastPlayed)
+            const now = DateTime.now().setZone('America/Costa_Rica')
+            const diffMinutes = now.diff(lastCRPlayed, 'minutes').minutes
+            online = diffMinutes <= (Number(process.env.ONLINE_THRESHOLD_MINUTES) || 30)
+            // Mins threshold to consider a player "online" A match duration + buffer but matches can be longer resulting in false negatives.
+            return online
         } catch {
             return false
         }
@@ -140,10 +115,7 @@ export class OnlineStatusCalculator {
     /**
      * Calculate hours since last activity
      */
-    static getHoursSinceLastActivity(
-        lastPlayed: string | null,
-        currentTime: DateTime = DateTime.now()
-    ): number | null {
+    static getHoursSinceLastActivity(lastPlayed: string | null, currentTime: DateTime = DateTime.now()): number | null {
         if (!lastPlayed) return null
 
         try {
@@ -160,14 +132,14 @@ export class OnlineStatusCalculator {
      * Get activity status description
      */
     static getActivityStatus(
-        lastPlayed: string | null,
+        lastPlayed: string,
         currentTime: DateTime = DateTime.now()
     ): 'online' | 'recent' | 'inactive' | 'unknown' {
         const hours = this.getHoursSinceLastActivity(lastPlayed, currentTime)
 
         if (hours === null) return 'unknown'
-        if (hours <= 1) return 'online'
-        if (hours <= this.ONLINE_THRESHOLD_HOURS) return 'recent'
+        if (this.isPlayerOnline(lastPlayed)) return 'online'
+        if (hours <= Number(process.env.ONLINE_THRESHOLD_HOURS) || 24) return 'recent'
         return 'inactive'
     }
 }
@@ -226,16 +198,11 @@ export class PositionCalculator {
         currentRanking: RankingPlayer[],
         previousRanking: RankingPlayer[]
     ): RankingPlayer[] {
-        const changes = this.calculatePositionChanges(
-            currentRanking,
-            previousRanking
-        )
+        const changes = this.calculatePositionChanges(currentRanking, previousRanking)
 
-        return currentRanking.map(player => ({
+        return currentRanking.map((player) => ({
             ...player,
-            positionChangeIndicator: player.btag
-                ? changes.get(player.btag)?.positionChangeIndicator || 'none'
-                : 'none',
+            positionChangeIndicator: player.btag ? changes.get(player.btag)?.positionChangeIndicator || 'none' : 'none',
         })) as RankingPlayer[]
     }
 
@@ -253,7 +220,7 @@ export class PositionCalculator {
             unchanged = 0,
             newPlayers = 0
 
-        changes.forEach(change => {
+        changes.forEach((change) => {
             switch (change.positionChangeIndicator) {
                 case 'up':
                     up++
@@ -282,13 +249,11 @@ export class TeamStatsAggregator {
     /**
      * Group team statistics by character ID
      */
-    static groupStatsByCharacterId(
-        teamStats: TeamStats[]
-    ): Map<number, TeamStats[]> {
+    static groupStatsByCharacterId(teamStats: TeamStats[]): Map<number, TeamStats[]> {
         const grouped = new Map<number, TeamStats[]>()
 
-        teamStats.forEach(team => {
-            team.members.forEach(member => {
+        teamStats.forEach((team) => {
+            team.members.forEach((member) => {
                 const characterId = member.character.id
                 if (!grouped.has(characterId)) {
                     grouped.set(characterId, [])
@@ -306,9 +271,7 @@ export class TeamStatsAggregator {
     static getHighestRatingTeam(playerTeams: TeamStats[]): TeamStats | null {
         if (playerTeams.length === 0) return null
 
-        return playerTeams.reduce((highest, current) =>
-            current.rating > highest.rating ? current : highest
-        )
+        return playerTeams.reduce((highest, current) => (current.rating > highest.rating ? current : highest))
     }
 
     /**
@@ -318,16 +281,14 @@ export class TeamStatsAggregator {
         if (playerTeams.length === 0) return null
 
         const timestamps = playerTeams
-            .map(team => team.lastPlayed)
+            .map((team) => team.lastPlayed)
             .filter(Boolean)
-            .map(timestamp => DateTime.fromISO(timestamp))
-            .filter(dt => dt.isValid)
+            .map((timestamp) => DateTime.fromISO(timestamp))
+            .filter((dt) => dt.isValid)
 
         if (timestamps.length === 0) return null
 
-        const mostRecent = timestamps.reduce((latest, current) =>
-            current > latest ? current : latest
-        )
+        const mostRecent = timestamps.reduce((latest, current) => (current > latest ? current : latest))
 
         return mostRecent.toISO()
     }
@@ -335,10 +296,7 @@ export class TeamStatsAggregator {
     /**
      * Calculate aggregated player statistics from team data
      */
-    static aggregatePlayerStats(
-        characterId: number,
-        playerTeams: TeamStats[]
-    ): Partial<RankingPlayer> {
+    static aggregatePlayerStats(characterId: number, playerTeams: TeamStats[]): Partial<RankingPlayer> {
         const highestRatingTeam = this.getHighestRatingTeam(playerTeams)
         const mostRecentActivity = this.getMostRecentActivity(playerTeams)
 
@@ -356,14 +314,10 @@ export class TeamStatsAggregator {
         }
 
         // Find member data for this character in the highest rating team
-        const memberData = highestRatingTeam.members.find(
-            member => member.character.id === Number(characterId)
-        )
+        const memberData = highestRatingTeam.members.find((member) => member.character.id === Number(characterId))
 
         if (!memberData) {
-            throw new Error(
-                `Member data not found for character ${characterId}`
-            )
+            throw new Error(`Member data not found for character ${characterId}`)
         }
 
         const race = RaceExtractor.extractRace(memberData)
@@ -388,7 +342,7 @@ export class RankedTeamConsolidator {
     static consolidateRankedTeams(teamsPerPlayer: Team[]): RankedPlayer[] {
         // Each player can have up to 4 teams in ranked 1v1 ladder (1 for each race + random)
         const consolidatedPlayerMap = {} as Record<string, RankedPlayer>
-        teamsPerPlayer.forEach(team => {
+        teamsPerPlayer.forEach((team) => {
             const btag = team.members[0].account.battleTag
             if (consolidatedPlayerMap[btag]) {
                 let tempRankedPlayer = consolidatedPlayerMap[btag]
@@ -432,14 +386,15 @@ export class RankedTeamConsolidator {
         return Object.values(consolidatedPlayerMap)
     }
 
-    static getMainTeam(consolidatedPlayer: RankedPlayer[]): RankedPlayer[] { // main race calculation
+    static getMainTeam(consolidatedPlayer: RankedPlayer[]): RankedPlayer[] {
+        // main race calculation
         const singleTeamList = [] as RankedPlayer[]
-        consolidatedPlayer.map(player => {
+        consolidatedPlayer.map((player) => {
             let raceGames = player.members.raceGames
             if (raceGames) {
                 const entries = Object.entries(raceGames)
                 let maxGames = -1
-                let maxRace: string | undefined = undefined // the race that has more playes games.
+                let maxRace: string | undefined = undefined // the race that has more played games.
                 let maxIndex = -1
                 let totalGames = 0
                 entries.forEach(([key, value], idx) => {
@@ -459,9 +414,9 @@ export class RankedTeamConsolidator {
                 const mainTies = player.ties as number[]
                 const mainLeagueType = player.leagueType as number[]
                 const mainLastPlayed = player.lastPlayed as string[]
-                raceGames = { [maxRace as string]: maxGames }
+                raceGames = { [String(maxRace)]: maxGames }
                 const mainMembers = { ...player.members, raceGames }
-               
+
                 if (typeof maxRace === 'string') {
                     switch (maxRace) {
                         case 'ZERG':
@@ -500,7 +455,9 @@ export class RankedTeamConsolidator {
                     wins: mainWins[maxIndex],
                     rating: mainRating[maxIndex],
                     members: mainMembers,
-                    mainRace: maxRace
+                    mainRace: maxRace,
+                    totalGames: totalGames,
+                    online: false,
                 }
 
                 singleTeamList.push(mainTeam)
@@ -508,6 +465,43 @@ export class RankedTeamConsolidator {
         })
 
         return singleTeamList
+    }
+
+    static getLastPlayedInDays(lastPlayed: string | null): string {
+        if (!lastPlayed) return '-' // No data available
+
+        try {
+            const lastPlayedCr = toCostaRicaTime(lastPlayed)
+            const now = DateTime.now().setZone('America/Costa_Rica')
+            const diffDays = now.startOf('day').diff(lastPlayedCr.startOf('day'), 'days').days
+            if (isNaN(diffDays)) return '-'
+            if (diffDays === 0) {
+                return lastPlayedCr.toFormat('h:mm a') // e.g., "7:33 AM"
+            }
+            return `${Math.floor(diffDays)}d ago`
+        } catch {
+            return '-' // Error parsing date
+        }
+    }
+
+    static getRankingPlayers(RankedPlayers: RankedPlayer[]): RankingPlayer[] {
+        return RankedPlayers.map((player) => {
+            const totalGames = player.totalGames || 0
+
+            return {
+                btag: player.members.account?.battleTag,
+                name: player.members.account?.tag,
+                playerCharacterId: player.members.character?.id,
+                race: player.mainRace,
+                ratingLast: Number(player.rating),
+                leagueTypeLast: String(player.leagueType),
+                gamesThisSeason: totalGames,
+                gamesPerRace: RaceExtractor.getGamesPerRace(player.members),
+                lastDatePlayed: RankedTeamConsolidator.getLastPlayedInDays(String(player.lastPlayed)),
+                online: OnlineStatusCalculator.isPlayerOnline(String(player.lastPlayed)),
+                lastPlayed: String(player.lastPlayed),
+            } as RankingPlayer
+        })
     }
 }
 
@@ -522,21 +516,15 @@ export class DataDerivationsService {
         teamStats: TeamStats[],
         csvPlayerData: Array<{ id: string; btag?: string; name?: string }> = []
     ): RankingPlayer[] {
-        const groupedStats =
-            TeamStatsAggregator.groupStatsByCharacterId(teamStats)
+        const groupedStats = TeamStatsAggregator.groupStatsByCharacterId(teamStats)
         const ranking: RankingPlayer[] = []
 
         // Create lookup for CSV data
-        const csvLookup = new Map(
-            csvPlayerData.map(player => [player.id, player])
-        )
+        const csvLookup = new Map(csvPlayerData.map((player) => [player.id, player]))
 
         // Process each character's team data
         groupedStats.forEach((playerTeams, characterId) => {
-            const derivedStats = TeamStatsAggregator.aggregatePlayerStats(
-                characterId,
-                playerTeams
-            )
+            const derivedStats = TeamStatsAggregator.aggregatePlayerStats(characterId, playerTeams)
             const csvData = csvLookup.get(String(characterId))
 
             const player: RankingPlayer = {
@@ -569,24 +557,15 @@ export class DataDerivationsService {
     /**
      * Add position indicators to ranking data using baseline comparison
      */
-    static addPositionIndicators(
-        currentRanking: RankingPlayer[],
-        baselineRanking: RankingPlayer[]
-    ): RankingPlayer[] {
-        return PositionCalculator.addPositionChangeIndicators(
-            currentRanking,
-            baselineRanking
-        )
+    static addPositionIndicators(currentRanking: RankingPlayer[], baselineRanking: RankingPlayer[]): RankingPlayer[] {
+        return PositionCalculator.addPositionChangeIndicators(currentRanking, baselineRanking)
     }
 
     /**
      * Filter ranking data based on minimum games threshold
      */
-    static filterByMinimumGames(
-        ranking: RankingPlayer[],
-        minimumGames: number = 20
-    ): RankingPlayer[] {
-        return ranking.filter(player => player.gamesThisSeason >= minimumGames)
+    static filterByMinimumGames(ranking: RankingPlayer[], minimumGames: number = 20): RankingPlayer[] {
+        return ranking.filter((player) => player.gamesThisSeason >= minimumGames)
     }
 
     /**
@@ -599,19 +578,14 @@ export class DataDerivationsService {
         raceDistribution: Record<string, number>
         leagueDistribution: Record<string, number>
     } {
-        const activePlayers = ranking.filter(player => player.online).length
+        const activePlayers = ranking.filter((player) => player.online).length
         const averageRating =
-            ranking.length > 0
-                ? ranking.reduce(
-                      (sum, player) => sum + (player.ratingLast || 0),
-                      0
-                  ) / ranking.length
-                : 0
+            ranking.length > 0 ? ranking.reduce((sum, player) => sum + (player.ratingLast || 0), 0) / ranking.length : 0
 
         const raceDistribution: Record<string, number> = {}
         const leagueDistribution: Record<string, number> = {}
 
-        ranking.forEach(player => {
+        ranking.forEach((player) => {
             // Count race distribution
             const race = player.race || 'UNKNOWN'
             raceDistribution[race] = (raceDistribution[race] || 0) + 1
