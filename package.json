@@ -8,6 +8,7 @@
         "dev": "concurrently --names \"FE,BE\" -c \"auto,green\" \"vite\" \"nodemon\"",
         "build": "npm run type-check && npm run build:client && npm run build:server",
         "build:server": "node scripts/build.cjs",
+        "build:server:dev": "node scripts/build-dev.cjs",
         "build:client": "vite build",
         "type-check": "tsc --project tsconfig.check.json",
         "type-check:watch": "tsc --noEmit --composite false --watch",
