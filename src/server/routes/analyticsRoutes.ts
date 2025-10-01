@@ -192,10 +192,8 @@ router.get('/ranking', async (req, res) => {
         const enhancedRanking = currentRanking.map((player, index) => ({
             ...player,
             currentRank: index,
-            deltaData: deltaMap.get(player.btag) || null,
+            deltaData: deltaMap.get(String(player.btag)) || null,
         }))
-
-        console.log(`Enhanced ranking with ${deltaMap.size} deltas`)
 
         res.json({
             success: true,

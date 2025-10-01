@@ -254,7 +254,7 @@ export class TeamStatsAggregator {
 
         teamStats.forEach((team) => {
             team.members.forEach((member) => {
-                const characterId = member.character.id
+                const characterId = Number(member?.character?.id)
                 if (!grouped.has(characterId)) {
                     grouped.set(characterId, [])
                 }
@@ -314,7 +314,7 @@ export class TeamStatsAggregator {
         }
 
         // Find member data for this character in the highest rating team
-        const memberData = highestRatingTeam.members.find((member) => member.character.id === Number(characterId))
+        const memberData = highestRatingTeam.members.find((member) => Number(member?.character?.id) === Number(characterId))
 
         if (!memberData) {
             throw new Error(`Member data not found for character ${characterId}`)
@@ -322,7 +322,7 @@ export class TeamStatsAggregator {
 
         const race = RaceExtractor.extractRace(memberData)
         const gamesPerRace = RaceExtractor.getGamesPerRace(memberData)
-        const online = OnlineStatusCalculator.isPlayerOnline(mostRecentActivity)
+        const online = OnlineStatusCalculator.isPlayerOnline(String(mostRecentActivity))
 
         return {
             playerCharacterId: characterId,
