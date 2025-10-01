@@ -9,7 +9,7 @@ esbuild
         outfile: path.resolve(__dirname, '../dist/webserver/server.cjs'),
         target: 'node20',
         format: 'cjs',
-        sourcemap: true
+        sourcemap: (process.env.NODE_ENV === 'development' || process.env.BUILD_SOURCEMAPS === '1') ? 'external' : false
     })
     .catch(() => {
         process.exit(1)

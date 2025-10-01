@@ -11,7 +11,8 @@
         "noFallthroughCasesInSwitch": true, // Report errors on fallthrough cases in switch statements
         "pretty": true,
         "esModuleInterop": true,
-        "sourceMap": true
+        "noEmit": true,
+        "incremental": false
     },
     "include": ["../../src/server/**/*"], // Include server-side TypeScript files
     "exclude": ["../../node_modules"] // Exclude node_modules folder
