@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { getTop, searchPlayer} from '../services/pulseApi'
+import { getRanking, searchPlayer} from '../services/pulseApi'
 import { getDailySnapshot } from '../services/snapshotService'
 import { formatData } from '../utils/formatData'
 import { filterRankingForDisplay } from '../utils/rankingFilters'
@@ -8,32 +8,21 @@ import logger from '../logging/logger'
 
 const router = Router()
 
-router.get('/top', async (req: Request, res: Response) => {
-    const userAgent = req.headers['user-agent']
-	const { device, os } = getClientInfo(userAgent)
-    const details = {
-        referer: req.headers.referer,
-        device,
-		os,
-		ip: req.headers['x-forwarded-for'] || req.ip
-    }
+// router.get('/ranking', async (req: Request, res: Response) => {
+//     const userAgent = req.headers['user-agent']
+// 	const { device, os } = getClientInfo(userAgent)
+//     const details = {
+//         referer: req.headers.referer,
+//         device,
+// 		os,
+// 		ip: req.headers['x-forwarded-for'] || req.ip
+//     }
 
-    logger.info({ route: '/api/top', details }, 'fetch live ranking')
-    res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
-    const rankingData = await getTop()
-    let formattedData = await formatData(rankingData, 'ranking')
-    formattedData = filterRankingForDisplay(formattedData)
-    // Ensure integrity: keep only ranked entries (rating, league, race present)
-    const filtered = (formattedData ?? []).filter(
-        (row: any) =>
-            Number.isFinite(row?.ratingLast) &&
-            Number.isFinite(row?.leagueTypeLast) &&
-            typeof row?.race === 'string'
-    )
-    // If filtering removes everything (edge case), fall back to unfiltered
-    formattedData = filtered.length > 0 ? filtered : (formattedData ?? [])
-    res.json(formattedData)
-})
+//     logger.info({ route: '/api/top', details }, 'fetch live ranking')
+//     res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
+//     const rankingData = await getRanking()
+//     res.json(rankingData)
+// })
 
 router.get('/search', async (req: Request, res: Response) => {
     const term = req.query.term

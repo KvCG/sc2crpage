@@ -15,13 +15,12 @@
 import { AxiosError } from 'axios'
 import { readCsv } from '../utils/csvParser'
 import cache from '../utils/cache'
-import { toCostaRicaTime } from '../utils/pulseApiHelper'
-import { DateTime } from 'luxon'
 import { get, withBasePath, endpoints } from './pulseHttpClient'
 import { metrics } from '../metrics/lite'
 import { bumpCache } from '../observability/requestContext'
 import { pulseAdapter } from './pulseAdapter'
 import { RankedTeamConsolidator } from './dataDerivations'
+import { RankedPlayer } from '../../shared/types'
 
 /**
  * Searches for a player by name or BattleTag.
@@ -74,7 +73,7 @@ const getPlayersIds = async (): Promise<string[]> => {
 // A single in-flight promise is created per cold-cache window and reset in finally.
 let inflightPromise: Promise<any[]> | null = null
 
-export const getTop = async (): Promise<any[]> => {
+export const getRanking = async (): Promise<RankedPlayer[]> => {
     const cacheKey = 'snapShot'
     const cachedData = cache.get(cacheKey)
     if (cachedData) {
@@ -99,14 +98,12 @@ export const getTop = async (): Promise<any[]> => {
             if (!characterIds || characterIds.length === 0) {
                 return []
             }
-
             try {
                 const allRankedTeams = await pulseAdapter.fetchRankedTeams(characterIds, currentSeason)
                 const singleTeamPerPlayer = RankedTeamConsolidator.consolidateRankedTeams(allRankedTeams)
-                const mainTeamList = RankedTeamConsolidator.getMainTeam(singleTeamPerPlayer)
-                const rankedPlayers = RankedTeamConsolidator.getRankingPlayers(mainTeamList)
-                cache.set(cacheKey, rankedPlayers)
-                return mainTeamList
+                const finalPlayers = RankedTeamConsolidator.getMainTeam(singleTeamPerPlayer)
+                cache.set(cacheKey, finalPlayers)
+                return finalPlayers
             } catch (err) {
                 // continue to next attempt without recursion
             }

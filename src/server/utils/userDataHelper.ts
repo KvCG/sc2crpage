@@ -1,6 +1,6 @@
 import { readCsv } from './csvParser'
 import { formatData } from './formatData'
-import { getTop } from '../services/pulseApi'
+import { getRanking } from '../services/pulseApi'
 
 export const verifyPlayer = async player => {
     const rankedPlayers = await readCsv()
@@ -17,7 +17,7 @@ export const verifyPlayer = async player => {
 
 export const verifyChallongeParticipant = async challongeParticipant => {
     // TODO Check where this is used and updated
-    const snapshot = getTop()
+    const snapshot = getRanking()
     const rankedPlayers = await readCsv()
     for (const rankedPlayer of rankedPlayers) {
         if (rankedPlayer?.challongeId == challongeParticipant.challongeUserId) {

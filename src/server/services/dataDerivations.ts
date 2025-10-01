@@ -119,7 +119,7 @@ export class OnlineStatusCalculator {
         if (!lastPlayed) return null
 
         try {
-            const lastPlayedTime = DateTime.fromISO(lastPlayed)
+            const lastPlayedTime = toCostaRicaTime(lastPlayed)
             if (!lastPlayedTime.isValid) return null
 
             return currentTime.diff(lastPlayedTime, 'hours').hours
@@ -322,7 +322,6 @@ export class TeamStatsAggregator {
 
         const race = RaceExtractor.extractRace(memberData)
         const gamesPerRace = RaceExtractor.getGamesPerRace(memberData)
-        const totalGames = RaceExtractor.getTotalGames(memberData)
         const online = OnlineStatusCalculator.isPlayerOnline(mostRecentActivity)
 
         return {
@@ -330,7 +329,6 @@ export class TeamStatsAggregator {
             race,
             ratingLast: highestRatingTeam.rating,
             leagueTypeLast: highestRatingTeam.league.type,
-            gamesThisSeason: totalGames,
             gamesPerRace,
             lastDatePlayed: mostRecentActivity,
             online,
@@ -343,26 +341,26 @@ export class RankedTeamConsolidator {
         // Each player can have up to 4 teams in ranked 1v1 ladder (1 for each race + random)
         const consolidatedPlayerMap = {} as Record<string, RankedPlayer>
         teamsPerPlayer.forEach((team) => {
-            const btag = team.members[0].account.battleTag
+            const btag = String(team.members[0]?.account?.battleTag)
             if (consolidatedPlayerMap[btag]) {
                 let tempRankedPlayer = consolidatedPlayerMap[btag]
                 // Merge all values as arrays, but for members, keep all raceGames keys/values
                 consolidatedPlayerMap[btag] = {
                     ...tempRankedPlayer,
-                    globalRank: [...tempRankedPlayer.globalRank, team.globalRank],
-                    regionRank: [...tempRankedPlayer.regionRank, team.regionRank],
-                    lastPlayed: [...tempRankedPlayer.lastPlayed, team.lastPlayed],
-                    leagueRank: [...tempRankedPlayer.leagueRank, team.leagueRank],
-                    leagueType: [...tempRankedPlayer.leagueType, team.league.type],
-                    losses: [...tempRankedPlayer.losses, team.losses],
-                    ties: [...tempRankedPlayer.ties, team.ties],
-                    wins: [...tempRankedPlayer.wins, team.wins],
-                    rating: [...tempRankedPlayer.rating, team.rating],
+                    globalRank: [...(tempRankedPlayer.globalRank as number[]), team.globalRank],
+                    regionRank: [...(tempRankedPlayer.regionRank as number[]), team.regionRank],
+                    lastPlayed: [...(tempRankedPlayer.lastPlayed as string[]), team.lastPlayed],
+                    leagueRank: [...(tempRankedPlayer.leagueRank as number[]), team.leagueRank],
+                    leagueType: [...(tempRankedPlayer.leagueType as number[]), team.league.type],
+                    losses: [...(tempRankedPlayer.losses as number[]), team.losses],
+                    ties: [...(tempRankedPlayer.ties as number[]), team.ties],
+                    wins: [...(tempRankedPlayer.wins as number[]), team.wins],
+                    rating: [...(tempRankedPlayer.rating as number[]), team.rating],
                     members: {
                         ...tempRankedPlayer.members,
                         ...team.members[0],
                         raceGames: {
-                            ...tempRankedPlayer.members.raceGames,
+                            ...tempRankedPlayer.members?.raceGames,
                             ...team.members[0].raceGames,
                         } as RaceGames,
                     } as Member,
@@ -390,9 +388,9 @@ export class RankedTeamConsolidator {
         // main race calculation
         const singleTeamList = [] as RankedPlayer[]
         consolidatedPlayer.map((player) => {
-            let raceGames = player.members.raceGames
-            if (raceGames) {
-                const entries = Object.entries(raceGames)
+            let gamesPerRace = player.members?.raceGames as RaceGames
+            if (gamesPerRace) {
+                const entries = Object.entries(gamesPerRace)
                 let maxGames = -1
                 let maxRace: string | undefined = undefined // the race that has more played games.
                 let maxIndex = -1
@@ -414,8 +412,7 @@ export class RankedTeamConsolidator {
                 const mainTies = player.ties as number[]
                 const mainLeagueType = player.leagueType as number[]
                 const mainLastPlayed = player.lastPlayed as string[]
-                raceGames = { [String(maxRace)]: maxGames }
-                const mainMembers = { ...player.members, raceGames }
+                const mainMembers = { ...player.members, gamesPerRace }
 
                 if (typeof maxRace === 'string') {
                     switch (maxRace) {
@@ -445,6 +442,10 @@ export class RankedTeamConsolidator {
                 }
 
                 const mainTeam: RankedPlayer = {
+                    btag: player.members?.account?.battleTag,
+                    discriminator: player.members?.account?.discriminator,
+                    id: player.members?.account?.id,
+                    name: player.members?.account?.tag || '',
                     globalRank: mainGlobalRank[maxIndex],
                     regionRank: mainRegionRank[maxIndex],
                     lastPlayed: mainLastPlayed[maxIndex],
@@ -454,9 +455,11 @@ export class RankedTeamConsolidator {
                     ties: mainTies[maxIndex],
                     wins: mainWins[maxIndex],
                     rating: mainRating[maxIndex],
-                    members: mainMembers,
+                    clan: player.members?.clan as Clan,
                     mainRace: maxRace,
                     totalGames: totalGames,
+                    gamesPerRace: gamesPerRace,
+                    lastDatePlayed: mainLastPlayed[maxIndex],
                     online: false,
                 }
 
@@ -482,26 +485,6 @@ export class RankedTeamConsolidator {
         } catch {
             return '-' // Error parsing date
         }
-    }
-
-    static getRankingPlayers(RankedPlayers: RankedPlayer[]): RankingPlayer[] {
-        return RankedPlayers.map((player) => {
-            const totalGames = player.totalGames || 0
-
-            return {
-                btag: player.members.account?.battleTag,
-                name: player.members.account?.tag,
-                playerCharacterId: player.members.character?.id,
-                race: player.mainRace,
-                ratingLast: Number(player.rating),
-                leagueTypeLast: String(player.leagueType),
-                gamesThisSeason: totalGames,
-                gamesPerRace: RaceExtractor.getGamesPerRace(player.members),
-                lastDatePlayed: RankedTeamConsolidator.getLastPlayedInDays(String(player.lastPlayed)),
-                online: OnlineStatusCalculator.isPlayerOnline(String(player.lastPlayed)),
-                lastPlayed: String(player.lastPlayed),
-            } as RankingPlayer
-        })
     }
 }
 

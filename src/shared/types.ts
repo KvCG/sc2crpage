@@ -6,36 +6,40 @@ export interface TeamStats {
     league: { type: string }
     lastPlayed: string
 }
-export interface RankingPlayer {
-    lastPlayed: string | null
-    playerCharacterId: number
-    btag?: string
-    name?: string
-    race: string | null
-    ratingLast: number | null
-    leagueTypeLast: string | null
-    gamesThisSeason: number
-    gamesPerRace: Record<string, number>
-    lastDatePlayed: string | null
-    online: boolean
-    positionChangeIndicator?: 'up' | 'down' | 'none'
-}
-
 export interface RankedPlayer {
+    // Core identity
+    btag: string | undefined
+    name: string
+    discriminator: number | undefined
+    id: number | undefined   //Character ID
+    clan?: Clan | null       //Clan info if available
+    
+    // Game statistics 
     rating: number[] | number
     wins: number[] | number
-    ties: number[] | number
     losses: number[] | number
+    ties: number[] | number
     leagueType: number[] | number
     globalRank: number[] | number
     regionRank: number[] | number
     leagueRank: number[] | number
+    
+    
+    // Activity tracking
     lastPlayed: string[] | string
-    members: Member
+    online: boolean
+    
+    // Race and games
     mainRace?: string
     totalGames?: number
-    online: boolean
-    positionChangeIndicator?: 'up' | 'down' | 'none' 
+    gamesPerRace: RaceGames
+    
+    // UI enhancements
+    lastDatePlayed: string  // Human-readable format
+    positionChangeIndicator?: 'up' | 'down' | 'none'
+    
+    // Metadata
+    members?: Member  // Keep for detailed character info
 }
 
 export interface Account {
@@ -67,10 +71,10 @@ export interface Member {
     protossGamesPlayed?: number
     terranGamesPlayed?: number
     zergGamesPlayed?: number
-    character: {
+    character?: {
         id: number
     }
-    account: Account
+    account?: Account
     clan: Clan | null
     raceGames?: RaceGames
 }
