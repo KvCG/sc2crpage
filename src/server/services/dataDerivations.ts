@@ -14,79 +14,13 @@
 
 import { DateTime } from 'luxon'
 
-import { Account, Clan, Member, RaceGames, RankedPlayer, RankingPlayer, Team, TeamStats } from '../../shared/types' // Ensure types are imported
+import { Clan, Member, RaceGames, RankedPlayer, Team } from '../../shared/types'
 import { toCostaRicaTime } from '../utils/pulseApiHelper'
 
 export interface PositionChange {
     positionChangeIndicator: 'up' | 'down' | 'none'
     previousPosition?: number
     currentPosition: number
-}
-
-/**
- * Race extraction utilities
- */
-export class RaceExtractor {
-    /**
-     * Extract race from team member data using multiple fallback strategies
-     */
-    static extractRace(member: Member): string | null {
-        if (!member) return null
-
-        // Strategy 1: Use raceGames object (preferred)
-        if (member.raceGames) {
-            const races = Object.entries(member.raceGames)
-            if (races.length === 0) return null
-
-            // Find race with most games
-            const [mostPlayedRace] = races.reduce((max, current) => (current[1] > max[1] ? current : max))
-            return mostPlayedRace
-        }
-
-        // Strategy 2: Use individual race game fields
-        const raceGames = {
-            TERRAN: member.terranGamesPlayed || 0,
-            PROTOSS: member.protossGamesPlayed || 0,
-            ZERG: member.zergGamesPlayed || 0,
-            RANDOM: member.randomGamesPlayed || 0,
-        }
-
-        const maxGames = Math.max(...Object.values(raceGames))
-        if (maxGames === 0) return null
-
-        // Return race with most games
-        const raceEntry = Object.entries(raceGames).find(([_, games]) => games === maxGames)
-        return raceEntry ? raceEntry[0] : null
-    }
-
-    /**
-     * Get games per race from member data
-     */
-    static getGamesPerRace(member: Member): Record<string, number> {
-        const games = {
-            TERRAN: 0,
-            PROTOSS: 0,
-            ZERG: 0,
-            RANDOM: 0,
-        }
-
-        if (member.raceGames) {
-            // Use raceGames object if available
-            Object.entries(member.raceGames).forEach(([race, count]) => {
-                if (race in games) {
-                    games[race as keyof typeof games] = count
-                }
-            })
-        } else {
-            // Fallback to individual fields
-            games.TERRAN = member.terranGamesPlayed || 0
-            games.PROTOSS = member.protossGamesPlayed || 0
-            games.ZERG = member.zergGamesPlayed || 0
-            games.RANDOM = member.randomGamesPlayed || 0
-        }
-
-        return games
-    }
 }
 
 /**
@@ -127,6 +61,26 @@ export class OnlineStatusCalculator {
             return null
         }
     }
+    /**
+     * Gets the last date a player played, formatted for Costa Rica time human readble.
+     * @param {String} lastPlayed - String with a lastPlayed data.
+     * @returns {string} Formatted last played date or '-' if unavailable.
+     */
+    static getPlayerLastDatePlayed = (lastPlayed: string) => {
+        try {
+            const lasCRPlayed = toCostaRicaTime(lastPlayed)
+            const now = DateTime.now().setZone('America/Costa_Rica')
+            const diffDays = now.startOf('day').diff(lasCRPlayed.startOf('day'), 'days').days
+            if (isNaN(diffDays)) return '-'
+            if (diffDays === 0) {
+                return lasCRPlayed.toFormat('h:mm a') // e.g., "7:33 AM"
+            }
+            return `${Math.floor(diffDays)}d ago`
+        } catch (error) {
+            console.error(`[getPlayerLastDatePlayed] Error:`, error)
+            return '-'
+        }
+    }
 
     /**
      * Get activity status description
@@ -152,8 +106,8 @@ export class PositionCalculator {
      * Calculate position changes between two ranking snapshots
      */
     static calculatePositionChanges(
-        currentRanking: RankingPlayer[],
-        previousRanking: RankingPlayer[]
+        currentRanking: RankedPlayer[],
+        previousRanking: RankedPlayer[]
     ): Map<string, PositionChange> {
         const changes = new Map<string, PositionChange>()
 
@@ -195,15 +149,15 @@ export class PositionCalculator {
      * Add position change indicators to ranking data
      */
     static addPositionChangeIndicators(
-        currentRanking: RankingPlayer[],
-        previousRanking: RankingPlayer[]
-    ): RankingPlayer[] {
+        currentRanking: RankedPlayer[],
+        previousRanking: RankedPlayer[]
+    ): RankedPlayer[] {
         const changes = this.calculatePositionChanges(currentRanking, previousRanking)
 
         return currentRanking.map((player) => ({
             ...player,
             positionChangeIndicator: player.btag ? changes.get(player.btag)?.positionChangeIndicator || 'none' : 'none',
-        })) as RankingPlayer[]
+        }))
     }
 
     /**
@@ -239,100 +193,6 @@ export class PositionCalculator {
         })
 
         return { up, down, unchanged, new: newPlayers }
-    }
-}
-
-/**
- * Team statistics aggregation utilities
- */
-export class TeamStatsAggregator {
-    /**
-     * Group team statistics by character ID
-     */
-    static groupStatsByCharacterId(teamStats: TeamStats[]): Map<number, TeamStats[]> {
-        const grouped = new Map<number, TeamStats[]>()
-
-        teamStats.forEach((team) => {
-            team.members.forEach((member) => {
-                const characterId = Number(member?.character?.id)
-                if (!grouped.has(characterId)) {
-                    grouped.set(characterId, [])
-                }
-                grouped.get(characterId)!.push(team)
-            })
-        })
-
-        return grouped
-    }
-
-    /**
-     * Find team with highest rating for a player
-     */
-    static getHighestRatingTeam(playerTeams: TeamStats[]): TeamStats | null {
-        if (playerTeams.length === 0) return null
-
-        return playerTeams.reduce((highest, current) => (current.rating > highest.rating ? current : highest))
-    }
-
-    /**
-     * Get most recent activity timestamp from team data
-     */
-    static getMostRecentActivity(playerTeams: TeamStats[]): string | null {
-        if (playerTeams.length === 0) return null
-
-        const timestamps = playerTeams
-            .map((team) => team.lastPlayed)
-            .filter(Boolean)
-            .map((timestamp) => DateTime.fromISO(timestamp))
-            .filter((dt) => dt.isValid)
-
-        if (timestamps.length === 0) return null
-
-        const mostRecent = timestamps.reduce((latest, current) => (current > latest ? current : latest))
-
-        return mostRecent.toISO()
-    }
-
-    /**
-     * Calculate aggregated player statistics from team data
-     */
-    static aggregatePlayerStats(characterId: number, playerTeams: TeamStats[]): Partial<RankingPlayer> {
-        const highestRatingTeam = this.getHighestRatingTeam(playerTeams)
-        const mostRecentActivity = this.getMostRecentActivity(playerTeams)
-
-        if (!highestRatingTeam) {
-            return {
-                playerCharacterId: characterId,
-                race: null,
-                ratingLast: null,
-                leagueTypeLast: null,
-                gamesThisSeason: 0,
-                gamesPerRace: { TERRAN: 0, PROTOSS: 0, ZERG: 0, RANDOM: 0 },
-                lastDatePlayed: null,
-                online: false,
-            }
-        }
-
-        // Find member data for this character in the highest rating team
-        const memberData = highestRatingTeam.members.find((member) => Number(member?.character?.id) === Number(characterId))
-
-        if (!memberData) {
-            throw new Error(`Member data not found for character ${characterId}`)
-        }
-
-        const race = RaceExtractor.extractRace(memberData)
-        const gamesPerRace = RaceExtractor.getGamesPerRace(memberData)
-        const online = OnlineStatusCalculator.isPlayerOnline(String(mostRecentActivity))
-
-        return {
-            playerCharacterId: characterId,
-            race,
-            ratingLast: highestRatingTeam.rating,
-            leagueTypeLast: highestRatingTeam.league.type,
-            gamesPerRace,
-            lastDatePlayed: mostRecentActivity,
-            online,
-        }
     }
 }
 
@@ -441,6 +301,7 @@ export class RankedTeamConsolidator {
                     }
                 }
 
+                const lastPlayedStr = mainLastPlayed[maxIndex]
                 const mainTeam: RankedPlayer = {
                     btag: player.members?.account?.battleTag,
                     discriminator: player.members?.account?.discriminator,
@@ -448,7 +309,7 @@ export class RankedTeamConsolidator {
                     name: player.members?.account?.tag || '',
                     globalRank: mainGlobalRank[maxIndex],
                     regionRank: mainRegionRank[maxIndex],
-                    lastPlayed: mainLastPlayed[maxIndex],
+                    lastPlayed: lastPlayedStr,
                     leagueRank: mainLeagueRank[maxIndex],
                     leagueType: mainLeagueType[maxIndex],
                     losses: mainLosses[maxIndex],
@@ -459,8 +320,8 @@ export class RankedTeamConsolidator {
                     mainRace: maxRace,
                     totalGames: totalGames,
                     gamesPerRace: gamesPerRace,
-                    lastDatePlayed: mainLastPlayed[maxIndex],
-                    online: false,
+                    lastDatePlayed: OnlineStatusCalculator.getPlayerLastDatePlayed(lastPlayedStr),
+                    online: OnlineStatusCalculator.isPlayerOnline(lastPlayedStr),
                 }
 
                 singleTeamList.push(mainTeam)
@@ -489,72 +350,41 @@ export class RankedTeamConsolidator {
 }
 
 /**
- * Main derivations service that combines all utilities
+ * Main derivations service with streamlined RankedPlayer processing
  */
 export class DataDerivationsService {
     /**
-     * Process raw team statistics into ranking data
+     * Process raw team data into final RankedPlayer format
      */
-    static processTeamStatsToRanking(
-        teamStats: TeamStats[],
-        csvPlayerData: Array<{ id: string; btag?: string; name?: string }> = []
-    ): RankingPlayer[] {
-        const groupedStats = TeamStatsAggregator.groupStatsByCharacterId(teamStats)
-        const ranking: RankingPlayer[] = []
+    static processTeamsToRankedPlayers(teams: Team[]): RankedPlayer[] {
+        // Step 1: Consolidate multiple teams per player
+        const consolidatedPlayers = RankedTeamConsolidator.consolidateRankedTeams(teams)
 
-        // Create lookup for CSV data
-        const csvLookup = new Map(csvPlayerData.map((player) => [player.id, player]))
+        // Step 2: Extract main team data (single values)
+        const rankedPlayers = RankedTeamConsolidator.getMainTeam(consolidatedPlayers)
 
-        // Process each character's team data
-        groupedStats.forEach((playerTeams, characterId) => {
-            const derivedStats = TeamStatsAggregator.aggregatePlayerStats(characterId, playerTeams)
-            const csvData = csvLookup.get(String(characterId))
-
-            const player: RankingPlayer = {
-                ...derivedStats,
-                btag: csvData?.btag,
-                name: csvData?.name,
-                playerCharacterId: characterId,
-                race: derivedStats.race || null,
-                ratingLast: derivedStats.ratingLast || null,
-                leagueTypeLast: derivedStats.leagueTypeLast || null,
-                gamesThisSeason: derivedStats.gamesThisSeason || 0,
-                gamesPerRace: derivedStats.gamesPerRace || {
-                    TERRAN: 0,
-                    PROTOSS: 0,
-                    ZERG: 0,
-                    RANDOM: 0,
-                },
-                lastDatePlayed: derivedStats.lastDatePlayed || null,
-                online: derivedStats.online || false,
-                lastPlayed: derivedStats.lastDatePlayed || null,
-            }
-
-            ranking.push(player)
-        })
-
-        // Sort by rating (highest first)
-        return ranking.sort((a, b) => (b.ratingLast || 0) - (a.ratingLast || 0))
+        // Step 3: Sort by rating (highest first)
+        return rankedPlayers.sort((a, b) => (b.rating as number) - (a.rating as number))
     }
 
     /**
      * Add position indicators to ranking data using baseline comparison
      */
-    static addPositionIndicators(currentRanking: RankingPlayer[], baselineRanking: RankingPlayer[]): RankingPlayer[] {
+    static addPositionIndicators(currentRanking: RankedPlayer[], baselineRanking: RankedPlayer[]): RankedPlayer[] {
         return PositionCalculator.addPositionChangeIndicators(currentRanking, baselineRanking)
     }
 
     /**
      * Filter ranking data based on minimum games threshold
      */
-    static filterByMinimumGames(ranking: RankingPlayer[], minimumGames: number = 20): RankingPlayer[] {
-        return ranking.filter((player) => player.gamesThisSeason >= minimumGames)
+    static filterByMinimumGames(ranking: RankedPlayer[], minimumGames: number = 20): RankedPlayer[] {
+        return ranking.filter((player) => (player.totalGames || 0) >= minimumGames)
     }
 
     /**
      * Get ranking statistics summary
      */
-    static getRankingStatistics(ranking: RankingPlayer[]): {
+    static getRankingStatistics(ranking: RankedPlayer[]): {
         totalPlayers: number
         activePlayers: number
         averageRating: number
@@ -563,18 +393,20 @@ export class DataDerivationsService {
     } {
         const activePlayers = ranking.filter((player) => player.online).length
         const averageRating =
-            ranking.length > 0 ? ranking.reduce((sum, player) => sum + (player.ratingLast || 0), 0) / ranking.length : 0
+            ranking.length > 0
+                ? ranking.reduce((sum, player) => sum + ((player.rating as number) || 0), 0) / ranking.length
+                : 0
 
         const raceDistribution: Record<string, number> = {}
         const leagueDistribution: Record<string, number> = {}
 
         ranking.forEach((player) => {
             // Count race distribution
-            const race = player.race || 'UNKNOWN'
+            const race = player.mainRace || 'UNKNOWN'
             raceDistribution[race] = (raceDistribution[race] || 0) + 1
 
             // Count league distribution
-            const league = player.leagueTypeLast || 'UNKNOWN'
+            const league = String(player.leagueType) || 'UNKNOWN'
             leagueDistribution[league] = (leagueDistribution[league] || 0) + 1
         })
 

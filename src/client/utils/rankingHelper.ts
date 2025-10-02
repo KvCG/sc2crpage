@@ -43,9 +43,12 @@ export const addPositionChangeIndicator = (
     }
 
     // Fast lookup: map each player's battle tag to their previous index
+    // Use first occurrence for duplicates
     const previousIndexByBtag = new Map<string, number>()
     baseline.forEach((row, index) => {
-        if (row?.btag) previousIndexByBtag.set(row.btag, index)
+        if (row?.btag && !previousIndexByBtag.has(row.btag)) {
+            previousIndexByBtag.set(row.btag, index)
+        }
     })
 
     return current.map((row, currentIndex) => {

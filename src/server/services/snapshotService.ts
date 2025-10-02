@@ -1,4 +1,4 @@
-import { formatData } from '../utils/formatData'
+
 import { snapshotCache } from '../utils/cache'
 import { getRanking } from './pulseApi'
 import { DateTime } from 'luxon'
@@ -23,8 +23,7 @@ export async function getDailySnapshot(): Promise<SnapshotResponse> {
 
     // Compute from live data and cache with expiry at CR midnight
     const raw = await getRanking()
-    const ranked = await formatData(raw, 'ranking')
-    const data = filterRankingForDisplay(ranked)
+    const data = filterRankingForDisplay(raw)
     const nowCR = DateTime.now().setZone('America/Costa_Rica')
     const createdAt = nowCR.toISO() ?? new Date().toISOString()
 
