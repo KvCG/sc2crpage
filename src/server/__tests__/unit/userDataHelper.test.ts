@@ -9,20 +9,21 @@ vi.mock('../../utils/csvParser', () => ({
 
 // Mock pulseApi.getTop and formatData to avoid heavy deps inside verifyChallongeParticipant
 vi.mock('../../services/pulseApi', () => ({
-    getTop: vi.fn(() =>
+    getRanking: vi.fn(() =>
         Promise.resolve([
             {
-                playerCharacterId: '111',
-                ratingLast: 4000,
-                race: 'Zerg',
-                leagueTypeLast: 'Master',
-                ratingAvg: 3900,
+                id: 111,
+                rating: 4000,
+                mainRace: 'Zerg',
+                leagueType: 6, // Master league
+                btag: 'Neo#111',
+                name: 'Neo',
             },
         ])
     ),
 }))
 
-vi.mock('../formatData', () => ({
+vi.mock('../../utils/formatData', () => ({
     formatData: vi.fn(async (snapshot: any, type: string) => {
         if (type === 'ranking') {
             return Array.isArray(snapshot) ? snapshot : [snapshot]
@@ -42,21 +43,21 @@ describe('userDataHelper', () => {
         vi.clearAllMocks()
     })
 
-    it('verifyPlayer enriches player with btag/name when id matches', async () => {
+    it('verifyPlayer is deprecated and returns unchanged player', async () => {
         const player = {
-            playerCharacterId: '111',
+            id: 111,
             name: 'Old',
             btag: undefined,
         }
         const res = await verifyPlayer(player)
-        expect(res.btag).toBe('Neo#111')
-        expect(res.name).toBe('Neo')
+        // Function is deprecated - should return unchanged
+        expect(res).toEqual(player)
     })
 
     it('verifyPlayer leaves unmatched player unchanged', async () => {
-        const player = { playerCharacterId: '999' }
+        const player = { id: 999 }
         const res = await verifyPlayer(player)
-        expect(res).toEqual({ playerCharacterId: '999' })
+        expect(res).toEqual({ id: 999 })
     })
 
     it('verifyChallongeParticipant enriches from CSV and snapshot ranking data', async () => {
@@ -66,24 +67,14 @@ describe('userDataHelper', () => {
         expect(res).toHaveProperty('id', 1)
     })
 
-    it('filterByHighestRatingLast keeps highest per btag', () => {
-        const input: Array<{ btag: string; ratingLast: number; id: number }> = [
-            { btag: 'A#1', ratingLast: 3000, id: 1 },
-            { btag: 'A#1', ratingLast: 3500, id: 2 },
-            { btag: 'B#2', ratingLast: 2500, id: 3 },
+    it('filterByHighestRatingLast is deprecated and returns unchanged', () => {
+        const input: Array<{ btag: string; rating: number; id: number }> = [
+            { btag: 'A#1', rating: 3000, id: 1 },
+            { btag: 'A#1', rating: 3500, id: 2 },
+            { btag: 'B#2', rating: 2500, id: 3 },
         ]
-        const out = filterByHighestRatingLast(input) as Array<{
-            btag: string
-            ratingLast: number
-            id: number
-        }>
-        // Should have two btags with highest ratingLast for A#1
-        expect(out.length).toBe(2)
-        const a = out.find((p: { btag: string }) => p.btag === 'A#1') as {
-            btag: string
-            ratingLast: number
-            id: number
-        }
-        expect(a.ratingLast).toBe(3500)
+        const out = filterByHighestRatingLast(input)
+        // Function is deprecated - returns input unchanged
+        expect(out).toEqual(input)
     })
 })
