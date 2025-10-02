@@ -1,6 +1,6 @@
 import { CacheKeys } from '../utils/cacheKeys'
 import { DataDerivationsService, OnlineStatusCalculator } from '../services/dataDerivations'
-import { getRanking } from '../services/pulseApi'
+import { pulseService } from '../services/pulseService'
 import { getDailySnapshot } from '../services/snapshotService'
 import logger from '../logging/logger'
 import { DateTime } from 'luxon'
@@ -183,7 +183,7 @@ export class AnalyticsService {
             const snapshot = await getDailySnapshot()
             return snapshot.data || []
         } else {
-            const rawData = await getRanking()
+            const rawData = await pulseService.getRanking()
             return rawData || []
         }
     }

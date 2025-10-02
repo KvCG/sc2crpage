@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { getRanking, searchPlayer} from '../services/pulseApi'
+import { pulseService } from '../services/pulseService'
 import { getDailySnapshot } from '../services/snapshotService'
 import { formatData } from '../utils/formatData'
 import { filterRankingForDisplay } from '../utils/rankingFilters'
@@ -17,7 +17,7 @@ const router = Router()
 router.get('/top', async (_req: Request, res: Response) => {
     res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
     try {
-        const ranking = await getRanking()
+        const ranking = await pulseService.getRanking()
         const filteredRanking = filterRankingForDisplay(ranking)
         res.json(filteredRanking)
     } catch (error) {
@@ -41,15 +41,15 @@ router.get('/ranking', async (req, res) => {
 
         // Get current ranking and deltas in parallel
         const [currentRanking, deltas] = await Promise.all([
-            getRanking(),
+            pulseService.getRanking(),
             DeltaComputationEngine.computePlayerDeltas(options),
         ])
 
         // Create delta lookup map
-        const deltaMap = new Map(deltas.map((delta) => [delta.btag || `${delta.id}`, delta]))
+        const deltaMap = new Map(deltas.map((delta: any) => [delta.btag || `${delta.id}`, delta]))
 
-        // Enhance ranking with delta data
-        const enhancedRanking = currentRanking.map((player, index) => ({
+        // Enhance ranking with delta information
+        const enhancedRanking = currentRanking.map((player: any, index: number) => ({
             ...player,
             currentRank: index,
             deltaData: deltaMap.get(String(player.btag)) || null,
@@ -89,7 +89,7 @@ router.get('/search', async (req: Request, res: Response) => {
 
     res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
     try {
-        const playerData = await searchPlayer(term as string)
+        const playerData = await pulseService.searchPlayer(term as string)
         const formattedData = await formatData(playerData, 'search')
         res.json(formattedData)
     } catch (error) {

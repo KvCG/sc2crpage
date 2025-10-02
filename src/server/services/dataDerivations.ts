@@ -16,6 +16,7 @@ import { DateTime } from 'luxon'
 
 import { Clan, Member, RaceGames, RankedPlayer, Team } from '../../shared/types'
 import { toCostaRicaTime } from '../utils/pulseApiHelper'
+import { getDisplayName } from '../utils/csvDisplayNames'
 
 export interface PositionChange {
     positionChangeIndicator: 'up' | 'down' | 'none'
@@ -245,6 +246,8 @@ export class RankedTeamConsolidator {
     }
 
     static getMainTeam(consolidatedPlayer: RankedPlayer[]): RankedPlayer[] {
+        // Display names are now automatically loaded by pulseService when reading CSV
+        
         // main race calculation
         const singleTeamList = [] as RankedPlayer[]
         consolidatedPlayer.map((player) => {
@@ -302,11 +305,17 @@ export class RankedTeamConsolidator {
                 }
 
                 const lastPlayedStr = mainLastPlayed[maxIndex]
+                
+                // Get display name from CSV or fallback to account tag
+                const characterId = player.members?.account?.id
+                const displayName = getDisplayName(characterId)
+                const playerName = displayName || player.members?.account?.tag || player.members?.account?.battleTag?.split('#')[0] || 'Unknown'
+                
                 const mainTeam: RankedPlayer = {
                     btag: player.members?.account?.battleTag,
                     discriminator: player.members?.account?.discriminator,
                     id: player.members?.account?.id,
-                    name: player.members?.account?.tag || '',
+                    name: playerName,
                     globalRank: mainGlobalRank[maxIndex],
                     regionRank: mainRegionRank[maxIndex],
                     lastPlayed: lastPlayedStr,
@@ -360,7 +369,7 @@ export class DataDerivationsService {
         // Step 1: Consolidate multiple teams per player
         const consolidatedPlayers = RankedTeamConsolidator.consolidateRankedTeams(teams)
 
-        // Step 2: Extract main team data (single values)
+        // Step 2: Extract main team data (single values) with display names
         const rankedPlayers = RankedTeamConsolidator.getMainTeam(consolidatedPlayers)
 
         // Step 3: Sort by rating (highest first)
