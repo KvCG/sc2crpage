@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Hoist mock functions to avoid initialization issues
 const hoisted = vi.hoisted(() => ({
     mockReadCsv: vi.fn(),
+    mockBumpPulseReq: vi.fn(),
+    mockBumpPulseErr: vi.fn(),
     mockCacheGet: vi.fn(),
     mockCacheSet: vi.fn(),
     mockCacheClear: vi.fn(),
@@ -45,11 +47,13 @@ vi.mock('../../metrics/lite', () => ({
 
 vi.mock('../../observability/requestContext', () => ({
     bumpCache: hoisted.mockBumpCache,
+    bumpPulseReq: hoisted.mockBumpPulseReq,
+    bumpPulseErr: hoisted.mockBumpPulseErr,
 }))
 
 vi.mock('../pulseAdapter', () => ({
-    PulseAdapter: vi.fn(() => hoisted.mockPulseAdapter),
-    PulseRequestCache: vi.fn(() => hoisted.mockPulseRequestCache),
+    PulseAdapter: vi.fn().mockImplementation(() => hoisted.mockPulseAdapter),
+    PulseRequestCache: vi.fn().mockImplementation(() => hoisted.mockPulseRequestCache),
 }))
 
 vi.mock('../dataDerivations', () => ({

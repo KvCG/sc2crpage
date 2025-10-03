@@ -91,7 +91,7 @@ describe('pulseApi.getTop', () => {
         expect(r1).toEqual(r2)
         expect(
             getMock.mock.calls.filter(([u]) =>
-                (u as string).startsWith('group/team')
+                (u as string).startsWith('character-teams')
             ).length
         ).toBe(1)
     })
@@ -101,7 +101,7 @@ describe('pulseApi.getTop', () => {
         const r2 = await pulse.getTop()
         expect(r1).toEqual(r2)
         const teamCalls = getMock.mock.calls.filter(([u]) =>
-            (u as string).startsWith('group/team')
+            (u as string).startsWith('character-teams')
         ).length
         expect(teamCalls).toBe(1)
     })

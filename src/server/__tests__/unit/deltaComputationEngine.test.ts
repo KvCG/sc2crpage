@@ -355,7 +355,39 @@ describe('DeltaComputationEngine', () => {
         })
 
         test('respects limit parameter', async () => {
-            const topMovers = await DeltaComputationEngine.getTopMovers('both', 1)
+            // Clear existing mocks to avoid interference
+            vi.clearAllMocks()
+            
+            // Set up mocks to ensure we have position deltas - btags must match between current and baseline
+            const testBaseline = {
+                ...mockBaselineSnapshot,
+                data: [
+                    { id: 1, btag: 'Player1#1234', ratingLast: 1000 }, // Position 0 (1st) in baseline
+                    { id: 2, btag: 'Player2#5678', ratingLast: 900 }   // Position 1 (2nd) in baseline
+                ]
+            }
+            
+            const testCurrent = {
+                ...mockCurrentSnapshot,
+                data: [
+                    { id: 2, btag: 'Player2#5678', ratingLast: 1600 }, // Position 0 (1st) in current - moved up from position 1 (+1)
+                    { id: 1, btag: 'Player1#1234', ratingLast: 1500 }  // Position 1 (2nd) in current - moved down from position 0 (-1)
+                ]
+            }
+
+            ;(getDailySnapshot as Mock).mockResolvedValue(testCurrent)
+            ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([{
+                fileId: 'test-backup',
+                fileName: 'test-snapshot.json',
+                timestamp: DateTime.fromISO('2025-09-25T12:00:00Z'),
+                metadata: { type: 'snapshot', timestamp: '2025-09-25T12:00:00Z', playerCount: 2, dataSize: 1024 }
+            }])
+            ;(PlayerAnalyticsPersistence.restoreSnapshot as Mock).mockResolvedValue(testBaseline)
+            
+            const topMovers = await DeltaComputationEngine.getTopMovers('both', 1, {
+                minimumConfidence: 0,
+                includeInactive: true
+            })
 
             expect(topMovers).toHaveLength(1)
         })
@@ -402,6 +434,9 @@ describe('DeltaComputationEngine', () => {
 
     describe('Confidence Score Calculation', () => {
         test('calculates confidence scores based on data quality', async () => {
+            // Clear existing mocks to avoid interference
+            vi.clearAllMocks()
+            
             const highQualitySnapshot = {
                 createdAt: '2025-09-26T12:00:00Z',
                 expiry: Date.now() + 86400000,
@@ -420,22 +455,67 @@ describe('DeltaComputationEngine', () => {
                 expiry: Date.now() + 86400000,
                 data: [{
                     id: 2,
-                    // Missing btag, name, race - should lower confidence
+                    btag: 'LowQuality#5678', // Need btag for matching, but missing name, race - should lower confidence
                     ratingLast: 1400,
                     daysSinceLastGame: 10
                 }]
             }
 
-            ;(getDailySnapshot as Mock).mockResolvedValueOnce(highQualitySnapshot)
+            const baselineForHighQuality = {
+                ...mockBaselineSnapshot,
+                data: [{
+                    id: 1,
+                    btag: 'HighQuality#1234', // Must match btag in highQualitySnapshot
+                    name: 'HighQuality',
+                    ratingLast: 1500, // Different rating to create delta
+                    race: 'Protoss',
+                    daysSinceLastGame: 2
+                }]
+            }
+
+            const baselineForLowQuality = {
+                ...mockBaselineSnapshot,
+                data: [{
+                    id: 2,
+                    btag: 'LowQuality#5678', // Add matching btag for lowQualitySnapshot
+                    ratingLast: 1300, // Different rating to create delta
+                    daysSinceLastGame: 8
+                }]
+            }
+
+            // Test high quality deltas
+            ;(getDailySnapshot as Mock).mockResolvedValue(highQualitySnapshot)
+            ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([{
+                fileId: 'high-quality-backup',
+                fileName: 'high-quality-snapshot.json',
+                timestamp: DateTime.fromISO('2025-09-25T12:00:00Z'),
+                metadata: { type: 'snapshot', timestamp: '2025-09-25T12:00:00Z', playerCount: 1, dataSize: 512 }
+            }])
+            ;(PlayerAnalyticsPersistence.restoreSnapshot as Mock).mockResolvedValue(baselineForHighQuality)
             const highQualityDeltas = await DeltaComputationEngine.computePlayerDeltas({
-                minimumConfidence: 0
+                minimumConfidence: 0,
+                includeInactive: true
             })
 
-            ;(getDailySnapshot as Mock).mockResolvedValueOnce(lowQualitySnapshot)
+            // Clear mocks and set up for second test
+            vi.clearAllMocks()
+
+            // Test low quality deltas
+            ;(getDailySnapshot as Mock).mockResolvedValue(lowQualitySnapshot)
+            ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([{
+                fileId: 'low-quality-backup',
+                fileName: 'low-quality-snapshot.json',
+                timestamp: DateTime.fromISO('2025-09-25T12:00:00Z'),
+                metadata: { type: 'snapshot', timestamp: '2025-09-25T12:00:00Z', playerCount: 1, dataSize: 256 }
+            }])
+            ;(PlayerAnalyticsPersistence.restoreSnapshot as Mock).mockResolvedValue(baselineForLowQuality)
             const lowQualityDeltas = await DeltaComputationEngine.computePlayerDeltas({
-                minimumConfidence: 0
+                minimumConfidence: 0,
+                includeInactive: true
             })
 
+            expect(highQualityDeltas).toHaveLength(1)
+            expect(lowQualityDeltas).toHaveLength(1)
             expect(highQualityDeltas[0].confidenceScore).toBeGreaterThan(lowQualityDeltas[0].confidenceScore)
         })
     })

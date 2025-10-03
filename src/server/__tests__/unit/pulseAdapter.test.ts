@@ -7,6 +7,7 @@ const hoisted = vi.hoisted(() => ({
         searchCharacter: 'character/search',
         listSeasons: 'season/list/all',
         groupTeam: 'group/team',
+        characterTeams: 'character-teams',
     },
     mockWithBasePath: vi.fn((path: string) => path)
 }))
@@ -150,11 +151,7 @@ describe('PulseAdapter', () => {
     })
 
     describe('getPlayersStats', () => {
-        beforeEach(() => {
-            // Mock getCurrentSeason for stats requests
-            mockHttpGet
-                .mockResolvedValueOnce([{ region: 'US', battlenetId: 'season-1' }]) // getCurrentSeason call
-        })
+        // Each test sets up its own complete mock chain
 
         it('returns empty array for empty player list', async () => {
             const stats = await adapter.getPlayersStats([])
@@ -169,18 +166,16 @@ describe('PulseAdapter', () => {
                 { characterId: 'player2', rating: 2500 }
             ]
 
+            // Set up proper mock chain: first getCurrentSeason, then fetchRankedTeams
             mockHttpGet
-                .mockResolvedValueOnce(mockStats) // getPlayersStats call
+                .mockResolvedValueOnce([{ region: 'US', battlenetId: 'season-1' }]) // getCurrentSeason
+                .mockResolvedValueOnce(mockStats) // fetchRankedTeams call
 
             const stats = await adapter.getPlayersStats(playerIds)
 
-            expect(mockHttpGet).toHaveBeenCalledTimes(2) // getCurrentSeason + getPlayersStats
+            expect(mockHttpGet).toHaveBeenCalledTimes(2) // getCurrentSeason + fetchRankedTeams
             expect(mockHttpGet).toHaveBeenLastCalledWith(
-                expect.stringContaining('group/team'),
-                {},
-                {},
-                0,
-                3
+                expect.stringContaining('character-teams'),
             )
             expect(stats).toEqual(mockStats)
         })
@@ -190,13 +185,11 @@ describe('PulseAdapter', () => {
             const testAdapter = createPulseAdapter({ chunkSize: 2 })
             const playerIds = ['player1', 'player2', 'player3', 'player4']
             
-            // Mock getCurrentSeason
-            mockHttpGet.mockResolvedValueOnce([{ region: 'US', battlenetId: 'season-1' }])
-            
-            // Mock batch responses
+            // Set up complete mock chain: getCurrentSeason + 2 batch calls
             mockHttpGet
-                .mockResolvedValueOnce([{ characterId: 'player1' }, { characterId: 'player2' }])
-                .mockResolvedValueOnce([{ characterId: 'player3' }, { characterId: 'player4' }])
+                .mockResolvedValueOnce([{ region: 'US', battlenetId: 'season-1' }]) // getCurrentSeason
+                .mockResolvedValueOnce([{ characterId: 'player1' }, { characterId: 'player2' }]) // batch 1
+                .mockResolvedValueOnce([{ characterId: 'player3' }, { characterId: 'player4' }]) // batch 2
 
             const stats = await testAdapter.getPlayersStats(playerIds)
 
@@ -229,9 +222,9 @@ describe('PulseAdapter', () => {
             await expect(adapter.getPlayersStats(['player1']))
                 .rejects.toMatchObject({
                     error: 'No seasons',
+                    // The actual error comes from getCurrentSeason, not getPlayersStats
                     context: { 
-                        playerCount: 1,
-                        operation: 'getPlayersStats' 
+                        operation: 'getCurrentSeason'
                     }
                 })
         })
