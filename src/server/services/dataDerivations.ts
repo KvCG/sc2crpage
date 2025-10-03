@@ -94,7 +94,7 @@ export class OnlineStatusCalculator {
 
         if (hours === null) return 'unknown'
         if (this.isPlayerOnline(lastPlayed)) return 'online'
-        if (hours <= Number(process.env.ONLINE_THRESHOLD_HOURS) || 24) return 'recent'
+        if (hours <= (Number(process.env.ONLINE_THRESHOLD_HOURS) || 24)) return 'recent'
         return 'inactive'
     }
 }
