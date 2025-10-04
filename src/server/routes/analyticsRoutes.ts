@@ -6,7 +6,6 @@ import { AnalyticsService } from '../services/analyticsService'
 import { incrementAnalyticsError } from '../metrics/lite'
 import { DeltaComputationEngine } from '../services/deltaComputationEngine'
 import { DateTime } from 'luxon'
-import { getRanking } from '../services/pulseApi'
 
 const router = Router()
 
