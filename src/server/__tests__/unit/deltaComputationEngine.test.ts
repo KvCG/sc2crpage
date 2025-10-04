@@ -437,8 +437,11 @@ describe('DeltaComputationEngine', () => {
             // Clear existing mocks to avoid interference
             vi.clearAllMocks()
             
+            // Use very recent timestamps to avoid age penalty
+            const recentTime = new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+            
             const highQualitySnapshot = {
-                createdAt: '2025-09-26T12:00:00Z',
+                createdAt: recentTime,
                 expiry: Date.now() + 86400000,
                 data: [{
                     id: 1,
@@ -451,18 +454,19 @@ describe('DeltaComputationEngine', () => {
             }
 
             const lowQualitySnapshot = {
-                createdAt: '2025-09-26T12:00:00Z', 
+                createdAt: recentTime,
                 expiry: Date.now() + 86400000,
                 data: [{
                     id: 2,
-                    btag: 'LowQuality#5678', // Need btag for matching, but missing name, race - should lower confidence
+                    btag: 'LowQuality#5678', // Missing name and race - should lower confidence
                     ratingLast: 1400,
-                    daysSinceLastGame: 10
+                    daysSinceLastGame: 10 // Less recent activity
                 }]
             }
 
             const baselineForHighQuality = {
                 ...mockBaselineSnapshot,
+                createdAt: new Date(Date.now() - 86400000).toISOString(), // 24 hours ago
                 data: [{
                     id: 1,
                     btag: 'HighQuality#1234', // Must match btag in highQualitySnapshot
@@ -475,6 +479,7 @@ describe('DeltaComputationEngine', () => {
 
             const baselineForLowQuality = {
                 ...mockBaselineSnapshot,
+                createdAt: new Date(Date.now() - 86400000).toISOString(), // 24 hours ago
                 data: [{
                     id: 2,
                     btag: 'LowQuality#5678', // Add matching btag for lowQualitySnapshot

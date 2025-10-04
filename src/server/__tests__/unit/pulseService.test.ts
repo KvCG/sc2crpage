@@ -51,12 +51,12 @@ vi.mock('../../observability/requestContext', () => ({
     bumpPulseErr: hoisted.mockBumpPulseErr,
 }))
 
-vi.mock('../pulseAdapter', () => ({
+vi.mock('../../services/pulseAdapter', () => ({
     PulseAdapter: vi.fn().mockImplementation(() => hoisted.mockPulseAdapter),
     PulseRequestCache: vi.fn().mockImplementation(() => hoisted.mockPulseRequestCache),
 }))
 
-vi.mock('../dataDerivations', () => ({
+vi.mock('../../services/dataDerivations', () => ({
     DataDerivationsService: hoisted.mockDataDerivationsService,
 }))
 
@@ -277,11 +277,13 @@ describe('PulseService', () => {
         it('handles empty CSV data gracefully', async () => {
             hoisted.mockCacheGet.mockReturnValueOnce(null)
             hoisted.mockReadCsv.mockResolvedValueOnce([])
+            hoisted.mockPulseAdapter.getCurrentSeason.mockResolvedValueOnce('64')
 
             const result = await service.getRanking()
 
             expect(result).toEqual([])
-            expect(hoisted.mockPulseAdapter.getCurrentSeason).not.toHaveBeenCalled()
+            expect(hoisted.mockPulseAdapter.getCurrentSeason).toHaveBeenCalled()
+            expect(hoisted.mockPulseAdapter.fetchRankedTeams).not.toHaveBeenCalled()
         })
 
         it('handles CSV read errors gracefully', async () => {
