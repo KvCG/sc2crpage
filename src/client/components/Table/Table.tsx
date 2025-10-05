@@ -42,26 +42,22 @@ type RowProps = { row: DecoratedRow; index: number; visibleColumns: ColumnOption
 const RankingTableRow = ({ row, index, visibleColumns }: RowProps) => {
     const {
         btag,
-        ratingLast,
-        race,
-        leagueTypeLast,
+        rating,
+        mainRace,
+        leagueType,
         positionChangeIndicator,
         positionDelta,
         lastDatePlayed,
         gamesPerRace,
-		online
+        online,
+        totalGames,
     } = row
 
-    const totalGames =
-        (gamesPerRace?.terranGamesPlayed ?? 0) +
-        (gamesPerRace?.protossGamesPlayed ?? 0) +
-        (gamesPerRace?.zergGamesPlayed ?? 0) +
-        (gamesPerRace?.randomGamesPlayed ?? 0)
-
     const arrow = positionChangeIndicator === 'up' ? '▲' : positionChangeIndicator === 'down' ? '▼' : ''
-    const deltaText = positionChangeIndicator !== 'none' && typeof positionDelta === 'number' && Math.abs(positionDelta) > 0
-        ? ` ${Math.abs(positionDelta)}`
-        : ''
+    const deltaText =
+        positionChangeIndicator !== 'none' && typeof positionDelta === 'number' && Math.abs(positionDelta) > 0
+            ? ` ${Math.abs(positionDelta)}`
+            : ''
 
     return (
         <Table.Tr key={btag}>
@@ -70,24 +66,34 @@ const RankingTableRow = ({ row, index, visibleColumns }: RowProps) => {
                 {deltaText}
             </Table.Td>
             {visibleColumns.top && <Table.Td className={classes.top}>{index + 1}</Table.Td>}
-            {visibleColumns.name && <Table.Td className={classes.name} title={btag}>{getStandardName(row)}</Table.Td>}
-            {visibleColumns.mmr && <Table.Td>{ratingLast}</Table.Td>}
+            {visibleColumns.name && (
+                <Table.Td className={classes.name} title={btag}>
+                    {getStandardName(row)}
+                </Table.Td>
+            )}
+            {visibleColumns.mmr && <Table.Td>{rating}</Table.Td>}
             {visibleColumns.rank && (
                 <Table.Td>
-                    <img className={classes.rank} src={getLeagueSrc(leagueTypeLast)} alt="league" />
+                    <img className={classes.rank} src={getLeagueSrc(leagueType)} alt="league" />
                 </Table.Td>
             )}
             {visibleColumns.race && (
-                <Table.Td className={cx(raceAssets[race as keyof typeof raceAssets]?.className)}>
-                    <img className={classes.rank} src={raceAssets[race as keyof typeof raceAssets]?.assetPath} alt={race} />
+                <Table.Td className={cx(raceAssets[mainRace as keyof typeof raceAssets]?.className)}>
+                    <img
+                        className={classes.rank}
+                        src={raceAssets[mainRace as keyof typeof raceAssets]?.assetPath}
+                        alt={mainRace}
+                    />
                 </Table.Td>
             )}
-            {visibleColumns.terran && <Table.Td>{gamesPerRace?.terranGamesPlayed}</Table.Td>}
-            {visibleColumns.protoss && <Table.Td>{gamesPerRace?.protossGamesPlayed}</Table.Td>}
-            {visibleColumns.zerg && <Table.Td>{gamesPerRace?.zergGamesPlayed}</Table.Td>}
-            {visibleColumns.random && <Table.Td>{gamesPerRace?.randomGamesPlayed}</Table.Td>}
+            {visibleColumns.terran && <Table.Td>{gamesPerRace?.TERRAN || '-'}</Table.Td>}
+            {visibleColumns.protoss && <Table.Td>{gamesPerRace?.PROTOSS || '-'}</Table.Td>}
+            {visibleColumns.zerg && <Table.Td>{gamesPerRace?.ZERG || '-'}</Table.Td>}
+            {visibleColumns.random && <Table.Td>{gamesPerRace?.RANDOM || '-'}</Table.Td>}
             {visibleColumns.total && <Table.Td>{totalGames}</Table.Td>}
-            {visibleColumns.lastPlayed && <Table.Td className={classes.lastPlayedColumn}>{addOnlineIndicator(lastDatePlayed, online)}</Table.Td>}
+            {visibleColumns.lastPlayed && (
+                <Table.Td className={classes.lastPlayedColumn}>{addOnlineIndicator(lastDatePlayed, online)}</Table.Td>
+            )}
         </Table.Tr>
     )
 }
@@ -124,62 +130,54 @@ export function RankingTable({ data, loading }: TableProps) {
 
             <Grid.Col span={12}>
                 {!loading && Array.isArray(tableData) && tableData.length > 0 && (
-                    <RankingTableColumnFilters
-                        columns={visibleColumns}
-                        onColumnChange={setVisibleColumns}
-                    />
+                    <RankingTableColumnFilters columns={visibleColumns} onColumnChange={setVisibleColumns} />
                 )}
             </Grid.Col>
 
-            <Skeleton
-                className={classes.skeleton}
-                visible={loading}
-                maw={700}
-                miw={250}
-            >
+            <Skeleton className={classes.skeleton} visible={loading} maw={700} miw={250}>
                 <div className={classes.tableContainer}>
-                <Table
-                    verticalSpacing="3"
-                    striped
-                    stickyHeader
-                    highlightOnHover
-                    stripedColor="dark"
-                    maw={700}
-                    miw={250}
-                    mb={50}
-                >
-                    <Table.Thead className={classes.header}>
-                        <Table.Tr>
-                            <Table.Th className={classes.posIndicator}></Table.Th>
-                            {visibleColumns.top && <Table.Th className={classes.top}>Top</Table.Th>}
-                            {visibleColumns.name && <Table.Th className={classes.name}>Name</Table.Th>}
-                            {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
-                            {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
-                            {visibleColumns.race && <Table.Th>Race</Table.Th>}
-                            
-                            {visibleColumns.terran && <Table.Th># Terran</Table.Th>}
-                            {visibleColumns.protoss && <Table.Th># Protoss</Table.Th>}
-                            {visibleColumns.zerg && <Table.Th># Zerg</Table.Th>}
-                            {visibleColumns.random && <Table.Th># Random</Table.Th>}
-                            {visibleColumns.total && (
-                                <Table.Th title="Total games played this season">Total Games</Table.Th>
+                    <Table
+                        verticalSpacing="3"
+                        striped
+                        stickyHeader
+                        highlightOnHover
+                        stripedColor="dark"
+                        maw={700}
+                        miw={250}
+                        mb={50}
+                    >
+                        <Table.Thead className={classes.header}>
+                            <Table.Tr>
+                                <Table.Th className={classes.posIndicator}></Table.Th>
+                                {visibleColumns.top && <Table.Th className={classes.top}>Top</Table.Th>}
+                                {visibleColumns.name && <Table.Th className={classes.name}>Name</Table.Th>}
+                                {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
+                                {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
+                                {visibleColumns.race && <Table.Th>Race</Table.Th>}
+
+                                {visibleColumns.terran && <Table.Th># Terran</Table.Th>}
+                                {visibleColumns.protoss && <Table.Th># Protoss</Table.Th>}
+                                {visibleColumns.zerg && <Table.Th># Zerg</Table.Th>}
+                                {visibleColumns.random && <Table.Th># Random</Table.Th>}
+                                {visibleColumns.total && (
+                                    <Table.Th title="Total games played this season">Total Games</Table.Th>
+                                )}
+                                {visibleColumns.lastPlayed && <Table.Th>Last Played</Table.Th>}
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {tableData?.map((row: DecoratedRow, index: number) =>
+                                row.rating ? (
+                                    <RankingTableRow
+                                        key={row.btag}
+                                        row={row}
+                                        index={index}
+                                        visibleColumns={visibleColumns}
+                                    />
+                                ) : null
                             )}
-							{visibleColumns.lastPlayed && <Table.Th>Last Played</Table.Th>}
-                        </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                        {tableData?.map((row: DecoratedRow, index: number) =>
-                            row.ratingLast ? (
-                                <RankingTableRow
-                                    key={row.btag}
-                                    row={row}
-                                    index={index}
-                                    visibleColumns={visibleColumns}
-                                />
-                            ) : null
-                        )}
-                    </Table.Tbody>
-                </Table>
+                        </Table.Tbody>
+                    </Table>
                 </div>
             </Skeleton>
         </Grid>

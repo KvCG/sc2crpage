@@ -5,10 +5,10 @@ import {
 } from '../../../server/utils/rankingFilters'
 
 const makeRow = (overrides: Partial<any> = {}) => ({
-    ratingLast: 4500,
-    leagueTypeLast: 5,
-    race: 'ZERG',
-    gamesThisSeason: 12,
+    rating: 4500,
+    leagueType: 5,
+    mainRace: 'ZERG',
+    totalGames: 12,
     ...overrides,
 })
 
@@ -34,9 +34,9 @@ describe('rankingFilters', () => {
     it('filters invalid rows (missing rating/league/race)', () => {
         const rows = [
             makeRow(),
-            makeRow({ ratingLast: undefined }),
-            makeRow({ leagueTypeLast: undefined }),
-            makeRow({ race: undefined }),
+            makeRow({ rating: undefined }),
+            makeRow({ leagueType: undefined }),
+            makeRow({ mainRace: undefined }),
         ]
         const out = filterRankingForDisplay(rows)
         expect(out.length).toBe(1)
@@ -45,20 +45,20 @@ describe('rankingFilters', () => {
     it('filters out low-activity players below threshold', () => {
         process.env.RANKING_MIN_GAMES = '15'
         const rows = [
-            makeRow({ gamesThisSeason: 20 }),
-            makeRow({ gamesThisSeason: 10 }),
-            makeRow({ gamesThisSeason: 0 }),
+            makeRow({ totalGames: 20 }),
+            makeRow({ totalGames: 10 }),
+            makeRow({ totalGames: 0 }),
         ]
         const out = filterRankingForDisplay(rows)
         expect(out.length).toBe(1)
-        expect(out[0].gamesThisSeason).toBe(20)
+        expect(out[0].totalGames).toBe(20)
     })
 
     it('falls back to valid rows if active filter empties result', () => {
         process.env.RANKING_MIN_GAMES = '100'
         const rows = [
-            makeRow({ gamesThisSeason: 50 }),
-            makeRow({ gamesThisSeason: 60 }),
+            makeRow({ totalGames: 50 }),
+            makeRow({ totalGames: 60 }),
         ]
         const out = filterRankingForDisplay(rows)
         expect(out.length).toBe(2)

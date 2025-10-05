@@ -39,6 +39,9 @@ describe('Analytics Middleware', () => {
         mockReq = {
             ip: '127.0.0.1',
             path: '/api/analytics/test',
+            headers: {
+                'user-agent': 'test-agent'
+            },
             get: vi.fn((header: string) => {
                 if (header === 'User-Agent') return 'test-agent'
                 return undefined
@@ -46,13 +49,23 @@ describe('Analytics Middleware', () => {
             query: {},
             validatedQuery: undefined
         }
+        // Create response mock with chaining methods
+        const statusMock = vi.fn()
+        const jsonMock = vi.fn()
+        const setHeaderMock = vi.fn()
+        
         mockRes = {
-            status: vi.fn().mockReturnThis(),
-            json: vi.fn().mockReturnThis(),
-            setHeader: vi.fn()
-        }
+            status: statusMock,
+            json: jsonMock,
+            setHeader: setHeaderMock
+        } as any
+        
+        // Set up method chaining
+        statusMock.mockReturnValue(mockRes)
+        jsonMock.mockReturnValue(mockRes)
+        setHeaderMock.mockReturnValue(mockRes)
+        
         mockNext = vi.fn()
-        vi.resetAllMocks()
     })
 
     afterEach(() => {
