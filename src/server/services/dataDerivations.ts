@@ -50,7 +50,10 @@ export class OnlineStatusCalculator {
     /**
      * Calculate hours since last activity
      */
-    static getHoursSinceLastActivity(lastPlayed: string | null, currentTime: DateTime = DateTime.now()): number | null {
+    static getHoursSinceLastActivity(
+        lastPlayed: string | null,
+        currentTime: DateTime = DateTime.now()
+    ): number | null {
         if (!lastPlayed) return null
 
         try {
@@ -157,7 +160,9 @@ export class PositionCalculator {
 
         return currentRanking.map((player) => ({
             ...player,
-            positionChangeIndicator: player.btag ? changes.get(player.btag)?.positionChangeIndicator || 'none' : 'none',
+            positionChangeIndicator: player.btag
+                ? changes.get(player.btag)?.positionChangeIndicator || 'none'
+                : 'none',
         }))
     }
 
@@ -247,26 +252,36 @@ export class RankedTeamConsolidator {
 
     static getMainTeam(consolidatedPlayer: RankedPlayer[]): RankedPlayer[] {
         // Display names are now automatically loaded by pulseService when reading CSV
-        
+
         // main race calculation
         const singleTeamList = [] as RankedPlayer[]
         consolidatedPlayer.map((player) => {
             let gamesPerRace = player.members?.raceGames as RaceGames
             if (gamesPerRace) {
                 const entries = Object.entries(gamesPerRace)
-                let maxGames = -1
-                let maxRace: string | undefined = undefined // the race that has more played games.
+                let totalGames = 0 // total games played across all races
+                entries.forEach(([key, value]) => {
+                    totalGames += value
+                })
+
+                const mainRating = player.rating as number[]
+                // Find index of max rating
+                let maxRating = -Infinity
                 let maxIndex = -1
-                let totalGames = 0
-                entries.forEach(([key, value], idx) => {
-                    if (typeof value === 'number' && value > maxGames) {
-                        totalGames += value
-                        maxGames = value
-                        maxRace = key
+                let maxRace: string | undefined = undefined
+                mainRating.forEach((rating, idx) => {
+                    if (typeof rating === 'number' && rating > maxRating) {
+                        maxRating = rating
                         maxIndex = idx
                     }
                 })
-                const mainRating = player.rating as number[]
+
+                // Get race corresponding to maxIndex
+                if (maxIndex !== -1) {
+                    const raceKeys = Object.keys(gamesPerRace)
+                    maxRace = raceKeys[maxIndex]
+                }
+
                 const mainGlobalRank = player.globalRank as number[]
                 const mainRegionRank = player.regionRank as number[]
                 const mainLeagueRank = player.leagueRank as number[]
@@ -305,16 +320,22 @@ export class RankedTeamConsolidator {
                 }
 
                 const lastPlayedStr = mainLastPlayed[maxIndex]
-                
+
                 // Get display name from CSV or fallback to account tag
                 const characterId = player.members?.account?.id
-                const displayName = getDisplayName(characterId)
-                const playerName = displayName || player.members?.account?.tag || player.members?.account?.battleTag?.split('#')[0] || 'Unknown'
-                
+                const btag = player.members?.account?.battleTag
+                const displayName = getDisplayName(String(btag))
+                const playerName =
+                    displayName ||
+                    player.members?.account?.tag ||
+                    player?.members?.character?.name?.split('#')[0] ||
+                    player.members?.account?.battleTag?.split('#')[0] ||
+                    'Unknown'
+
                 const mainTeam: RankedPlayer = {
-                    btag: player.members?.account?.battleTag,
+                    btag: btag,
                     discriminator: player.members?.account?.discriminator,
-                    id: player.members?.account?.id,
+                    id: characterId,
                     name: playerName,
                     globalRank: mainGlobalRank[maxIndex],
                     regionRank: mainRegionRank[maxIndex],
@@ -366,27 +387,30 @@ export class DataDerivationsService {
      * Process raw team data into final RankedPlayer format
      */
     static processTeamsToRankedPlayers(teams: Team[]): RankedPlayer[] {
-        // Step 1: Consolidate multiple teams per player
+        // Consolidate multiple teams per player
         const consolidatedPlayers = RankedTeamConsolidator.consolidateRankedTeams(teams)
-
-        // Step 2: Extract main team data (single values) with display names
+        // Extract main team data (single values) with display names
         const rankedPlayers = RankedTeamConsolidator.getMainTeam(consolidatedPlayers)
-
-        // Step 3: Sort by rating (highest first)
-        return rankedPlayers.sort((a, b) => (b.rating as number) - (a.rating as number))
+        return rankedPlayers // Already sorted by the pulse API
     }
 
     /**
      * Add position indicators to ranking data using baseline comparison
      */
-    static addPositionIndicators(currentRanking: RankedPlayer[], baselineRanking: RankedPlayer[]): RankedPlayer[] {
+    static addPositionIndicators(
+        currentRanking: RankedPlayer[],
+        baselineRanking: RankedPlayer[]
+    ): RankedPlayer[] {
         return PositionCalculator.addPositionChangeIndicators(currentRanking, baselineRanking)
     }
 
     /**
      * Filter ranking data based on minimum games threshold
      */
-    static filterByMinimumGames(ranking: RankedPlayer[], minimumGames: number = 20): RankedPlayer[] {
+    static filterByMinimumGames(
+        ranking: RankedPlayer[],
+        minimumGames: number = 20
+    ): RankedPlayer[] {
         return ranking.filter((player) => (player.totalGames || 0) >= minimumGames)
     }
 
@@ -403,7 +427,8 @@ export class DataDerivationsService {
         const activePlayers = ranking.filter((player) => player.online).length
         const averageRating =
             ranking.length > 0
-                ? ranking.reduce((sum, player) => sum + ((player.rating as number) || 0), 0) / ranking.length
+                ? ranking.reduce((sum, player) => sum + ((player.rating as number) || 0), 0) /
+                  ranking.length
                 : 0
 
         const raceDistribution: Record<string, number> = {}

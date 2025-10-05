@@ -73,6 +73,7 @@ export interface Member {
     zergGamesPlayed?: number
     character?: {
         id: number
+        name: string
     }
     account?: Account
     clan: Clan | null

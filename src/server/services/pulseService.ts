@@ -80,15 +80,17 @@ export class PulseService {
      * Get the current season ID from the API
      */
     async getCurrentSeason(): Promise<string | undefined> {
-        return await this.requestCache.executeWithCache('current-season', () => this.adapter.getCurrentSeason())
+        return await this.requestCache.executeWithCache('current-season', () =>
+            this.adapter.getCurrentSeason()
+        )
     }
 
     /**
      * Get display name for a character ID from CSV data
      */
-    getDisplayNameFromCsv(characterId: string | number | undefined): string | null {
-        if (!characterId || !this.displayNameLookup) return null
-        return this.displayNameLookup.get(String(characterId)) || null
+    getDisplayNameFromCsv(btag: string ): string | null {
+        if (!btag || !this.displayNameLookup) return null
+        return this.displayNameLookup.get(btag) || null
     }
 
     /**
@@ -97,26 +99,30 @@ export class PulseService {
     private async loadPlayersFromCsv(): Promise<string[]> {
         try {
             const players = (await readCsv()) as unknown as Array<{
-                id: string
                 btag: string
                 name?: string
                 challongeId?: string
+                id: string
             }>
 
             // Build display name lookup while we have the CSV data
             if (!this.displayNameLookup) {
                 this.displayNameLookup = new Map<string, string>()
                 players.forEach((player) => {
-                    if (player.id && player.name) {
-                        this.displayNameLookup!.set(player.id, player.name)
+                    if (player.btag && player.name) {
+                        this.displayNameLookup!.set(player.btag, player.name)
                     }
                 })
-                console.log(`[PulseService] Loaded ${this.displayNameLookup.size} display names from CSV`)
+                console.log(
+                    `[PulseService] Loaded ${this.displayNameLookup.size} display names from CSV`
+                )
             }
 
             return players.map((player) => player.id)
         } catch (error) {
-            console.error(`[PulseService.loadPlayersFromCsv] Error reading CSV: ${(error as Error).message}`)
+            console.error(
+                `[PulseService.loadPlayersFromCsv] Error reading CSV: ${(error as Error).message}`
+            )
             return []
         }
     }
@@ -124,7 +130,7 @@ export class PulseService {
     /**
      * Get current ranking with caching and anti-stampede protection
      */
-    async getRanking(): Promise<RankedPlayer[]> {
+    async getRanking(includeInactive: boolean, minimumGames: number): Promise<RankedPlayer[]> {
         const cacheKey = 'snapShot'
         const cachedData = cache.get(cacheKey)
 
@@ -143,7 +149,7 @@ export class PulseService {
         }
 
         // Start new fetch and store the promise
-        this.inflightRankingPromise = this.fetchRankingData()
+        this.inflightRankingPromise = this.fetchRankingData(includeInactive, minimumGames)
 
         try {
             const result = await this.inflightRankingPromise
@@ -157,7 +163,10 @@ export class PulseService {
     /**
      * Internal method to fetch and process ranking data
      */
-    private async fetchRankingData(): Promise<RankedPlayer[]> {
+    private async fetchRankingData(
+        includeInactive: boolean,
+        minimumGames: number
+    ): Promise<RankedPlayer[]> {
         try {
             const characterIds = await this.loadPlayersFromCsv()
             const currentSeason = await this.getCurrentSeason()
@@ -170,14 +179,23 @@ export class PulseService {
                 throw new Error('Unable to fetch current season')
             }
 
-            const allRankedTeams = await this.adapter.fetchRankedTeams(characterIds, Number(currentSeason))
+            const allRankedTeams = await this.adapter.fetchRankedTeams(
+                characterIds,
+                Number(currentSeason)
+            )
 
             // Process teams to ranked players with display names automatically included
-            const finalPlayers = DataDerivationsService.processTeamsToRankedPlayers(allRankedTeams)
+            let filteredPlayers = DataDerivationsService.processTeamsToRankedPlayers(allRankedTeams)
 
+            if (!includeInactive) {
+                filteredPlayers = DataDerivationsService.filterByMinimumGames(
+                    filteredPlayers,
+                    minimumGames
+                )
+            }
             // Cache the results
-            cache.set('snapShot', finalPlayers)
-            return finalPlayers
+            cache.set('snapShot', filteredPlayers)
+            return filteredPlayers
         } catch (error) {
             console.error(`[PulseService.fetchRankingData] Error:`, error)
             return []

@@ -124,6 +124,55 @@ export class PulseAdapter {
     }
 
     /**
+     * Fetch player statistics by getting current season and fetching ranked teams
+     * Includes automatic batching for large player lists and error recovery
+     *
+     * @param {string[]} playerIds - Array of player character IDs
+     * @returns {Promise<any[]>} Combined stats from all successful batches
+     */
+    async getPlayersStats(playerIds: string[]): Promise<any[]> {
+        if (!playerIds.length) {
+            return []
+        }
+
+        try {
+            // Get current season first
+            const seasonId = await this.getCurrentSeason()
+            if (!seasonId) {
+                throw this.standardizeError(new Error('No current season available'), {
+                    operation: 'getPlayersStats',
+                    playerCount: playerIds.length
+                })
+            }
+
+            const results: any[] = []
+            const { chunkSize } = this.config
+
+            // Process in batches
+            for (let i = 0; i < playerIds.length; i += chunkSize) {
+                const batch = playerIds.slice(i, i + chunkSize)
+                
+                try {
+                    const batchResults = await this.fetchRankedTeams(batch, Number(seasonId))
+                    results.push(...batchResults)
+                } catch (error) {
+                    // Log batch error but continue with other batches
+                    console.error(`[PulseAdapter.getPlayersStats] Batch ${Math.floor(i/chunkSize) + 1} failed:`, error)
+                }
+            }
+
+            return results
+        } catch (error) {
+            const standardized = this.standardizeError(error, {
+                operation: 'getPlayersStats',
+                playerCount: playerIds.length
+            })
+            console.error('[PulseAdapter.getPlayersStats] Failed:', standardized)
+            throw standardized
+        }
+    }
+
+    /**
      * Fetch Ranked teams for a list of player IDs with batching and error handling.
      * @param {string[]} playerIds - Array of player character IDs.
      * @param {string | number} seasonId - The current season ID.

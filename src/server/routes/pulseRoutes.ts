@@ -14,12 +14,19 @@ const router = Router()
  * GET /api/top - Live Ranking Data
  * Returns current top player rankings using clean RankedPlayer interface
  */
-router.get('/top', async (_req: Request, res: Response) => {
-    res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
+router.get('/top', async (req: Request, res: Response) => {
+    res.setHeader(
+        'x-sc2pulse-attribution',
+        'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
+    )
+    const { includeInactive = false, groupBy, timeframe, minimumGames } = req.query
+
     try {
-        const ranking = await pulseService.getRanking()
-        const filteredRanking = filterRankingForDisplay(ranking)
-        res.json(filteredRanking)
+        const ranking = await pulseService.getRanking(
+            includeInactive === 'true',
+            Number(minimumGames ?? 20)
+        )
+        res.json(ranking)
     } catch (error) {
         logger.error({ error, route: '/api/top' }, 'Failed to fetch ranking data')
         res.status(500).json({ error: 'Failed to fetch ranking data' })
@@ -37,11 +44,12 @@ router.get('/ranking', async (req, res) => {
             includeInactive: req.query.includeInactive === 'true',
             minimumConfidence: parseInt(req.query.minimumConfidence as string) || 75,
             maxDataAge: parseInt(req.query.maxDataAge as string) || 48,
+            minimumGames: parseInt(req.query.minimumGames as string) || 20,
         }
 
         // Get current ranking and deltas in parallel
         const [currentRanking, deltas] = await Promise.all([
-            pulseService.getRanking(),
+            pulseService.getRanking(options.includeInactive, Number(options.minimumGames || 20)),
             DeltaComputationEngine.computePlayerDeltas(options),
         ])
 
@@ -82,12 +90,15 @@ router.get('/search', async (req: Request, res: Response) => {
         referer: req.headers.referer,
         query: term,
         device,
-		os,
-		ip: req.headers['x-forwarded-for'] || req.ip
+        os,
+        ip: req.headers['x-forwarded-for'] || req.ip,
     }
     logger.info({ route: '/api/search', details }, 'search player')
 
-    res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
+    res.setHeader(
+        'x-sc2pulse-attribution',
+        'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
+    )
     try {
         const playerData = await pulseService.searchPlayer(term as string)
         const formattedData = await formatData(playerData, 'search')
@@ -99,7 +110,10 @@ router.get('/search', async (req: Request, res: Response) => {
 })
 
 router.get('/snapshot', async (_req: Request, res: Response) => {
-    res.setHeader('x-sc2pulse-attribution', 'Data courtesy of sc2pulse.nephest.com (non-commercial use)')
+    res.setHeader(
+        'x-sc2pulse-attribution',
+        'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
+    )
     try {
         const snapshot = await getDailySnapshot()
         snapshot.data = filterRankingForDisplay(snapshot.data)

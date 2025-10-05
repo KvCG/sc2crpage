@@ -13,6 +13,6 @@ import { pulseService } from '../services/pulseService'
  * @param characterId - The character ID to look up
  * @returns The display name or null if not found
  */
-export function getDisplayName(characterId: string | number | undefined): string | null {
-    return pulseService.getDisplayNameFromCsv(characterId)
+export function getDisplayName(btag: string): string | null {
+    return pulseService.getDisplayNameFromCsv(btag)
 }
