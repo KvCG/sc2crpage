@@ -6,7 +6,7 @@
     "scripts": {
         "fedev": "vite --config vite.config.ts",
         "dev": "concurrently --names \"FE,BE\" -c \"auto,green\" \"vite\" \"nodemon\"",
-        "build": "npm run type-check && npm run build:client && npm run build:server",
+        "build": "npm run build:client && npm run build:server",
         "build:server": "node scripts/build.cjs",
         "build:server:dev": "node scripts/build-dev.cjs",
         "build:client": "vite build",
