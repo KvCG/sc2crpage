@@ -39,8 +39,8 @@ vi.mock('csv-parser', () => ({
     },
 }))
 
-// Mock Firebase download to be a no-op
-vi.mock('../../middleware/fbFileManagement', () => ({
+// Mock Google Drive download to be a no-op
+vi.mock('../../services/driveFileStorage', () => ({
     downloadFile: vi.fn().mockResolvedValue(undefined),
 }))
 
@@ -87,7 +87,7 @@ describe('csvParser', () => {
         const { PassThrough } = await import('stream')
         const stream = new PassThrough({ objectMode: true })
         const { downloadFile } = await import(
-            '../../middleware/fbFileManagement'
+            '../../services/driveFileStorage'
         )
         fsMock.existsSync.mockReturnValue(false)
         fsMock.createReadStream.mockReturnValue(stream)

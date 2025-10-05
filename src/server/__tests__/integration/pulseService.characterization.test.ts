@@ -3,7 +3,7 @@ import { pulseService, createPulseService, PulseService } from '../../services/p
 import { RankedPlayer } from '../../../shared/types'
 
 // Mock file operations to prevent real file creation during integration tests
-vi.mock('../../middleware/fbFileManagement', () => ({
+vi.mock('../../services/driveFileStorage', () => ({
     downloadFile: vi.fn().mockResolvedValue(undefined)
 }))
 

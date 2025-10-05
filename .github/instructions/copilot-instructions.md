@@ -26,7 +26,7 @@
 ## Data (ladderCR.csv)
 - **Path**: `dist/data/ladderCR.csv` (server reads from this location)
 - **Acquisition**:
-  - Option 1: If Firebase configured via `FIREBASE_SERVICE_ACCOUNT_KEY`, auto-downloads on first run
+  - Option 1: If Google Drive configured via `GOOGLE_SERVICE_ACCOUNT_KEY`, auto-downloads from `RankedPlayers_{Env}/ladderCR.csv` folder on first run
   - Option 2: Manually place the file after build
   - Option 3: Request from maintainers (NeO or Kerverus)
 
@@ -35,8 +35,8 @@
 - **Data Sources**:
   - SC2Pulse: `services/pulseApi.ts` implements player search and rankings
   - Challonge: `services/challongeApi.ts` for tournament data
-  - Firebase: `services/firebase.ts` for ladder data storage
   - Google Drive: `services/googleApi.ts` for replay uploads/listing and analysis JSON retrieval
+  - Google Drive Storage: `services/driveFileStorage.ts` for ladder data storage and file operations
 - **Middleware**: Server serves static assets, mounts API routes, and falls back to SPA
 
 ## Client Patterns
@@ -62,9 +62,8 @@
   - Pull Requests: Preview deployments with dev API backend
 
 ## Environment Variables
-- **Firebase**: `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON string)
 - **Challonge**: `CHALLONGE_API_KEY`, `CURRENT_TOURNAMENT`
-- **Google**: `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON string)
+- **Google Drive**: `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON string) - Used for replay storage, analytics persistence, and ladder data storage
 - **Replay**: `REPLAY_ANALYZER_URL`
 - **Configuration**: `MMR_RANGE_FOR_PREMIER_MATCH`, `MMR_RANGE_FOR_CLOSE_MATCH`, `PORT`
 
