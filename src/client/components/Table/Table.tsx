@@ -1,111 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useMediaQuery } from '@mantine/hooks'
-import { Table, Skeleton, Grid, Text } from '@mantine/core'
-import cx from 'clsx'
+import { Table, Skeleton, Grid, Text, Box, Flex } from '@mantine/core'
 import classes from './Table.module.css'
-import { addOnlineIndicator, getLeagueSrc } from '../../utils/rankingHelper'
 import { raceAssets } from '../../constants/races'
-import { getStandardName } from '../../utils/common'
-import { RacesTable } from '../RaceTable/RacesTable'
-import { RankingTableColumnFilters, ColumnOptions } from './TableColumnFilters'
+import { RankingTableColumnFilters } from './TableColumnFilters'
+import { RankingTableRow } from './RankingTableRow'
+import { usePersistedColumns } from '../../hooks/usePersistedColumns'
+import { getInitialColumnConfig } from '../../utils/tableHelpers'
+import { filterByRace, countRaces, normalizeRace, getRaceDisplayName } from '../../utils/raceUtils'
 import type { DecoratedRow } from '../../utils/rankingHelper'
-
-const defaultVisibleColumns: ColumnOptions = {
-    top: true,
-    name: true,
-    mmr: true,
-    rank: true,
-    race: true,
-    lastPlayed: true,
-    terran: false,
-    protoss: false,
-    zerg: false,
-    random: false,
-    total: true,
-}
-
-const compactVisibleColumns: ColumnOptions = {
-    top: true,
-    name: true,
-    mmr: true,
-    rank: false,
-    race: true,
-    lastPlayed: false,
-    terran: false,
-    protoss: false,
-    zerg: false,
-    random: false,
-    total: false,
-}
-
-type RowProps = { row: DecoratedRow; index: number; visibleColumns: ColumnOptions }
-const RankingTableRow = ({ row, index, visibleColumns }: RowProps) => {
-    const {
-        btag,
-        ratingLast,
-        race,
-        leagueTypeLast,
-        positionChangeIndicator,
-        positionDelta,
-        lastDatePlayed,
-        gamesPerRace,
-		online
-    } = row
-
-    const totalGames =
-        (gamesPerRace?.terranGamesPlayed ?? 0) +
-        (gamesPerRace?.protossGamesPlayed ?? 0) +
-        (gamesPerRace?.zergGamesPlayed ?? 0) +
-        (gamesPerRace?.randomGamesPlayed ?? 0)
-
-    const arrow = positionChangeIndicator === 'up' ? '▲' : positionChangeIndicator === 'down' ? '▼' : ''
-    const deltaText = positionChangeIndicator !== 'none' && typeof positionDelta === 'number' && Math.abs(positionDelta) > 0
-        ? ` ${Math.abs(positionDelta)}`
-        : ''
-
-    return (
-        <Table.Tr key={btag}>
-            <Table.Td className={classes.posIndicator} data-content={arrow}>
-                {arrow}
-                {deltaText}
-            </Table.Td>
-            {visibleColumns.top && <Table.Td className={classes.top}>{index + 1}</Table.Td>}
-            {visibleColumns.name && <Table.Td className={classes.name} title={btag}>{getStandardName(row)}</Table.Td>}
-            {visibleColumns.mmr && <Table.Td>{ratingLast}</Table.Td>}
-            {visibleColumns.rank && (
-                <Table.Td>
-                    <img className={classes.rank} src={getLeagueSrc(leagueTypeLast)} alt="league" />
-                </Table.Td>
-            )}
-            {visibleColumns.race && (
-                <Table.Td className={cx(raceAssets[race as keyof typeof raceAssets]?.className)}>
-                    <img className={classes.rank} src={raceAssets[race as keyof typeof raceAssets]?.assetPath} alt={race} />
-                </Table.Td>
-            )}
-            {visibleColumns.terran && <Table.Td>{gamesPerRace?.terranGamesPlayed}</Table.Td>}
-            {visibleColumns.protoss && <Table.Td>{gamesPerRace?.protossGamesPlayed}</Table.Td>}
-            {visibleColumns.zerg && <Table.Td>{gamesPerRace?.zergGamesPlayed}</Table.Td>}
-            {visibleColumns.random && <Table.Td>{gamesPerRace?.randomGamesPlayed}</Table.Td>}
-            {visibleColumns.total && <Table.Td>{totalGames}</Table.Td>}
-            {visibleColumns.lastPlayed && <Table.Td className={classes.lastPlayedColumn}>{addOnlineIndicator(lastDatePlayed, online)}</Table.Td>}
-        </Table.Tr>
-    )
-}
 
 type TableProps = { data: DecoratedRow[] | null; loading: boolean }
 export function RankingTable({ data, loading }: TableProps) {
-    const isSmallScreen = useMediaQuery('(max-width: 48em)')
-    const [tableData, setTableData] = useState<DecoratedRow[] | null>(data)
+    const isSmallScreen = useMediaQuery('(max-width: 48em)') ?? false
+    const [selectedRace, setSelectedRace] = useState<string>('')
 
-    const [visibleColumns, setVisibleColumns] = useState<ColumnOptions>(() => {
-        const stored = localStorage.getItem('visibleColumns')
-        if (stored) return JSON.parse(stored) as ColumnOptions
-        return isSmallScreen ? compactVisibleColumns : defaultVisibleColumns
-    })
+    const initialColumns = getInitialColumnConfig(isSmallScreen) // Adjust initial table columns based on screen size
+    const [visibleColumns, setVisibleColumns] = usePersistedColumns(initialColumns) // Loads ans saves column preferences in localStorage
 
-    useEffect(() => {
-        localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns))
-    }, [visibleColumns])
+    // Filter data based on selected race
+    const tableData = selectedRace && data ? filterByRace(data, selectedRace) : data
+
+    const handleRaceFilter = (race: string) => {
+        setSelectedRace(race)
+    }
 
     if (!loading && !tableData?.length) {
         return <p>Sc2Pulse is failing to respond, please refresh the page.</p>
@@ -119,7 +37,36 @@ export function RankingTable({ data, loading }: TableProps) {
                         Select a race to filter the table. Click again to remove.
                     </Text>
                 )}
-                <RacesTable data={data} setTableData={setTableData} loading={loading} />
+                {!loading && data && (
+                    <Box>
+                        <Flex direction="row" gap="xl" wrap="wrap" align="center" justify="center">
+                            {Object.entries(countRaces(data)).map(([race, count]) => {
+                                const normalizedRace = normalizeRace(race)
+                                return (
+                                    <Flex key={race} align="center" gap="0.5rem">
+                                        <button
+                                            style={{ 
+                                                border: 'none', 
+                                                background: 'none', 
+                                                cursor: 'pointer',
+                                                opacity: selectedRace === normalizedRace ? 0.7 : 1
+                                            }}
+                                            onClick={() => handleRaceFilter(selectedRace === normalizedRace ? '' : normalizedRace)}
+                                        >
+                                            <img
+                                                src={raceAssets[normalizedRace as keyof typeof raceAssets]?.assetPath}
+                                                alt={getRaceDisplayName(race)}
+                                                style={{ width: '36px', height: '36px' }}
+                                            />
+                                        </button>
+                                        <Text>{count}</Text>
+                                    </Flex>
+                                )
+                            })}
+                        </Flex>
+                    </Box>
+                )}
+                {loading && <div>Loading...</div>}
             </Grid.Col>
 
             <Grid.Col span={12}>
@@ -131,55 +78,56 @@ export function RankingTable({ data, loading }: TableProps) {
                 )}
             </Grid.Col>
 
-            <Skeleton
-                className={classes.skeleton}
-                visible={loading}
-                maw={700}
-                miw={250}
-            >
+            <Skeleton className={classes.skeleton} visible={loading} maw={700} miw={250}>
                 <div className={classes.tableContainer}>
-                <Table
-                    verticalSpacing="3"
-                    striped
-                    stickyHeader
-                    highlightOnHover
-                    stripedColor="dark"
-                    maw={700}
-                    miw={250}
-                    mb={50}
-                >
-                    <Table.Thead className={classes.header}>
-                        <Table.Tr>
-                            <Table.Th className={classes.posIndicator}></Table.Th>
-                            {visibleColumns.top && <Table.Th className={classes.top}>Top</Table.Th>}
-                            {visibleColumns.name && <Table.Th className={classes.name}>Name</Table.Th>}
-                            {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
-                            {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
-                            {visibleColumns.race && <Table.Th>Race</Table.Th>}
-                            
-                            {visibleColumns.terran && <Table.Th># Terran</Table.Th>}
-                            {visibleColumns.protoss && <Table.Th># Protoss</Table.Th>}
-                            {visibleColumns.zerg && <Table.Th># Zerg</Table.Th>}
-                            {visibleColumns.random && <Table.Th># Random</Table.Th>}
-                            {visibleColumns.total && (
-                                <Table.Th title="Total games played this season">Total Games</Table.Th>
+                    <Table
+                        verticalSpacing="3"
+                        striped
+                        stickyHeader
+                        highlightOnHover
+                        stripedColor="dark"
+                        maw={700}
+                        miw={250}
+                        mb={50}
+                    >
+                        <Table.Thead className={classes.header}>
+                            <Table.Tr>
+                                <Table.Th className={classes.posIndicator}></Table.Th>
+                                {visibleColumns.top && (
+                                    <Table.Th className={classes.top}>Top</Table.Th>
+                                )}
+                                {visibleColumns.name && (
+                                    <Table.Th className={classes.name}>Name</Table.Th>
+                                )}
+                                {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
+                                {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
+                                {visibleColumns.race && <Table.Th>Race</Table.Th>}
+
+                                {visibleColumns.terran && <Table.Th># Terran</Table.Th>}
+                                {visibleColumns.protoss && <Table.Th># Protoss</Table.Th>}
+                                {visibleColumns.zerg && <Table.Th># Zerg</Table.Th>}
+                                {visibleColumns.random && <Table.Th># Random</Table.Th>}
+                                {visibleColumns.total && (
+                                    <Table.Th title="Total games played this season">
+                                        Total Games
+                                    </Table.Th>
+                                )}
+                                {visibleColumns.lastPlayed && <Table.Th>Last Played</Table.Th>}
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {tableData?.map((row: DecoratedRow, index: number) =>
+                                row.rating ? (
+                                    <RankingTableRow
+                                        key={row.btag}
+                                        row={row}
+                                        index={index}
+                                        visibleColumns={visibleColumns}
+                                    />
+                                ) : null
                             )}
-							{visibleColumns.lastPlayed && <Table.Th>Last Played</Table.Th>}
-                        </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                        {tableData?.map((row: DecoratedRow, index: number) =>
-                            row.ratingLast ? (
-                                <RankingTableRow
-                                    key={row.btag}
-                                    row={row}
-                                    index={index}
-                                    visibleColumns={visibleColumns}
-                                />
-                            ) : null
-                        )}
-                    </Table.Tbody>
-                </Table>
+                        </Table.Tbody>
+                    </Table>
                 </div>
             </Skeleton>
         </Grid>

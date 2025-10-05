@@ -26,7 +26,7 @@
 ## Data (ladderCR.csv)
 - **Path**: `dist/data/ladderCR.csv` (server reads from this location)
 - **Acquisition**:
-  - Option 1: If Firebase configured via `FIREBASE_SERVICE_ACCOUNT_KEY`, auto-downloads on first run
+  - Option 1: If Google Drive configured via `GOOGLE_SERVICE_ACCOUNT_KEY`, auto-downloads from `RankedPlayers_{Env}/ladderCR.csv` folder on first run
   - Option 2: Manually place the file after build
   - Option 3: Request from maintainers (NeO or Kerverus)
 
@@ -35,8 +35,8 @@
 - **Data Sources**:
   - SC2Pulse: `services/pulseApi.ts` implements player search and rankings
   - Challonge: `services/challongeApi.ts` for tournament data
-  - Firebase: `services/firebase.ts` for ladder data storage
   - Google Drive: `services/googleApi.ts` for replay uploads/listing and analysis JSON retrieval
+  - Google Drive Storage: `services/driveFileStorage.ts` for ladder data storage and file operations
 - **Middleware**: Server serves static assets, mounts API routes, and falls back to SPA
 
 ## Client Patterns
@@ -62,9 +62,8 @@
   - Pull Requests: Preview deployments with dev API backend
 
 ## Environment Variables
-- **Firebase**: `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON string)
 - **Challonge**: `CHALLONGE_API_KEY`, `CURRENT_TOURNAMENT`
-- **Google**: `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON string)
+- **Google Drive**: `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON string) - Used for replay storage, analytics persistence, and ladder data storage
 - **Replay**: `REPLAY_ANALYZER_URL`
 - **Configuration**: `MMR_RANGE_FOR_PREMIER_MATCH`, `MMR_RANGE_FOR_CLOSE_MATCH`, `PORT`
 
@@ -151,6 +150,14 @@ Readability is mandatory. Generate code that is easy to read, easy to maintain, 
 - **Meta Fields**: For null streaks, missing baselines, or degraded confidence, include `meta.limits.reason` or similar context in fixtures.
 
 Document new schema/fixture patterns in `docs/contracts/` and `docs/fixtures/` for all new API endpoints. Update this section when new reusable patterns emerge.
+
+### Separation of Concerns (High Priority)
+- Keep build tooling plugins separate from configuration files.
+  - Vite plugins live under `plugins/` (e.g., `plugins/clientBuildInfo.ts`).
+  - `vite.config.ts` should only assemble plugins and set Vite options.
+- Share cross-cutting runtime detection in `src/shared/` only (e.g., `src/shared/runtimeEnv.ts`).
+- Server-only helpers (e.g., git process calls) belong in `src/server/utils/` (e.g., `src/server/utils/gitInfo.ts`).
+- Do not mix runtime app logic with build-time tooling; prefer small, focused modules.
 
 Avoid:
 - Overly clever chaining or compressed syntax.

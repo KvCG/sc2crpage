@@ -12,11 +12,11 @@
         "isolatedModules": true,
         "moduleDetection": "force",
         "noEmit": true,
+        "incremental": false,
         "jsx": "react-jsx",
 		"allowSyntheticDefaultImports": true, // // This can help with module imports
     	"esModuleInterop": true, // This can help with module imports
 		"moduleResolution": "node", // Standard Node.js module resolution
-		"sourceMap": true,
 
         /* Linting */
         "strict": true,

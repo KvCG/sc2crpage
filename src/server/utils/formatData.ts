@@ -1,9 +1,5 @@
 import { addMatchCategory, getStandingsData } from './challongeHelper'
-import {
-    filterByHighestRatingLast,
-    verifyChallongeParticipant,
-    verifyPlayer,
-} from './userDataHelper'
+import { verifyChallongeParticipant } from './userDataHelper'
 
 export const formatData = async (data: any, type: string) => {
     let formattedData: any = []
@@ -13,8 +9,8 @@ export const formatData = async (data: any, type: string) => {
             break
         }
         case 'ranking': {
-            formattedData = await formatRankingData(data)
-            break
+            // Ranking data uses RankedPlayer interface directly
+            return data
         }
         case 'tournament': {
             formattedData = await formatTournamentData(data)
@@ -67,17 +63,7 @@ const formatSearchData = (data: any[]) => {
     return players
 }
 
-const formatRankingData = async (data: any) => {
-    if (!data) return null
-    data = await Promise.all(
-        (Array.isArray(data) ? data : [data]).map(async playerData => {
-            const verifiedPlayerData = await verifyPlayer(playerData)
-            return verifiedPlayerData
-        })
-    )
-    data = filterByHighestRatingLast(data)
-    return data.sort((a: any, b: any) => b.ratingLast - a.ratingLast)
-}
+
 
 const formatParticipantData = async (data: any) => {
     if (!data) return null

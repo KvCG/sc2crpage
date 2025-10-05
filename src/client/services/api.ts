@@ -30,7 +30,7 @@ export const search = async (searchTerm: string) => {
 }
 
 export const getTop = async () => {
-    const response = await api.get(`api/top`)
+    const response = await api.get(`api/top/?includeInactive=false&minimumGames=20`)
     return response
 }
 

@@ -1,6 +1,39 @@
 # Debugging & Observability
 
-This guide summarizes the lightweight logging, metrics, and request tracing built into the API, and how to use URL-driven request IDs from the client.
+This guide covers both **development debugging** (VS Code, sourcemaps, breakpoints) and **production observability** (logging, metrics, tracing) for the SC2CR API.
+
+## Development Debugging Setup
+
+### Quick Start
+1. Set breakpoints in TypeScript source files (e.g., `src/server/routes/analyticsRoutes.ts`)
+2. Press `F5` or select **"Debug Server"** from VS Code debug dropdown  
+3. Breakpoints activate and debugging works normally
+
+### Architecture
+Following SC2CR **separation of concerns**:
+- **Production Build**: `scripts/build.cjs` - Optimized, no debugging overhead
+- **Development Build**: `scripts/build-dev.cjs` - Full sourcemaps and debugging support
+- **VS Code Integration**: Clean launch configurations using development builds
+
+### Available Methods
+- **Debug Server**: `F5` - Builds and launches with debugger
+- **Attach to Nodemon**: Connects to running `npm run dev` process
+- **Port**: Uses `PORT=3001` to avoid conflicts
+
+### Build Commands
+```bash
+npm run build:server:dev  # Development build with debugging
+npm run build:server      # Production build (optimized)
+```
+
+### Troubleshooting
+- **Grey breakpoints?** Ensure using dev build: `npm run build:server:dev`
+- **Port conflicts?** Debug uses `PORT=3001`, modify in `.vscode/launch.json` if needed
+- **Performance issues?** Dev builds are larger; use production builds for performance testing
+
+## Production Observability
+
+This section summarizes the lightweight logging, metrics, and request tracing built into the API, and how to use URL-driven request IDs from the client.
 
 ## Correlation vs Request ID
 

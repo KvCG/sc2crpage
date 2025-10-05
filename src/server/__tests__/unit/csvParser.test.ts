@@ -2,8 +2,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('path', async () => {
     const actual = await vi.importActual<any>('path')
-    // Ensure filePath resolves to a stable temp location for tests
-    return { ...actual, join: (...args: string[]) => actual.join(...args) }
+    // Mock path.join to return a temp path instead of real source path
+    return { 
+        ...actual, 
+        join: (...args: string[]) => {
+            // If this is the specific path used in csvParser, return a temp path
+            if (args.includes('..') && args.includes('data') && args.includes('ladderCR.csv')) {
+                return '/tmp/test-ladderCR.csv'
+            }
+            return actual.join(...args)
+        }
+    }
 })
 
 // Hoisted fs mock because module uses fs at import time
@@ -11,6 +20,10 @@ const fsMock = vi.hoisted(() => ({
     existsSync: vi.fn(),
     createReadStream: vi.fn(),
     unlink: vi.fn(),
+    // Add additional fs methods to prevent real file operations
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    statSync: vi.fn(),
 }))
 
 vi.mock('fs', () => ({
@@ -26,14 +39,16 @@ vi.mock('csv-parser', () => ({
     },
 }))
 
-// Mock Firebase download to be a no-op
-vi.mock('../../middleware/fbFileManagement', () => ({
+// Mock Google Drive download to be a no-op
+vi.mock('../../services/driveFileStorage', () => ({
     downloadFile: vi.fn().mockResolvedValue(undefined),
 }))
 
 describe('csvParser', () => {
     beforeEach(() => {
         vi.resetModules()
+        // Clear any global mocks for this specific test
+        vi.clearAllMocks()
     })
 
     afterEach(() => {
@@ -72,7 +87,7 @@ describe('csvParser', () => {
         const { PassThrough } = await import('stream')
         const stream = new PassThrough({ objectMode: true })
         const { downloadFile } = await import(
-            '../../middleware/fbFileManagement'
+            '../../services/driveFileStorage'
         )
         fsMock.existsSync.mockReturnValue(false)
         fsMock.createReadStream.mockReturnValue(stream)
