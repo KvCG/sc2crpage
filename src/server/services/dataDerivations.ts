@@ -319,7 +319,7 @@ export class RankedTeamConsolidator {
                     }
                 }
 
-                const lastPlayedStr = mainLastPlayed[maxIndex]
+                const lastPlayedStr = this.getlastLastPlayed(mainLastPlayed)
 
                 // Get display name from CSV or fallback to account tag
                 const characterId = player.members?.account?.id
@@ -376,6 +376,17 @@ export class RankedTeamConsolidator {
         } catch {
             return '-' // Error parsing date
         }
+    }
+
+    static getlastLastPlayed(lastPlayed: string[]): string {
+        if (!lastPlayed || lastPlayed.length === 0) return '-'
+        let latest = lastPlayed[0]
+        lastPlayed.forEach((dateStr) => {
+            if (new Date(dateStr) > new Date(latest)) {
+                latest = dateStr
+            }
+        })
+        return latest
     }
 }
 
