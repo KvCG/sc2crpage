@@ -1,7 +1,7 @@
 {
     "watch": ["src/server"],
     "ext": "ts",
-    "exec": "esbuild src/server/server.ts --outfile=dist/webserver/server.cjs --bundle --platform=node --sourcemap && node --enable-source-maps dist/webserver/server.cjs",
+    "exec": "npm run build:server:dev && node --enable-source-maps --inspect=9229 dist/webserver/server.cjs",
     "ignore": ["dist/*"],
     "env": {
         "NODE_ENV": "development"

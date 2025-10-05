@@ -45,3 +45,11 @@ Object.defineProperty(window, 'matchMedia', {
         dispatchEvent: vi.fn(),
     })),
 })
+
+// Global mock for csvParser to prevent real file operations during any test
+vi.mock('../server/utils/csvParser', () => ({
+    readCsv: vi.fn().mockResolvedValue([
+        { id: '1', btag: 'TestPlayer#1234', name: 'Test Player', challongeId: '12345' }
+    ]),
+    refreshDataCache: vi.fn().mockResolvedValue(undefined)
+}))

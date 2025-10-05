@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import express from 'express'
 import request from 'supertest'
 import apiRoutes from '../routes/apiRoutes'
-import { httpLogger, httpMetricsMiddleware } from '../logging/http'
+import { httpLogger, httpMetricsMiddleware } from '../logging/httpLogger'
 import { metrics } from '../metrics/lite'
 
 describe('Phase 1 logging & debug', () => {

@@ -1,12 +1,12 @@
 /**
  * Pulse API Adapter Service
- * 
+ *
  * Centralized adapter for SC2Pulse API interactions with:
  * - Configuration injection for timeouts, rate limits, endpoints
  * - Standardized error handling and retry logic
  * - Metrics collection and observability hooks
  * - Request batching and optimization patterns
- * 
+ *
  * This adapter serves as the single point of integration with the SC2Pulse API,
  * providing a clean, testable interface for all Pulse operations.
  */
@@ -25,9 +25,9 @@ export interface PulseAdapterConfig {
 // Default configuration following existing patterns
 const DEFAULT_CONFIG: PulseAdapterConfig = {
     maxRetries: 3,
-    chunkSize: 100,        // Max character IDs per batch (keeps under 400 team limit)
-    apiTimeout: 8000,      // 8 second timeout
-    rateLimit: 10,         // 10 RPS to stay within SC2Pulse limits
+    chunkSize: 100, // Max character IDs per batch (keeps under 400 team limit)
+    apiTimeout: 8000, // 8 second timeout
+    rateLimit: 10, // 10 RPS to stay within SC2Pulse limits
 }
 
 // Standardized error interface for consistent handling
@@ -61,7 +61,7 @@ export class PulseAdapter {
                 0,
                 this.config.maxRetries
             )
-            
+
             return Array.isArray(data) ? data : [data].filter(Boolean)
         } catch (error) {
             const pulseError = this.standardizeError(error, { searchTerm })
@@ -82,57 +82,15 @@ export class PulseAdapter {
                 0,
                 this.config.maxRetries
             )
-            
+
             // Prefer US region, fallback to first available season
             const usRegion = data?.find((season: any) => season?.region === 'US')
             const selectedSeason = usRegion?.battlenetId ?? data?.[0]?.battlenetId
-            
+
             return selectedSeason
         } catch (error) {
             const pulseError = this.standardizeError(error, { operation: 'getCurrentSeason' })
             console.error('[PulseAdapter.getCurrentSeason] Failed to fetch season:', pulseError)
-            throw pulseError
-        }
-    }
-
-    /**
-     * Fetch player statistics with intelligent batching and error recovery
-     */
-    async getPlayersStats(playerIds: string[]): Promise<any[]> {
-        if (!playerIds || playerIds.length === 0) {
-            return []
-        }
-
-        try {
-            const seasonId = await this.getCurrentSeason()
-            if (!seasonId) {
-                throw new Error('No current season available')
-            }
-
-            // Batch requests to stay within API limits (4 teams per player * 100 players = 400 limit)
-            const batches = this.createPlayerBatches(playerIds, this.config.chunkSize)
-            const allResults: any[] = []
-
-            for (const batch of batches) {
-                try {
-                    const batchResults = await this.fetchPlayerStatsBatch(batch, seasonId)
-                    allResults.push(...batchResults)
-                } catch (error) {
-                    // Log batch error but continue with other batches
-                    console.warn('[PulseAdapter.getPlayersStats] Batch failed:', {
-                        batchSize: batch.length,
-                        error: (error as Error).message
-                    })
-                }
-            }
-
-            return allResults
-        } catch (error) {
-            const pulseError = this.standardizeError(error, { 
-                playerCount: playerIds.length,
-                operation: 'getPlayersStats'
-            })
-            console.error('[PulseAdapter.getPlayersStats] Failed to fetch player stats:', pulseError)
             throw pulseError
         }
     }
@@ -146,13 +104,7 @@ export class PulseAdapter {
         options: { headers?: Record<string, any> } = {}
     ): Promise<T> {
         try {
-            return await httpGet<T>(
-                withBasePath(endpoint),
-                params,
-                options,
-                0,
-                this.config.maxRetries
-            )
+            return await httpGet<T>(withBasePath(endpoint), params, options, 0, this.config.maxRetries)
         } catch (error) {
             const pulseError = this.standardizeError(error, { endpoint, params })
             console.error(`[PulseAdapter.executeRequest] Request failed for ${endpoint}:`, pulseError)
@@ -172,17 +124,67 @@ export class PulseAdapter {
     }
 
     /**
-     * Fetch statistics for a single batch of players
+     * Fetch player statistics by getting current season and fetching ranked teams
+     * Includes automatic batching for large player lists and error recovery
+     *
+     * @param {string[]} playerIds - Array of player character IDs
+     * @returns {Promise<any[]>} Combined stats from all successful batches
      */
-    private async fetchPlayerStatsBatch(playerIds: string[], seasonId: string): Promise<any[]> {
-        const params = playerIds.map(id => `characterId=${id}`).join('&')
+    async getPlayersStats(playerIds: string[]): Promise<any[]> {
+        if (!playerIds.length) {
+            return []
+        }
+
+        try {
+            // Get current season first
+            const seasonId = await this.getCurrentSeason()
+            if (!seasonId) {
+                throw this.standardizeError(new Error('No current season available'), {
+                    operation: 'getPlayersStats',
+                    playerCount: playerIds.length
+                })
+            }
+
+            const results: any[] = []
+            const { chunkSize } = this.config
+
+            // Process in batches
+            for (let i = 0; i < playerIds.length; i += chunkSize) {
+                const batch = playerIds.slice(i, i + chunkSize)
+                
+                try {
+                    const batchResults = await this.fetchRankedTeams(batch, Number(seasonId))
+                    results.push(...batchResults)
+                } catch (error) {
+                    // Log batch error but continue with other batches
+                    console.error(`[PulseAdapter.getPlayersStats] Batch ${Math.floor(i/chunkSize) + 1} failed:`, error)
+                }
+            }
+
+            return results
+        } catch (error) {
+            const standardized = this.standardizeError(error, {
+                operation: 'getPlayersStats',
+                playerCount: playerIds.length
+            })
+            console.error('[PulseAdapter.getPlayersStats] Failed:', standardized)
+            throw standardized
+        }
+    }
+
+    /**
+     * Fetch Ranked teams for a list of player IDs with batching and error handling.
+     * @param {string[]} playerIds - Array of player character IDs.
+     * @param {string | number} seasonId - The current season ID.
+     * @returns {Promise<any[]>} Array of team objects.
+     */
+    async fetchRankedTeams(playerIds: string[], seasonId: number): Promise<any[]> {
+        const params = playerIds.map((id) => `characterId=${id}`).join('&')
         const limit = Math.min(playerIds.length * 4, 400)
-        
-        // Build URL with all required parameters
-        const url = `${withBasePath(httpEndpoints.groupTeam)}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&limit=${limit}&${params}`
-        
-        const data = await httpGet<any | any[]>(url)
-        return Array.isArray(data) ? data : [data].filter(Boolean)
+        const url = `${withBasePath(
+            httpEndpoints.characterTeams
+        )}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&limit=${limit}&${params}`
+        return await httpGet<any | any[]>(url)
     }
 
     /**
@@ -196,11 +198,11 @@ export class PulseAdapter {
 
         const axiosError = error as AxiosError
         const status = axiosError.response?.status
-        
+
         return {
             error: axiosError.message ?? 'Unknown Pulse API error',
             code: status ?? axiosError.code ?? 'UNKNOWN',
-            context
+            context,
         }
     }
 
@@ -229,17 +231,14 @@ export function createPulseAdapter(config?: Partial<PulseAdapterConfig>): PulseA
 
 /**
  * Anti-stampede cache wrapper for Pulse operations
- * 
+ *
  * Prevents multiple concurrent requests for the same data by sharing
  * in-flight promises across callers.
  */
 export class PulseRequestCache {
     private inflightRequests = new Map<string, Promise<any>>()
 
-    async executeWithCache<T>(
-        cacheKey: string,
-        operation: () => Promise<T>
-    ): Promise<T> {
+    async executeWithCache<T>(cacheKey: string, operation: () => Promise<T>): Promise<T> {
         // Check if request is already in flight
         const existingPromise = this.inflightRequests.get(cacheKey)
         if (existingPromise) {

@@ -15,7 +15,7 @@ npm install
 
 # Get the ladder data file (required)
 # Option 1: Request from maintainers (NeO or Kerverus)
-# Option 2: Configure Firebase (see Environment Variables below)
+# Option 2: Place file manually or request from maintainers
 
 # Start development server (client + server)
 npm run dev
@@ -39,7 +39,7 @@ The app will be available at:
 - Data sources:
   - SC2Pulse API integration via `services/pulseApi.ts`
   - Challonge API for tournaments via `services/challongeApi.ts`
-  - Firebase storage for ladder data
+  - Google Drive for data storage and backups
 - Caching: LRU in-memory cache with 30s TTL
 
 ### Key Data Flow
@@ -79,7 +79,7 @@ The server requires `ladderCR.csv` to operate correctly:
 dist/data/ladderCR.csv
 ```
 
-If Firebase is configured, the server will auto-download the file on first run.
+If Google Drive is configured, the server will auto-download the file on first run from the RankedPlayers folder.
 
 ## 🌐 Environments
 
@@ -98,8 +98,7 @@ For detailed environment configuration, see [docs/technical-documentation/enviro
 Server requires these environment variables:
 
 ```
-# Firebase (optional, for ladder data download)
-FIREBASE_SERVICE_ACCOUNT_KEY=<JSON string>
+# Google Drive is used for data storage (ladder data, backups)
 
 # External APIs
 CHALLONGE_API_KEY=<key>

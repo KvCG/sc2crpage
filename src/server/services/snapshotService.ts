@@ -1,6 +1,6 @@
-import { formatData } from '../utils/formatData'
+
 import { snapshotCache } from '../utils/cache'
-import { getTop } from './pulseApi'
+import { pulseService } from './pulseService'
 import { DateTime } from 'luxon'
 import logger from '../logging/logger'
 import { filterRankingForDisplay } from '../utils/rankingFilters'
@@ -22,9 +22,8 @@ export async function getDailySnapshot(): Promise<SnapshotResponse> {
     logger.info('snapshot cache miss; recomputing daily snapshot')
 
     // Compute from live data and cache with expiry at CR midnight
-    const raw = await getTop()
-    const ranked = await formatData(raw, 'ranking')
-    const data = filterRankingForDisplay(ranked)
+    const raw = await pulseService.getRanking()
+    const data = filterRankingForDisplay(raw)
     const nowCR = DateTime.now().setZone('America/Costa_Rica')
     const createdAt = nowCR.toISO() ?? new Date().toISOString()
 
