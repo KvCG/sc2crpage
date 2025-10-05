@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
-import { Flex } from '@mantine/core'
+import { Button, Flex } from '@mantine/core'
 import { IconRefresh } from '@tabler/icons-react'
 import { addPositionChangeIndicator, type DecoratedRow } from '../utils/rankingHelper'
 import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
@@ -40,7 +40,9 @@ export const Ranking = () => {
                     const resp = await getSnapshot()
                     const serverSnap = resp.data // { data, createdAt (CR ISO time), expiry }
                     // Format timestamp in Costa Rica time (independent of the user's system timezone)
-                    const dtCR = DateTime.fromISO(String(serverSnap.createdAt)).setZone('America/Costa_Rica')
+                    const dtCR = DateTime.fromISO(String(serverSnap.createdAt)).setZone(
+                        'America/Costa_Rica'
+                    )
                     serverSnap.createdAt = dtCR.toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)
                     serverSnap.expiresAt = DateTime.fromMillis(serverSnap.expiry)
                         .setZone('America/Costa_Rica')
@@ -82,18 +84,14 @@ export const Ranking = () => {
                 <h1>StarCraft II Costa Rica's Top Players</h1>
                 <Flex justify={'center'} style={{ paddingBottom: '10px' }}>
                     <div>
-                        <IconRefresh
-                            onClick={() => {
-                                // Just pull data again
-                                fetch()
-                            }}
-                            stroke={1.5}
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                padding: '5px',
-                            }} // Move this to css file
-                        />
+                        <Button
+                            leftSection={<IconRefresh size={16} />}
+                            variant="light"
+                            onClick={fetch}
+                            loading={loading}
+                        >
+                            Refresh
+                        </Button>
                     </div>
                 </Flex>
             </Flex>

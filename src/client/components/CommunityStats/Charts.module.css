@@ -1,0 +1,106 @@
+/**
+ * CSS Module for Community Stats Charts
+ * 
+ * Centralized styles replacing inline styles scattered across chart components.
+ * Promotes consistency and maintainability.
+ */
+
+/* Chart container styles */
+.chartContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chartTitle {
+  margin-bottom: var(--mantine-spacing-xs);
+  text-align: center;
+}
+
+.chartWrapper {
+  flex: 1;
+  min-height: 200px;
+  max-height: 240px;
+  position: relative;
+}
+
+/* Error and loading states */
+.errorState,
+.loadingState {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.errorText {
+  color: var(--mantine-color-red-6);
+  font-size: var(--mantine-font-size-sm);
+  text-align: center;
+  margin-top: var(--mantine-spacing-sm);
+}
+
+.loadingText {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  text-align: center;
+  margin-top: var(--mantine-spacing-sm);
+}
+
+/* Custom legend styles */
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--mantine-spacing-sm);
+  margin-top: var(--mantine-spacing-xs);
+  flex-shrink: 0;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.legendIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
+}
+
+.legendText {
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+  color: var(--mantine-color-dimmed);
+}
+
+.legendColorBox {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .chartWrapper {
+    min-height: 180px;
+    max-height: 200px;
+  }
+  
+  .legend {
+    flex-wrap: wrap;
+    gap: var(--mantine-spacing-xs);
+  }
+  
+  .legendText {
+    max-width: 50px;
+  }
+}
