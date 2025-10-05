@@ -2,11 +2,19 @@
     "semi": false,
     "trailingComma": "es5",
     "singleQuote": true,
-    "printWidth": 80,
+    "printWidth": 100,
     "tabWidth": 4,
     "useTabs": false,
     "bracketSpacing": true,
     "jsxSingleQuote": false,
-    "arrowParens": "avoid",
-    "endOfLine": "lf"
+    "arrowParens": "always",
+    "endOfLine": "lf",
+    "overrides": [
+        {
+            "files": "*.md",
+            "options": {
+                "printWidth": 100
+            }
+        }
+    ]
 }

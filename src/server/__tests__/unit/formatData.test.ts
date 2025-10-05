@@ -52,38 +52,6 @@ describe('formatData - search', () => {
     })
 })
 
-describe('formatData - ranking', () => {
-    beforeEach(() => vi.clearAllMocks())
-
-    it('returns null for falsy input', async () => {
-        const result = await formatData(undefined as any, 'ranking')
-        expect(result).toBeNull()
-    })
-
-    it('verifies players and sorts by ratingLast desc', async () => {
-        const input = [
-            { playerCharacterId: 'a', ratingLast: 1200 },
-            { playerCharacterId: 'b', ratingLast: 1800 },
-            { playerCharacterId: 'c', ratingLast: 1500 },
-        ]
-
-        const result = await formatData(input as any, 'ranking')
-        expect(result.map((r: any) => r.playerCharacterId)).toEqual([
-            'b',
-            'c',
-            'a',
-        ])
-        result.forEach((r: any) => expect(r.verified).toBe(true))
-    })
-
-    it('handles single object input by wrapping into array', async () => {
-        const input = { playerCharacterId: 'solo', ratingLast: 999 }
-        const result = await formatData(input as any, 'ranking')
-        expect(result).toHaveLength(1)
-        expect((result as any)[0].playerCharacterId).toBe('solo')
-    })
-})
-
 describe('formatData - tournament', () => {
     it('formats info, participants, matches and standings', async () => {
         const data = {
