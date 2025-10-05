@@ -2,6 +2,68 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { pulseService, createPulseService, PulseService } from '../../services/pulseService'
 import { RankedPlayer } from '../../../shared/types'
 
+// Mock file operations to prevent real file creation during integration tests
+vi.mock('../../middleware/fbFileManagement', () => ({
+    downloadFile: vi.fn().mockResolvedValue(undefined)
+}))
+
+// Mock fs operations to prevent real file system access
+vi.mock('fs', () => ({
+    default: {
+        existsSync: vi.fn().mockReturnValue(true),
+        createReadStream: vi.fn(() => {
+            const { PassThrough } = require('stream')
+            const stream = new PassThrough({ objectMode: true })
+            // Simulate CSV data
+            queueMicrotask(() => {
+                stream.write({ id: '1', btag: 'Player1#1234', name: 'Player1', challongeId: '11111' })
+                stream.write({ id: '2', btag: 'Player2#5678', name: 'Player2', challongeId: '22222' })
+                stream.write({ id: '3', btag: 'Player3#9999', name: 'Player3', challongeId: '33333' })
+                stream.write({ id: '4', btag: 'Player4#4444', name: 'Player4', challongeId: '44444' })
+                stream.write({ id: '5', btag: 'Player5#5555', name: 'Player5', challongeId: '55555' })
+                stream.write({ id: '6', btag: 'Player6#6666', name: 'Player6', challongeId: '66666' })
+                stream.write({ id: '7', btag: 'Player7#7777', name: 'Player7', challongeId: '77777' })
+                stream.write({ id: '8', btag: 'Player8#8888', name: 'Player8', challongeId: '88888' })
+                stream.write({ id: '9', btag: 'Player9#0000', name: 'Player9', challongeId: '99999' })
+                stream.write({ id: '10', btag: 'Player10#1010', name: 'Player10', challongeId: '10101' })
+                stream.write({ id: '11', btag: 'Player11#1111', name: 'Player11', challongeId: '11111' })
+                stream.end()
+            })
+            return stream
+        }),
+        unlink: vi.fn((_path, cb) => cb(null))
+    },
+    existsSync: vi.fn().mockReturnValue(true),
+    createReadStream: vi.fn(() => {
+        const { PassThrough } = require('stream')
+        const stream = new PassThrough({ objectMode: true })
+        queueMicrotask(() => {
+            stream.write({ id: '1', btag: 'Player1#1234', name: 'Player1', challongeId: '11111' })
+            stream.write({ id: '2', btag: 'Player2#5678', name: 'Player2', challongeId: '22222' })
+            stream.write({ id: '3', btag: 'Player3#9999', name: 'Player3', challongeId: '33333' })
+            stream.write({ id: '4', btag: 'Player4#4444', name: 'Player4', challongeId: '44444' })
+            stream.write({ id: '5', btag: 'Player5#5555', name: 'Player5', challongeId: '55555' })
+            stream.write({ id: '6', btag: 'Player6#6666', name: 'Player6', challongeId: '66666' })
+            stream.write({ id: '7', btag: 'Player7#7777', name: 'Player7', challongeId: '77777' })
+            stream.write({ id: '8', btag: 'Player8#8888', name: 'Player8', challongeId: '88888' })
+            stream.write({ id: '9', btag: 'Player9#0000', name: 'Player9', challongeId: '99999' })
+            stream.write({ id: '10', btag: 'Player10#1010', name: 'Player10', challongeId: '10101' })
+            stream.write({ id: '11', btag: 'Player11#1111', name: 'Player11', challongeId: '11111' })
+            stream.end()
+        })
+        return stream
+    }),
+    unlink: vi.fn((_path, cb) => cb(null))
+}))
+
+// Mock csv-parser
+vi.mock('csv-parser', () => ({
+    default: () => {
+        const { PassThrough } = require('stream')
+        return new PassThrough({ objectMode: true })
+    }
+}))
+
 /**
  * Characterization tests for the unified PulseService
  * 
