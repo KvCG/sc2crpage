@@ -1,0 +1,105 @@
+/**
+ * CSS Module for Community Stats page
+ * Modular styles replacing inline styles and following SC2CR conventions
+ */
+
+/* Page header styles */
+.header {
+    text-align: center;
+    margin-bottom: var(--mantine-spacing-xl);
+}
+
+.title {
+    margin-bottom: var(--mantine-spacing-md);
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    padding-bottom: var(--mantine-spacing-sm);
+}
+
+/* Sections */
+.filtersSection {
+    margin-bottom: var(--mantine-spacing-md);
+}
+
+.filtersContainer {
+    padding: var(--mantine-spacing-sm);
+}
+
+.metadataSection {
+    margin-bottom: var(--mantine-spacing-md);
+}
+
+.metadataContainer {
+    padding: var(--mantine-spacing-xs);
+}
+
+/* Charts */
+.chartsGrid {
+    gap: var(--mantine-spacing-md);
+}
+
+.chartPaper {
+    position: relative;
+    height: 350px;
+    border: 1px solid var(--mantine-color-default-border);
+    border-radius: var(--mantine-radius-sm);
+    background-color: var(--mantine-color-body);
+}
+
+.chartContainer {
+    position: relative;
+    height: 320px;
+    width: 100%;
+}
+
+/* Loading overlay */
+.loadingOverlay {
+    z-index: 1000;
+    border-radius: var(--mantine-radius-sm);
+    backdrop-filter: blur(2px);
+}
+
+/* Error state */
+.errorAlert {
+    margin-bottom: var(--mantine-spacing-md);
+}
+
+.errorActions {
+    margin-top: var(--mantine-spacing-xs);
+}
+
+/* Empty state */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--mantine-spacing-lg);
+    text-align: center;
+    min-height: 300px;
+}
+
+.emptyIcon {
+    color: var(--mantine-color-gray-5);
+    margin-bottom: var(--mantine-spacing-sm);
+    font-size: 48px;
+}
+
+.emptyTitle {
+    color: var(--mantine-color-dimmed);
+    margin-top: var(--mantine-spacing-sm);
+    margin-bottom: var(--mantine-spacing-xs);
+}
+
+.emptyDescription {
+    color: var(--mantine-color-dimmed);
+    font-size: var(--mantine-font-size-sm);
+    margin-bottom: var(--mantine-spacing-sm);
+}
+
+.emptyActions {
+    margin-top: var(--mantine-spacing-sm);
+}

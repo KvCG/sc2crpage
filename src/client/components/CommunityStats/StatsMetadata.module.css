@@ -1,0 +1,51 @@
+/**
+ * CSS Module for StatsMetadata component
+ */
+
+.metadataContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--mantine-spacing-md);
+}
+
+.metadataGroup {
+    display: flex;
+    gap: var(--mantine-spacing-lg);
+    align-items: center;
+}
+
+.metadataItem {
+    display: flex;
+    flex-direction: column;
+}
+
+.metadataLabel {
+    font-size: var(--mantine-font-size-xs);
+    color: var(--mantine-color-dimmed);
+    margin-bottom: 2px;
+}
+
+.metadataValue {
+    font-size: var(--mantine-font-size-sm);
+    font-weight: 500;
+    color: var(--mantine-color-text);
+}
+
+.playersBadge {
+    font-size: var(--mantine-font-size-md);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .metadataContainer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .metadataGroup {
+        gap: var(--mantine-spacing-md);
+        flex-wrap: wrap;
+    }
+}

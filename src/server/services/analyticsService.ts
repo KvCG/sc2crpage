@@ -203,33 +203,42 @@ export class AnalyticsService {
         }
     }
 
+  
+    // Helper to aggregate games by race for readability and reuse
+    private static aggregateGamesByRace(players: RankedPlayer[]): Record<string, number> {
+        return players.reduce((acc: Record<string, number>, player: RankedPlayer) => {
+            Object.entries(player.gamesPerRace || {}).forEach(([race, games]) => {
+                acc[race] = (acc[race] || 0) + games
+            })
+            return acc
+        }, {})
+    }
+
+    
     /**
      * Generate race distribution analytics
      */
-    private static generateRaceAnalytics(players: RankedPlayer[]) {
+    private static generateRaceAnalytics(players: RankedPlayer[]): {
+        distribution: Record<string, number>
+        percentages: Record<string, string>
+        totalGamesPlayed: number
+        gamesByRace: Record<string, number>
+    } {
         const raceStats = DataDerivationsService.getRankingStatistics(players)
-        const totalGames = Object.values(
-            players.reduce((acc, player) => {
-                Object.entries(player.gamesPerRace || {}).forEach(([race, games]) => {
-                    acc[race] = (acc[race] || 0) + games
-                })
-                return acc
-            }, {} as Record<string, number>)
-        ).reduce((sum, games) => sum + games, 0)
+
+        const gamesByRace = this.aggregateGamesByRace(players)
+        const totalGames = players.reduce((sum, player) => sum + (player.totalGames || 0), 0) 
+
+        const percentages = Object.entries(raceStats.raceDistribution).reduce((acc: Record<string, string>, [race, count]) => {
+            acc[race] = players.length > 0 ? ((count / players.length) * 100).toFixed(2) : '0.00'
+            return acc
+        }, {})
 
         return {
             distribution: raceStats.raceDistribution,
-            percentages: Object.entries(raceStats.raceDistribution).reduce((acc, [race, count]) => {
-                acc[race] = players.length > 0 ? ((count / players.length) * 100).toFixed(2) : '0.00'
-                return acc
-            }, {} as Record<string, string>),
+            percentages,
             totalGamesPlayed: totalGames,
-            gamesByRace: players.reduce((acc, player) => {
-                Object.entries(player.gamesPerRace || {}).forEach(([race, games]) => {
-                    acc[race] = (acc[race] || 0) + games
-                })
-                return acc
-            }, {} as Record<string, number>),
+            gamesByRace,
         }
     }
 
