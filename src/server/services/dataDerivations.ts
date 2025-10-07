@@ -319,7 +319,7 @@ export class RankedTeamConsolidator {
                     }
                 }
 
-                const lastPlayedStr = this.getlastLastPlayed(mainLastPlayed)
+                const lastPlayedStr = this.getlastLastPlayed(mainLastPlayed) // Get the most recent lastPlayed date from all races
 
                 // Get display name from CSV or fallback to account tag
                 const characterId = player.members?.account?.id

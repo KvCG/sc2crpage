@@ -82,3 +82,23 @@ export const deleteReplay = async (body: any) => {
     const response = await api.post(`api/deleteReplay`, body)
     return response
 }
+
+export const getPlayerAnalytics = async (params?: {
+    timeframe?: 'current' | 'daily'
+    includeInactive?: boolean
+    minimumGames?: number
+    race?: string | null
+}) => {
+    const response = await api.get(`api/player-analytics`, { params })
+    return response
+}
+
+export const getPlayerActivityAnalysis = async (params?: {
+    timeframe?: 'current' | 'daily'
+    includeInactive?: boolean
+    minimumGames?: number
+    groupBy?: 'race' | 'league' | 'activity'
+}) => {
+    const response = await api.get(`api/player-analytics/activity`, { params })
+    return response
+}

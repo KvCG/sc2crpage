@@ -1,0 +1,38 @@
+/**
+ * CSS Module for StatsFilters component
+ */
+
+.filtersContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mantine-spacing-lg);
+    align-items: end;
+    justify-content: center;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.filterLabel {
+    font-size: var(--mantine-font-size-sm);
+    font-weight: 500;
+    margin-bottom: var(--mantine-spacing-xs);
+    color: var(--mantine-color-text);
+}
+
+.compactFilters {
+    gap: var(--mantine-spacing-md);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .filtersContainer {
+        gap: var(--mantine-spacing-sm);
+    }
+    
+    .compactFilters {
+        gap: var(--mantine-spacing-xs);
+    }
+}

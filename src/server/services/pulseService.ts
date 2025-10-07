@@ -130,7 +130,7 @@ export class PulseService {
     /**
      * Get current ranking with caching and anti-stampede protection
      */
-    async getRanking(includeInactive: boolean, minimumGames: number): Promise<RankedPlayer[]> {
+    async getRanking(includeInactive: boolean = false, minimumGames: number = 20): Promise<RankedPlayer[]> {
         const cacheKey = 'snapShot'
         const cachedData = cache.get(cacheKey)
 
