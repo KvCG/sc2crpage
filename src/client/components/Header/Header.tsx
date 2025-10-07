@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Container, Group, Burger, Stack, Menu } from '@mantine/core'
+import { Container, Group, Burger, Menu, Text, Pill } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import classes from './Header.module.css'
 import { Logo } from '../Logo/Logo'
@@ -53,7 +53,22 @@ export const Header = () => {
 
                 <Menu opened={opened} onChange={toggle}>
                     <Menu.Target>
-                        <Burger opened={opened} onClick={toggle} hiddenFrom="md" size="sm" />
+                        <Group>
+                            {!opened && (
+                                <Text
+                                    className={classes.banner}
+                                    gradient={{ from: 'yellow', to: 'green', deg: 90 }}
+                                    variant="gradient"
+                                    hiddenFrom="md"
+                                    fw={700}
+                                    c={'orange'}
+                                    size="sm"
+                                >
+                                    {"See what's new →"}
+                                </Text>
+                            )}
+                            <Burger opened={opened} onClick={toggle} hiddenFrom="md" size="sm" />
+                        </Group>
                     </Menu.Target>
                     <Menu.Dropdown>{mobileItems}</Menu.Dropdown>
                 </Menu>
