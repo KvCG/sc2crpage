@@ -71,7 +71,7 @@ export const HourlyActivityChart = ({ data, loading, error, title }: HourlyActiv
             x: {
                 title: {
                     display: true,
-                    text: 'Time of Day (Costa Rica Time)',
+                    text: 'CR Time',
                     color: CHART_THEME.TEXT_COLOR,
                 },
                 grid: {
