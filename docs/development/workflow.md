@@ -20,7 +20,7 @@ SC2CR uses a **trunk-based development workflow** centered around the `dev` bran
 ### Branch Structure
 
 ```mermaid
-gitgraph
+gitGraph
     commit id: "Initial"
     branch dev
     checkout dev
@@ -38,7 +38,7 @@ gitgraph
     checkout main
     merge dev
     commit id: "Release v1.1"
-    tag: "v1.1.0"
+    commit id: "v1.1.0" tag: "v1.1.0"
 ```
 
 ### Branch Types
