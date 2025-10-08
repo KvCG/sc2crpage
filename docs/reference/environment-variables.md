@@ -48,6 +48,17 @@ MAX_DATA_AGE_HOURS=48
 # Performance & Rate Limiting
 SC2PULSE_RPS=10
 ONLINE_THRESHOLD_MINUTES=30
+
+# Custom Match Ingestion (H2H System)
+H2H_CUSTOM_CUTOFF=2024-01-01
+H2H_CUSTOM_MIN_CONFIDENCE=low
+H2H_CUSTOM_POLL_INTERVAL_SEC=900
+H2H_BATCH_SIZE=50
+H2H_LOOKBACK_DAYS=7
+H2H_DEDUPE_RETENTION_HOURS=48
+H2H_MAX_MATCHES_PER_FILE=1000
+H2H_MAX_CONCURRENT=5
+H2H_DEDUPE_CACHE_LIMIT=10000
 ONLINE_THRESHOLD_HOURS=24
 ```
 
@@ -205,6 +216,66 @@ These variables only apply when `ENABLE_PLAYER_ANALYTICS=true`:
 - **Example**: `MAX_DATA_AGE_HOURS=48`
 - **Usage**: Data older than this is excluded from analytics
 - **Relevance**: Shorter periods focus on recent performance trends
+
+### 🎮 Custom Match Ingestion (H2H)
+
+Custom Head-to-Head match discovery and processing system configuration.
+
+#### `H2H_CUSTOM_CUTOFF`
+- **Purpose**: Earliest date for custom match processing
+- **Default**: `2024-01-01`
+- **Type**: String (YYYY-MM-DD format)
+- **Example**: `H2H_CUSTOM_CUTOFF=2024-01-01`
+- **Usage**: Only matches after this date are processed
+- **Performance**: Later cutoff dates reduce processing load
+
+#### `H2H_CUSTOM_MIN_CONFIDENCE`
+- **Purpose**: Minimum confidence level for storing matches
+- **Default**: `low`
+- **Type**: String (`low`, `medium`, `high`)
+- **Example**: `H2H_CUSTOM_MIN_CONFIDENCE=medium`
+- **Usage**: Filters out low-quality matches
+- **Quality**: Higher thresholds ensure better match quality
+
+#### `H2H_CUSTOM_POLL_INTERVAL_SEC`
+- **Purpose**: Automatic ingestion polling interval
+- **Default**: `900` (15 minutes)
+- **Type**: Integer (seconds)
+- **Example**: `H2H_CUSTOM_POLL_INTERVAL_SEC=1800`
+- **Usage**: How often the system checks for new matches
+- **Performance**: Longer intervals reduce API load
+
+#### `H2H_BATCH_SIZE`
+- **Purpose**: Maximum matches processed per batch
+- **Default**: `50`
+- **Type**: Integer
+- **Example**: `H2H_BATCH_SIZE=100`
+- **Usage**: Controls memory usage and processing speed
+- **Performance**: Larger batches are faster but use more memory
+
+#### `H2H_LOOKBACK_DAYS`
+- **Purpose**: Days to search back for new matches
+- **Default**: `7`
+- **Type**: Integer
+- **Example**: `H2H_LOOKBACK_DAYS=3`
+- **Usage**: How far back to search for matches each cycle
+- **Performance**: Shorter lookback reduces API calls
+
+#### `H2H_DEDUPE_RETENTION_HOURS`
+- **Purpose**: Hours to retain de-duplication tracking files
+- **Default**: `48`
+- **Type**: Integer
+- **Example**: `H2H_DEDUPE_RETENTION_HOURS=72`
+- **Usage**: Prevents reprocessing the same matches
+- **Storage**: Longer retention uses more disk space
+
+#### `H2H_MAX_MATCHES_PER_FILE`
+- **Purpose**: Maximum matches per storage file
+- **Default**: `1000`
+- **Type**: Integer
+- **Example**: `H2H_MAX_MATCHES_PER_FILE=500`
+- **Usage**: Controls individual file size
+- **Performance**: Smaller files are easier to process
 
 ---
 
