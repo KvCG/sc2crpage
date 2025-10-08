@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>SC2CR Documentation</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+        <meta
+            name="description"
+            content="SC2CR Documentation - StarCraft 2 Community Rankings development guides, API reference, and architecture documentation"
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0" />
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css" />
+    </head>
+    <body>
+        <div id="app"></div>
+        <script>
+            window.$docsify = {
+                name: 'SC2CR Docs',
+                repo: 'https://github.com/KvCG/sc2crpage',
+                loadSidebar: true,
+                subMaxLevel: 3,
+                auto2top: true,
+                homepage: 'README.md',
+                search: {
+                    maxAge: 86400000, // cache results for 1 day
+                    paths: 'auto', // auto index all .md files
+                    placeholder: 'Search...',
+                    noData: 'No matches found!',
+                    depth: 3, // how deep to index headings
+                },
+                mermaid: {
+                    theme: 'default'
+                },
+            }
+        </script>
+        <!-- Docsify v4 -->
+        <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+        <!-- Quick search plugin -->
+        <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+        <!-- Mermaid support -->
+        <script src="//cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.min.js"></script>
+        <!-- Docsify Mermaid plugin -->
+        <script src="//unpkg.com/docsify-mermaid@latest/dist/docsify-mermaid.js"></script>
+        <script>mermaid.initialize({ startOnLoad: true });</script>
+    </body>
+</html>

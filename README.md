@@ -1,209 +1,44 @@
-# SC2CR: StarCraft 2 Community Rankings
+# SC2CR: StarCraft 2 Community Rankings 🏆
 
 A full-stack application for tracking StarCraft 2 player statistics, replays, and tournaments.
 
-- **Live Site**: [SC2CR](https://sc2cr.vercel.app/)
-- **Tech Stack**: React/TypeScript (client) + Node/Express (server)
+**Live Site**: [sc2cr.vercel.app](https://sc2cr.vercel.app/)
 
-## 🚀 Quick Start for Developers
+## 🚀 Quick Start
 
 ```bash
-# Clone and setup
 git clone https://github.com/KvCG/sc2crpage.git
 cd sc2crpage
 npm install
-
-# Get the ladder data file (required)
-# Option 1: Request from maintainers (NeO or Kerverus)
-# Option 2: Place file manually or request from maintainers
-
-# Start development server (client + server)
 npm run dev
 ```
 
-The app will be available at:
-- Frontend: http://localhost:5173 (Vite)
-- API: http://localhost:3000
+**Frontend**: http://localhost:5173 | **Backend**: http://localhost:3000
 
-## 📚 Project Architecture
+## 📚 Documentation
 
-### Client (`src/client`)
-- React application with TypeScript and Vite
-- UI library: [Mantine v7](https://mantine.dev/)
-- Routing: React Router v6
-- API client: Custom hooks in `hooks/useFetch.tsx`
-- Config: Environment-aware API base selection in `services/config.ts`
+**→ [Complete Documentation Hub](docs/README.md)** - Getting started, development guides, API docs, and more
 
-### Server (`src/server`)
-- Express-based API with TypeScript
-- Data sources:
-  - SC2Pulse API integration via `services/pulseApi.ts`
-  - Challonge API for tournaments via `services/challongeApi.ts`
-  - Google Drive for data storage and backups
-- Caching: LRU in-memory cache with 30s TTL
+### Quick Links
+- **[Getting Started](docs/getting-started/README.md)** - Setup and installation
+- **[Development Guide](docs/development/README.md)** - Contributing and workflow  
+- **[API Documentation](docs/api/README.md)** - Backend API reference
+- **[Architecture](docs/architecture/README.md)** - System design overview
 
-### Key Data Flow
-1. Client makes requests to `/api/*` endpoints
-2. Server routes requests via `routes/apiRoutes.ts`
-3. Services fetch and transform external data
-4. Cached results returned to client
+## 🤝 Contributing
 
-## 💻 Development Workflow
+We welcome contributions! Start with our [development workflow](docs/development/workflow.md).
 
-### Common Commands
+**Quick Flow**: Fork → Create feature branch from `dev` → Submit PR
 
-```bash
-# Development mode (concurrent FE + BE)
-npm run dev
+## ⚡ Tech Stack
 
-# Build for production
-npm run build
+- **Frontend**: React + TypeScript + Vite + Mantine UI
+- **Backend**: Node.js + Express + TypeScript  
+- **Data**: SC2Pulse API, Challonge API, Google Drive
+- **Deploy**: Vercel (frontend) + Render/Fly.io (backend)
 
-# Start production server
-npm start
+## 🔗 Links
 
-# Lint codebase
-npm run lint
-
-# Docker workflow
-npm run buildImg     # Build Docker image
-npm run localPod     # Run container on http://localhost:3000
-```
-
-### Ladder Data
-
-The server requires `ladderCR.csv` to operate correctly:
-
-```bash
-# After build, place data file in:
-dist/data/ladderCR.csv
-```
-
-If Google Drive is configured, the server will auto-download the file on first run from the RankedPlayers folder.
-
-## 🌐 Environments
-
-| Environment | Client                           | API                                   |
-|-------------|----------------------------------|---------------------------------------|
-| Local       | Vite (localhost:5173)            | Express (localhost:3000)              |
-| Dev         | Vercel Preview (from `dev`)      | Fly.io (`sc2cr-dev.fly.dev`)          |
-| Production  | Vercel (sc2cr.vercel.app)        | Render (`sc2cr-latest.onrender.com`) |
-
-**Note**: All Vercel previews (including from feature branches) are considered "dev" environments because they connect to the Fly.io dev API.
-
-For detailed environment configuration, see [docs/technical-documentation/environments.md](docs/technical-documentation/environments.md).
-
-## 🔧 Environment Variables
-
-Server requires these environment variables:
-
-```
-# Google Drive is used for data storage (ladder data, backups)
-
-# External APIs
-CHALLONGE_API_KEY=<key>
-CURRENT_TOURNAMENT=<id>
-GOOGLE_SERVICE_ACCOUNT_KEY=<JSON string>
-REPLAY_ANALYZER_URL=<url>
-
-# Tunables
-MMR_RANGE_FOR_PREMIER_MATCH=<number>
-MMR_RANGE_FOR_CLOSE_MATCH=<number>
-# Minimum games to appear in rankings (default 10)
-RANKING_MIN_GAMES=<number>
-PORT=3000
-```
-
-### Logging & Observability (Server)
-
-- Logging: pino (pretty in development). Control with `LOG_LEVEL` (default `info`).
-- HTTP logs: 2xx/3xx are silent by default (`LOG_HTTP_SUCCESS=false`); 4xx/5xx log at error.
-- Health: `/api/health` is quiet; add `?verbose=1` to emit a single info log.
-- Request store and metrics are in-memory only; fetch via:
-  - `GET /api/debug?type=metrics` → counters + `pulse_p95_ms`/`pulse_p99_ms`
-  - `GET /api/debug?type=req&id=<requestId>` → last stored entry
-
-
-## 🏷️ Build Info (Client & Server)
-
-Build metadata is enabled across all environments for traceability.
-
-- Client: Injects a readable HTML comment under `<head>` with pretty JSON `{ app: 'client', env, commit, commitMessage?, branch?, pr?, buildNum? }`.
-- Server: `GET /api/debug?type=buildInfo` returns pretty-printed JSON.
-
-Sourcing:
-- Local: uses git when available for `commit`, `branch`, `commitMessage`; falls back to `commit: 'local'`.
-- Dev/Prod: uses CI vars only (no git calls).
-
-Implementation:
-- Frontend plugin at `plugins/clientBuildInfo.ts` (loaded from `vite.config.ts`).
-- Server utility at `src/server/utils/buildInfo.ts` with git helpers in `src/server/utils/gitInfo.ts`.
-
-## �🤝 Contributing
-
-We use a streamlined trunk-based workflow with `dev` as the integration branch:
-
-- Day-to-day: work directly on `dev` or create feature branches from `dev`
-- Never merge `dev` into `main`
-- Releases: curate a subset of `dev` and merge via a `release/*` branch into `main`
-
-```bash
-# Start work from dev (optionally branch for isolation)
-git checkout dev
-git pull origin dev
-git checkout -b feature/my-feature
-
-# Prepare a curated release (pick only the changes you want)
-git checkout dev
-git pull origin dev
-git checkout -b temp-release-prep
-git rebase -i origin/main   # pick/squash/drop to curate
-
-# Create a release branch from main and merge curated changes
-git checkout main
-git pull origin main
-git checkout -b release/1.x.x
-git merge --no-ff temp-release-prep
-
-# Open PR to main; after merge, tag
-git tag v1.x.x
-git push origin main --tags
-```
-
-- Commit messages: follow Conventional Commits (e.g., `feat(api): ... [BL-012]`).
-- Details in [docs/development-process/contributing.md](docs/development-process/contributing.md) and
-  [docs/development-process/branching-strategy.md](docs/development-process/branching-strategy.md).
-
-## 🔄 CI/CD
-
-Unified workflow in `.github/workflows/Deploy.yml`:
-
-1. **Checks**: Lint, type-check, tests
-2. **Docker**: Build and push to Docker Hub + Fly.io registry
-3. **Deploy**:
-   - On `main`: API to Render via webhook
-   - On `dev`: API to Fly.io via prebuilt image
-   - Frontend: Automatic via Vercel integration
-
-## 📋 Documentation Index
-
-### Technical Documentation
-- **Architecture**: [docs/technical-documentation/architecture.md](docs/technical-documentation/architecture.md)
-- **Environments**: [docs/technical-documentation/environments.md](docs/technical-documentation/environments.md)
-- **Environment Setup**: [docs/technical-documentation/environment-setup.md](docs/technical-documentation/environment-setup.md)
- - **Debugging & Observability**: [docs/technical-documentation/debugging.md](docs/technical-documentation/debugging.md)
-
-### Process Documentation
-- **Contributing**: [docs/development-process/contributing.md](docs/development-process/contributing.md)
-- **Branching Strategy**: [docs/development-process/branching-strategy.md](docs/development-process/branching-strategy.md)
-- **Deployment**: [docs/development-process/deployment.md](docs/development-process/deployment.md)
-- **Testing**: [docs/development-process/testing.md](docs/development-process/testing.md)
-
-### Project Management
-- **Backlog**: [docs/backlog/backlog.md](docs/backlog/backlog.md)
-- **Backlog Usage**: [docs/backlog/usage.md](docs/backlog/usage.md)
-
-## 📚 External Resources
-
-- [SC2Pulse API Documentation](https://sc2pulse.nephest.com/sc2/doc/swagger-ui/index.html)
-- [Blizzard StarCraft II Community APIs](https://develop.battle.net/documentation/starcraft-2/community-apis)
+- **Live Site**: [sc2cr.vercel.app](https://sc2cr.vercel.app/)
+- **Issues**: [GitHub Issues](https://github.com/KvCG/sc2crpage/issues)

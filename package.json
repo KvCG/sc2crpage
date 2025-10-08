@@ -22,7 +22,8 @@
         "test:watch": "vitest -c vitest.client.config.ts",
         "test:client": "vitest run -c vitest.client.config.ts",
         "test:server": "vitest run -c vitest.server.config.ts",
-        "coverage": "vitest run -c vitest.client.config.ts --coverage && vitest run -c vitest.server.config.ts --coverage"
+        "coverage": "vitest run -c vitest.client.config.ts --coverage && vitest run -c vitest.server.config.ts --coverage",
+        "docs": "npx docsify-cli serve docs -p 3001"
     },
     "dependencies": {
         "@mantine/core": "^7.17.3",

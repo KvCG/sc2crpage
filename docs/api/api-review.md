@@ -13,24 +13,22 @@ This document provides a canonical reference for all public API endpoints expose
   - Returns daily baseline ranking snapshot (used for position change indicators).
 
 ### Analytics & Historical Endpoints
-- **POST `/api/analytics/schedule/start`**
-  - Starts the automated analytics snapshot scheduler.
-- **POST `/api/analytics/schedule/stop`**
-  - Stops the analytics snapshot scheduler.
-- **GET `/api/analytics/schedule/status`**
+- **GET `/api/scheduler`**
   - Returns scheduler status and metrics.
-- **GET `/api/analytics/backups`**
+- **POST `/api/scheduler/force-run`**
+  - Force run a specific scheduled operation (snapshot, activity, movers).
+- **GET `/api/persistence`**
+  - Returns persistence layer status.
+- **GET `/api/persistence/backups`**
   - Lists available historical snapshot backups.
-- **GET `/api/analytics/restore/{fileId}`**
-  - Restores a specific historical snapshot by file ID.
-- **DELETE `/api/analytics/cleanup`**
-  - Cleans up old backups (retention policy).
-- **GET `/api/analytics/deltas`**
+- **GET `/api/deltas`**
   - Computes player ranking changes (deltas) over a time window.
-- **GET `/api/analytics/activity`**
-  - Returns population-level activity and movement analysis.
-- **GET `/api/analytics/movers`**
-  - Returns top movers (players with significant ranking changes).
+- **GET `/api/player-analytics`**
+  - Comprehensive player analytics and statistics.
+- **GET `/api/player-analytics/activity`**
+  - Detailed activity analysis with temporal patterns and engagement metrics.
+- **GET `/api/ranking`**
+  - Enhanced ranking with embedded delta information.
 
 ---
 
@@ -52,7 +50,7 @@ This document provides a canonical reference for all public API endpoints expose
 - `daysSinceLastGame` (number): Days since last game played
 - `gamesPlayedRecent` (number): Recent games played (window defined by backend)
 
-### `/api/analytics/schedule/*`
+### `/api/scheduler`
 - **Status Response:**
   - `isRunning` (boolean): Scheduler active status
   - `intervalHours` (number): Snapshot interval
@@ -61,10 +59,21 @@ This document provides a canonical reference for all public API endpoints expose
   - `lastRun` (ISO timestamp): Last completed run
   - `metrics`: Object with snapshot counts, error counts, last error
 
-### `/api/analytics/backups`
+### `/api/scheduler/force-run`
+- **Request Body:**
+  - `operation` (string): Operation to run ("snapshot", "activity", "movers")
+- **Response:**
+  - `operation` (string): Operation that was executed
+  - `executed` (boolean): Whether operation completed successfully
+  - `timestamp` (ISO timestamp): Execution time
+
+### `/api/persistence/backups`
+- **Query Parameters:**
+  - `maxAge` (number, optional): Maximum age in hours (default: 168)
 - **Response:**
   - `backups`: Array of `BackupMetadata` objects
-  - `pagination`: Object with `total`, `limit`, `offset`, `hasMore`
+  - `count` (number): Total number of backups
+  - `maxAge` (number): Age filter applied
 
 #### `BackupMetadata` fields:
 - `fileId` (string): Google Drive file ID
@@ -76,20 +85,19 @@ This document provides a canonical reference for all public API endpoints expose
   - `dataSize` (number): File size in bytes
   - `createdBy` (string): Source (e.g., "scheduler")
 
-### `/api/analytics/restore/{fileId}`
+### `/api/deltas`
+- **Query Parameters:**
+  - `timeWindowHours` (number, default: 24): Time window for comparison
+  - `includeInactive` (boolean, default: false): Include inactive players
+  - `minimumConfidence` (number, default: 50): Minimum confidence score
+  - `maxDataAge` (number, default: 48): Maximum baseline age in hours
 - **Response:**
-  - `snapshot`: Object
-    - `createdAt` (ISO timestamp)
-    - `expiry` (Unix ms)
-    - `data`: Array of `RankingRow` objects
-  - `metadata`: As above, with `restoredAt` (ISO timestamp)
-
-### `/api/analytics/deltas`
-- **Response:**
+  - `success` (boolean): Operation success status
   - `deltas`: Array of `PlayerDelta` objects
   - `metadata`: Object
-    - `timeWindow`: `{ hours, baseline, current }`
-    - `totalPlayers`, `filteredCount`, `averageConfidence`
+    - `count` (number): Number of deltas computed
+    - `options`: Query parameters used
+    - `timestamp` (ISO string): Computation time
 
 #### `PlayerDelta` fields:
 - `id` (number): Unique player identifier
@@ -107,20 +115,44 @@ This document provides a canonical reference for all public API endpoints expose
 - `leagueType` (number): League tier
 - `confidenceScore` (number): Confidence 0-100
 
-### `/api/analytics/activity`
+### `/api/player-analytics`
+- **Query Parameters:**
+  - `timeframe` (string, default: "current"): "current" or "daily"
+  - `includeInactive` (boolean, default: false): Include inactive players
+  - `minimumGames` (number, default: 20): Minimum games filter
+  - `race` (string, optional): Filter by specific race
 - **Response:**
-  - `analysis`: Object
-    - `totalPlayers`, `activePlayers`
-    - `movers`: `{ promotions, demotions, significantRises, significantFalls }`
-    - `activityLevels`: `{ high, medium, low, inactive }`
-    - `averageRatingChange` (number)
-    - `timestamp` (ISO)
-  - `metadata`: `{ timeWindow, confidence }`
+  - `success` (boolean): Operation success status
+  - `data`: Object with comprehensive analytics
+    - `activityStats`: Player activity statistics
+    - `raceDistribution`: Distribution by race
+    - `leagueStats`: Distribution by league
+    - `metadata`: Analysis metadata
 
-### `/api/analytics/movers`
+### `/api/player-analytics/activity`
+- **Query Parameters:**
+  - `includeInactive` (boolean, default: false): Include inactive players
+  - `groupBy` (string, default: "activity"): "race", "league", or "activity"
+  - `timeframe` (string, default: "current"): "current" or "daily"
+  - `minimumGames` (number, default: 20): Minimum games filter
 - **Response:**
-  - `movers`: Array of `PlayerDelta` (see above)
-  - `metadata`: `{ direction, limit, totalFound, timeWindow }`
+  - `success` (boolean): Operation success status
+  - `data`: Object with detailed activity analysis
+    - `activityAnalysis`: Activity level breakdown
+    - `temporalPatterns`: Time-based activity patterns
+    - `metadata`: Analysis metadata
+
+### `/api/ranking`
+- **Query Parameters:**
+  - `timeWindowHours` (number, default: 24): Time window for deltas
+  - `includeInactive` (boolean, default: false): Include inactive players
+  - `minimumConfidence` (number, default: 75): Minimum confidence score
+  - `maxDataAge` (number, default: 48): Maximum data age in hours
+  - `minimumGames` (number, default: 20): Minimum games filter
+- **Response:**
+  - `success` (boolean): Operation success status
+  - `ranking`: Array of enhanced ranking objects with embedded deltas
+  - `metadata`: Response metadata with player counts and options
 
 ### Error Response (all endpoints)
 - `success` (false)
