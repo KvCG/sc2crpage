@@ -22,12 +22,12 @@ npm run dev
 
 ## 🔍 Verify Setup
 
-### ✅ Check Frontend
+### - Check Frontend
 - **URL**: http://localhost:5173
 - **Expected**: SC2CR homepage loads
 - **Browser Console**: No error messages
 
-### ✅ Check Backend API
+### - Check Backend API
 - **URL**: http://localhost:3000/api/health  
 - **Expected**: `{"status": "ok"}`
 - **Terminal**: Server logs show "Server running on port 3000"
@@ -101,16 +101,16 @@ npm run build
 
 **Setup successful?** Choose your next move:
 
-### 🎯 **Start Contributing**
+###  **Start Contributing**
 - Browse [Good First Issues](https://github.com/KvCG/sc2crpage/labels/good%20first%20issue)
 - Read [Development Workflow](../development/workflow.md)
 
-### 📚 **Learn the Codebase**  
+###  **Learn the Codebase**  
 - [Complete Onboarding Guide](README.md) - Thorough project introduction
 - [Architecture Overview](../architecture/README.md) - System design
 - [Project Structure](README.md#project-structure) - Code organization
 
-### 🔧 **Advanced Setup**
+###  **Advanced Setup**
 - [Environment Variables](../reference/environment-variables.md) - Full configuration
 - [Development Guide](../development/README.md) - Advanced development setup
 - [Testing Guide](../development/testing.md) - Testing strategy
