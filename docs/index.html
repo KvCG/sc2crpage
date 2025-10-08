@@ -8,6 +8,11 @@
             name="description"
             content="SC2CR Documentation - StarCraft 2 Community Rankings development guides, API reference, and architecture documentation"
         />
+
+        <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png" />
+        <link rel="shortcut icon" href="assets/favicon.ico" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0" />
         <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css" />
     </head>
@@ -29,7 +34,13 @@
                     depth: 3, // how deep to index headings
                 },
                 mermaid: {
-                    theme: 'default'
+                    theme: 'default',
+                },
+                switchLightDarkMode: {
+                    useSwitchMode: true,
+                    top: 130,
+                    right: 26,
+                    svgColor: '#7d7b75',
                 },
             }
         </script>
@@ -41,6 +52,19 @@
         <script src="//cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.min.js"></script>
         <!-- Docsify Mermaid plugin -->
         <script src="//unpkg.com/docsify-mermaid@latest/dist/docsify-mermaid.js"></script>
-        <script>mermaid.initialize({ startOnLoad: true });</script>
+        <script>
+            mermaid.initialize({ startOnLoad: true })
+        </script>
+
+        <!-- stylesheets for darkmode -->
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css" />
+        <link
+            rel="stylesheet"
+            href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css"
+            disabled
+        />
+
+        <!-- docsify-simple-dark-mode plugin -->
+        <script src="https://cdn.jsdelivr.net/gh/pikapikapikaori/docsify-simple-dark-mode@latest/src/switchLightDarkMode.js"></script>
     </body>
 </html>
