@@ -67,7 +67,8 @@ Curate a release by selecting only the commits you want from `dev`:
    ```bash
    git branch -D temp-release-prep
    ```
-
+ 
+ Also check [[Git cheat sheet]] for info on how to update dev after the release. 
 ## Release Checklist
 
 - Scope decided: curated set from `dev` merged to `main` via `release/*` PR
