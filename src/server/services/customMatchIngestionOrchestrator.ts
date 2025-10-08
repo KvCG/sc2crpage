@@ -77,6 +77,17 @@ export class CustomMatchIngestionOrchestrator {
             throw error
         }
 
+        // Preload deduplication data for recent dates
+        try {
+            await this.preloadDeduplicationData()
+        } catch (error) {
+            logger.warn(
+                { error, feature: 'custom-match-ingestion' },
+                'Failed to preload deduplication data, continuing with empty cache'
+            )
+            // Don't fail startup for deduplication preload issues
+        }
+
         // Run initial ingestion
         await this.runIngestion()
 
@@ -339,6 +350,59 @@ export class CustomMatchIngestionOrchestrator {
             const matchLevel = confidenceOrder[match.confidence as MatchConfidence]
             return matchLevel >= minLevel
         })
+    }
+
+    /**
+     * Preload deduplication data from Drive for recent dates to improve startup performance
+     */
+    private async preloadDeduplicationData(): Promise<void> {
+        const config = getIngestionConfig()
+        const today = new Date()
+        
+        // Preload the last few days of deduplication data
+        const datesToPreload: string[] = []
+        for (let i = 0; i < config.lookbackDays; i++) {
+            const date = new Date(today)
+            date.setDate(date.getDate() - i)
+            const dateKey = date.toISOString().split('T')[0]
+            datesToPreload.push(dateKey)
+        }
+
+        logger.info(
+            {
+                feature: 'custom-match-ingestion',
+                dates: datesToPreload,
+            },
+            'Preloading deduplication data for recent dates'
+        )
+
+        // Load deduplication data in parallel
+        const preloadPromises = datesToPreload.map(async (dateKey) => {
+            try {
+                // This will trigger loading from Drive and populate the memory cache
+                await matchDeduplicator.isDuplicate('__preload_check__', dateKey)
+                return { dateKey, success: true }
+            } catch (error) {
+                logger.warn(
+                    { error, dateKey, feature: 'custom-match-ingestion' },
+                    'Failed to preload deduplication data for date'
+                )
+                return { dateKey, success: false }
+            }
+        })
+
+        const results = await Promise.all(preloadPromises)
+        const successCount = results.filter(r => r.success).length
+
+        logger.info(
+            {
+                feature: 'custom-match-ingestion',
+                totalDates: datesToPreload.length,
+                successCount,
+                failureCount: datesToPreload.length - successCount,
+            },
+            'Deduplication data preload completed'
+        )
     }
 }
 

@@ -10,6 +10,12 @@ import fs from 'fs/promises'
 import path from 'path'
 import logger from '../logging/logger'
 import { ProcessedCustomMatch } from '../../shared/customMatchTypes'
+import { customMatchDeduplicationDriveService, DeduplicationData } from './customMatchDeduplicationDriveService'
+
+/**
+ * Local deduplication data structure - uses the same interface as Drive for consistency
+ */
+type LocalDeduplicationData = DeduplicationData
 
 /**
  * Configuration for de-duplication tracking
@@ -17,6 +23,8 @@ import { ProcessedCustomMatch } from '../../shared/customMatchTypes'
 interface DedupeConfig {
     /** Directory to store deduplication tracking files */
     trackingDir: string
+    /** Single JSON file name for local backup */
+    localFileName: string
     /** Hours to retain tracking data (cleanup old files) */
     retentionHours: number
     /** In-memory cache size limit */
@@ -28,7 +36,8 @@ interface DedupeConfig {
  */
 const DEFAULT_DEDUPE_CONFIG: DedupeConfig = {
     trackingDir: path.join(__dirname, '../data/dedupe'),
-    retentionHours: Number(process.env.H2H_DEDUPE_RETENTION_HOURS) || 48,
+    localFileName: 'processed-matches-local.json',
+    retentionHours: Number(process.env.H2H_DEDUPE_RETENTION_HOURS) || 24 * 30, // 30 days instead of 2 days
     cacheLimit: Number(process.env.H2H_DEDUPE_CACHE_LIMIT) || 10000
 }
 
@@ -147,11 +156,35 @@ export class MatchDeduplicator {
      */
     async getStats() {
         const trackingFiles = await this.listTrackingFiles()
+        
+        // Get Drive statistics
+        let driveStats = null
+        try {
+            driveStats = await customMatchDeduplicationDriveService.getStats()
+        } catch (driveError) {
+            logger.warn(
+                { error: driveError, feature: 'match-deduplication' },
+                'Failed to get Drive deduplication stats'
+            )
+        }
+        
         const stats = {
-            trackedDates: trackingFiles.length,
-            cacheSize: this.cacheSize,
-            cacheKeys: this.memoryCache.size,
-            trackingDir: this.config.trackingDir
+            // Local file stats (backup/cache)
+            localFiles: {
+                trackedDates: trackingFiles.length,
+                trackingDir: this.config.trackingDir
+            },
+            // Memory cache stats
+            memoryCache: {
+                cacheSize: this.cacheSize,
+                cacheKeys: this.memoryCache.size
+            },
+            // Drive stats (primary storage)
+            driveStorage: driveStats || {
+                totalFiles: 0,
+                dateRange: null,
+                recentFiles: []
+            }
         }
 
         return stats
@@ -161,41 +194,95 @@ export class MatchDeduplicator {
      * Clean up old tracking files
      */
     async cleanup(): Promise<void> {
-        const retentionMs = this.config.retentionHours * 60 * 60 * 1000
-        const cutoffTime = Date.now() - retentionMs
-        
+        // Clean up Drive files (primary storage)
         try {
-            const files = await this.listTrackingFiles()
-            let deletedCount = 0
+            await customMatchDeduplicationDriveService.cleanupOldFiles()
+            logger.info(
+                { feature: 'match-deduplication' },
+                'Drive deduplication cleanup completed'
+            )
+        } catch (driveError) {
+            logger.warn(
+                { error: driveError, feature: 'match-deduplication' },
+                'Failed to cleanup Drive deduplication files'
+            )
+        }
+
+        // Clean up local JSON file (remove old entries)
+        try {
+            const localData = await this.loadLocalDeduplicationData()
+            const cutoffDate = new Date()
+            cutoffDate.setHours(cutoffDate.getHours() - this.config.retentionHours)
+            const cutoffDateKey = cutoffDate.toISOString().split('T')[0]
             
-            for (const file of files) {
-                const filePath = path.join(this.config.trackingDir, file)
-                const stats = await fs.stat(filePath)
-                
-                if (stats.mtime.getTime() < cutoffTime) {
-                    await fs.unlink(filePath)
-                    deletedCount++
-                    
-                    // Also remove from memory cache
-                    const dateKey = this.extractDateKeyFromFilename(file)
-                    if (dateKey) {
-                        this.memoryCache.delete(dateKey)
-                    }
+            const entriesBefore = Object.keys(localData.processedMatches).length
+            const matchesBefore = Object.values(localData.processedMatches)
+                .reduce((sum, matches) => sum + (matches as string[]).length, 0)
+            
+            // Filter out old entries
+            const filteredMatches: Record<string, string[]> = {}
+            let removedEntries = 0
+            
+            for (const [dateKey, matches] of Object.entries(localData.processedMatches)) {
+                if (dateKey >= cutoffDateKey) {
+                    filteredMatches[dateKey] = matches as string[]
+                } else {
+                    removedEntries++
+                    // Remove from memory cache too
+                    this.memoryCache.delete(dateKey)
                 }
+            }
+            
+            // Save updated local data if anything was removed
+            if (removedEntries > 0) {
+                localData.processedMatches = filteredMatches
+                await this.saveLocalDeduplicationData(localData)
             }
             
             logger.info(
                 { 
                     feature: 'match-deduplication',
-                    deletedFiles: deletedCount,
+                    removedLocalEntries: removedEntries,
+                    remainingEntries: Object.keys(filteredMatches).length,
+                    totalMatches: matchesBefore - (matchesBefore - Object.values(filteredMatches).reduce((sum, matches) => sum + matches.length, 0)),
                     retentionHours: this.config.retentionHours
                 },
-                'Deduplication cleanup completed'
+                'Local JSON deduplication cleanup completed'
             )
-        } catch (error) {
-            logger.error(
-                { error, feature: 'match-deduplication' },
-                'Failed to cleanup deduplication files'
+        } catch (localError) {
+            logger.warn(
+                { error: localError, feature: 'match-deduplication' },
+                'Failed to cleanup local JSON deduplication data'
+            )
+        }
+
+        // Clean up any remaining old txt files (legacy cleanup)
+        try {
+            const files = await this.listTrackingFiles()
+            let deletedCount = 0
+            
+            for (const file of files) {
+                // Only delete .txt files (legacy format), keep the JSON file
+                if (file.endsWith('.txt')) {
+                    const filePath = path.join(this.config.trackingDir, file)
+                    await fs.unlink(filePath)
+                    deletedCount++
+                }
+            }
+            
+            if (deletedCount > 0) {
+                logger.info(
+                    { 
+                        feature: 'match-deduplication',
+                        deletedLegacyFiles: deletedCount,
+                    },
+                    'Legacy txt files cleanup completed'
+                )
+            }
+        } catch (legacyError) {
+            logger.warn(
+                { error: legacyError, feature: 'match-deduplication' },
+                'Failed to cleanup legacy txt files'
             )
         }
     }
@@ -230,28 +317,57 @@ export class MatchDeduplicator {
             return new Set(cached)
         }
 
-        // Load from file
-        const filePath = this.getTrackingFilePath(dateKey)
-        const existingIds = new Set<string>()
-        
+        // Load from Drive first (primary source)
+        let existingIds: Set<string>
         try {
-            const content = await fs.readFile(filePath, 'utf-8')
-            const lines = content.split('\n').filter(line => line.trim())
-            lines.forEach(line => existingIds.add(line.trim()))
+            existingIds = await customMatchDeduplicationDriveService.getProcessedMatchIds(dateKey)
             
-            // Cache in memory
+            // Cache in memory for future use
             this.updateMemoryCache(dateKey, existingIds)
-        } catch (error: any) {
-            if (error.code !== 'ENOENT') {
-                logger.error(
-                    { error, dateKey, feature: 'match-deduplication' },
-                    'Failed to load existing match IDs'
-                )
-            }
-            // File doesn't exist yet, return empty set
+            
+            logger.debug(
+                { dateKey, count: existingIds.size, feature: 'match-deduplication' },
+                'Loaded match IDs from Drive'
+            )
+        } catch (driveError) {
+            logger.warn(
+                { error: driveError, dateKey, feature: 'match-deduplication' },
+                'Failed to load from Drive, falling back to local file'
+            )
+            
+            // Fallback to local file
+            existingIds = await this.loadFromLocalFile(dateKey)
         }
         
         return existingIds
+    }
+
+    /**
+     * Fallback method to load from local JSON file when Drive is unavailable
+     */
+    private async loadFromLocalFile(dateKey: string): Promise<Set<string>> {
+        try {
+            const localData = await this.loadLocalDeduplicationData()
+            const matchIds = localData.processedMatches[dateKey] || []
+            
+            const existingIds = new Set<string>(matchIds)
+            
+            // Cache in memory
+            this.updateMemoryCache(dateKey, existingIds)
+            
+            logger.debug(
+                { dateKey, count: existingIds.size, feature: 'match-deduplication' },
+                'Loaded match IDs from local JSON file'
+            )
+            
+            return existingIds
+        } catch (error: any) {
+            logger.error(
+                { error, dateKey, feature: 'match-deduplication' },
+                'Failed to load existing match IDs from local JSON file'
+            )
+            return new Set<string>()
+        }
     }
 
     /**
@@ -260,20 +376,100 @@ export class MatchDeduplicator {
     private async appendMatchIds(dateKey: string, matchIds: string[]): Promise<void> {
         if (matchIds.length === 0) return
         
-        const filePath = this.getTrackingFilePath(dateKey)
-        const content = matchIds.join('\n') + '\n'
+        console.log('[DEBUG] appendMatchIds called with:', { dateKey, matchIdsCount: matchIds.length })
+        
+        // Store to Drive first (primary storage)
+        try {
+            await customMatchDeduplicationDriveService.recordProcessedMatchIds(dateKey, matchIds)
+            
+            logger.debug(
+                { dateKey, count: matchIds.length, feature: 'match-deduplication' },
+                'Recorded match IDs to Drive'
+            )
+        } catch (driveError) {
+            logger.warn(
+                { error: driveError, dateKey, matchIds: matchIds.length, feature: 'match-deduplication' },
+                'Failed to record to Drive, will fallback to local file'
+            )
+        }
+        
+        // Also store to local file as backup/cache
+        try {
+            await this.appendToLocalFile(dateKey, matchIds)
+        } catch (localError) {
+            logger.warn(
+                { error: localError, dateKey, matchIds: matchIds.length, feature: 'match-deduplication' },
+                'Failed to record to local file backup'
+            )
+        }
+        
+        // Update memory cache regardless
+        const existing = this.memoryCache.get(dateKey) || new Set<string>()
+        matchIds.forEach(id => existing.add(id))
+        this.updateMemoryCache(dateKey, existing)
+    }
+
+    /**
+     * Update local JSON file as backup
+     */
+    private async appendToLocalFile(dateKey: string, matchIds: string[]): Promise<void> {
+        if (matchIds.length === 0) return
         
         try {
-            await fs.appendFile(filePath, content, 'utf-8')
+            // Load current local data
+            const localData = await this.loadLocalDeduplicationData()
             
-            // Update memory cache
-            const existing = await this.loadExistingMatchIds(dateKey)
-            matchIds.forEach(id => existing.add(id))
-            this.updateMemoryCache(dateKey, existing)
+            // Add new match IDs to the date key (avoiding duplicates)
+            const existingIds = new Set(localData.processedMatches[dateKey] || [])
+            const newUniqueIds = matchIds.filter(id => !existingIds.has(id))
+            
+            logger.info(
+                { 
+                    dateKey, 
+                    incomingMatchIds: matchIds.length,
+                    existingIds: existingIds.size,
+                    newUniqueIds: newUniqueIds.length,
+                    first5NewIds: newUniqueIds.slice(0, 5),
+                    feature: 'match-deduplication' 
+                },
+                'Local backup: processing match IDs'
+            )
+            
+            if (newUniqueIds.length > 0) {
+                localData.processedMatches[dateKey] = [
+                    ...(localData.processedMatches[dateKey] || []),
+                    ...newUniqueIds
+                ]
+                
+                // Update metadata
+                localData.metadata.lastUpdated = new Date().toISOString()
+                localData.metadata.totalDates = Object.keys(localData.processedMatches).length
+                localData.metadata.totalMatches = Object.values(localData.processedMatches)
+                    .reduce((sum, matches) => sum + matches.length, 0)
+                
+                logger.info(
+                    { 
+                        dateKey, 
+                        newMatchCount: newUniqueIds.length,
+                        totalDatesBeforeSave: localData.metadata.totalDates,
+                        totalMatchesBeforeSave: localData.metadata.totalMatches,
+                        feature: 'match-deduplication' 
+                    },
+                    'Local backup: about to save data with new matches'
+                )
+                
+                // Save back to local file
+                await this.saveLocalDeduplicationData(localData)
+            }
+            
+            logger.debug(
+                { dateKey, newMatchCount: newUniqueIds.length, feature: 'match-deduplication' },
+                'Updated local JSON deduplication file'
+            )
         } catch (error) {
             logger.error(
                 { error, dateKey, matchIds: matchIds.length, feature: 'match-deduplication' },
-                'Failed to append match IDs to tracking file'
+                'Failed to update local JSON tracking file'
             )
             throw error
         }
@@ -319,6 +515,93 @@ export class MatchDeduplicator {
             },
             'Evicted old cache entries'
         )
+    }
+
+    /**
+     * Load local deduplication data from JSON file
+     */
+    private async loadLocalDeduplicationData(): Promise<LocalDeduplicationData> {
+        const filePath = path.join(this.config.trackingDir, this.config.localFileName)
+        
+        try {
+            await this.ensureTrackingDirectory()
+            
+            const content = await fs.readFile(filePath, 'utf-8')
+            const localData = JSON.parse(content) as LocalDeduplicationData
+            
+            // Validate structure
+            if (!localData.metadata || !localData.processedMatches) {
+                throw new Error('Invalid local deduplication data structure')
+            }
+            
+            return localData
+        } catch (error: any) {
+            if (error.code === 'ENOENT') {
+                // Create empty structure
+                const emptyData: LocalDeduplicationData = {
+                    metadata: {
+                        schemaVersion: '1.0.0',
+                        lastUpdated: new Date().toISOString(),
+                        totalDates: 0,
+                        totalMatches: 0,
+                    },
+                    processedMatches: {}
+                }
+                return emptyData
+            }
+            
+            logger.error(
+                { error, filePath, feature: 'match-deduplication' },
+                'Failed to load local deduplication data'
+            )
+            throw error
+        }
+    }
+
+    /**
+     * Save local deduplication data to JSON file
+     */
+    private async saveLocalDeduplicationData(localData: LocalDeduplicationData): Promise<void> {
+        const filePath = path.join(this.config.trackingDir, this.config.localFileName)
+        
+        try {
+            await this.ensureTrackingDirectory()
+            
+            // Update metadata (no filtering during regular saves)
+            localData.metadata.totalDates = Object.keys(localData.processedMatches).length
+            localData.metadata.totalMatches = Object.values(localData.processedMatches)
+                .reduce((sum, matches) => sum + (matches as string[]).length, 0)
+            localData.metadata.lastUpdated = new Date().toISOString()
+            
+            logger.info(
+                { 
+                    totalDates: localData.metadata.totalDates,
+                    totalMatches: localData.metadata.totalMatches,
+                    feature: 'match-deduplication' 
+                },
+                'Local backup: saving data without filtering'
+            )
+            
+            // Write to file
+            const content = JSON.stringify(localData, null, 2)
+            await fs.writeFile(filePath, content, 'utf-8')
+            
+            logger.debug(
+                { 
+                    filePath, 
+                    totalDates: localData.metadata.totalDates,
+                    totalMatches: localData.metadata.totalMatches,
+                    feature: 'match-deduplication' 
+                },
+                'Saved local deduplication data'
+            )
+        } catch (error) {
+            logger.error(
+                { error, filePath, feature: 'match-deduplication' },
+                'Failed to save local deduplication data'
+            )
+            throw error
+        }
     }
 
     /**
