@@ -40,6 +40,7 @@ export const endpoints = {
     listSeasons: 'season/list/all',
     groupTeam: 'group/team',
     characterTeams: 'character-teams',
+    characterMatches: 'character-matches',
 } as const
 
 /**
