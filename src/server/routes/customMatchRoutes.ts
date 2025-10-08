@@ -8,6 +8,7 @@
 import { Router } from 'express'
 import { customMatchIngestionOrchestrator } from '../services/customMatchIngestionOrchestrator'
 import { customMatchStorageService } from '../services/customMatchStorageService'
+import { getH2HEnvironmentInfo } from '../config/h2hConfig'
 import logger from '../logging/logger'
 
 const router = Router()
@@ -29,13 +30,7 @@ router.get('/custom-matches/status', async (_req, res) => {
             data: {
                 ...status,
                 communityStats,
-                environment: {
-                    cutoffDate: process.env.H2H_CUSTOM_CUTOFF || '2025-10-08',
-                    minConfidence: process.env.H2H_CUSTOM_MIN_CONFIDENCE || 'low',
-                    pollInterval: process.env.H2H_CUSTOM_POLL_INTERVAL_SEC || '900',
-                    batchSize: process.env.H2H_BATCH_SIZE || '50',
-                    hasServiceAccount: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY
-                }
+                environment: getH2HEnvironmentInfo()
             }
         })
     } catch (error) {
@@ -177,18 +172,17 @@ router.post('/custom-matches/cleanup', async (_req, res) => {
  */
 router.post('/custom-matches/clear-cache', async (_req, res) => {
     try {
-        const { matchDeduplicator } = await import('../services/matchDeduplicator')
+        const { simplifiedMatchDeduplicator } = await import('../services/simplifiedMatchDeduplicator')
         
         // Clear the deduplication cache
-        const stats = matchDeduplicator.getStats()
-        const clearedFiles = await matchDeduplicator.cleanup()
+        const stats = await simplifiedMatchDeduplicator.getStats()
+        await simplifiedMatchDeduplicator.cleanup()
         
         res.json({
             success: true,
             message: 'Deduplication cache cleared successfully',
             data: {
-                statsBeforeCleanup: stats,
-                filesCleared: clearedFiles
+                statsBeforeCleanup: stats
             }
         })
     } catch (error) {

@@ -11,6 +11,25 @@
 export type MatchConfidence = 'low' | 'medium' | 'high'
 
 /**
+ * Match outcome types for winner tracking
+ */
+export type MatchOutcome = 'WIN_LOSS' | 'TIE' | 'UNKNOWN'
+
+/**
+ * Match result tracking winner/loser information
+ */
+export interface MatchResult {
+    /** The outcome type of the match */
+    outcome: MatchOutcome
+    /** Winner participant (for WIN_LOSS outcomes) */
+    winner?: ValidatedParticipant
+    /** Loser participant (for WIN_LOSS outcomes) */
+    loser?: ValidatedParticipant
+    /** All participants (for TIE or UNKNOWN outcomes) */
+    participants?: ValidatedParticipant[]
+}
+
+/**
  * Validated participant information from Pulse
  */
 export interface ValidatedParticipant {
@@ -89,6 +108,8 @@ export interface ProcessedCustomMatch {
     duration?: number
     /** Validated participants (only community players) */
     participants: ValidatedParticipant[]
+    /** Match winner/loser tracking */
+    matchResult: MatchResult
     /** Computed confidence level */
     confidence: MatchConfidence
     /** Confidence scoring details for debugging */
@@ -173,4 +194,30 @@ export interface IngestionStatus {
     uptimeMs: number
     /** Next scheduled run (if applicable) */
     nextRunAt?: string
+}
+
+/**
+ * Player statistics for winner analytics
+ */
+export interface PlayerStats {
+    /** Number of wins */
+    wins: number
+    /** Number of losses */
+    losses: number
+    /** Number of ties */
+    ties: number
+    /** Win rate percentage (wins / (wins + losses)) */
+    winRate: number
+}
+
+/**
+ * Winner analytics result
+ */
+export interface WinnerAnalytics {
+    /** Statistics by player character ID */
+    playerStats: Record<number, PlayerStats>
+    /** Total matches analyzed */
+    totalMatches: number
+    /** Total decisive matches (excluding ties) */
+    decisiveMatches: number
 }

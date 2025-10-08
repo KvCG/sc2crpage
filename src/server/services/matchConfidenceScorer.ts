@@ -11,7 +11,6 @@ import {
     ConfidenceFactors,
     ValidatedParticipant
 } from '../../shared/customMatchTypes'
-import logger from '../logging/logger'
 
 /**
  * Configuration for confidence scoring rules
@@ -118,16 +117,7 @@ export class MatchConfidenceScorer {
         // Determine confidence level
         const confidence = this.determineConfidenceLevel(score)
 
-        logger.debug(
-            { 
-                feature: 'confidence-scoring',
-                matchId: match.matchId,
-                score,
-                confidence,
-                factors
-            },
-            'Match confidence scored'
-        )
+
 
         return {
             ...match,

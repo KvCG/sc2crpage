@@ -8,9 +8,10 @@
 
 import { customMatchDiscoveryService } from './customMatchDiscoveryService'
 import { matchConfidenceScorer } from './matchConfidenceScorer'
-import { matchDeduplicator } from './matchDeduplicator'
+import { simplifiedMatchDeduplicator } from './simplifiedMatchDeduplicator'
 import { customMatchStorageService } from './customMatchStorageService'
 import logger from '../logging/logger'
+import { getH2HConfig } from '../config/h2hConfig'
 import {
     CustomMatchConfig,
     IngestionResult,
@@ -19,15 +20,16 @@ import {
 } from '../../shared/customMatchTypes'
 
 /**
- * Environment-based configuration with defaults
+ * Convert H2HConfig to CustomMatchConfig format
  */
 function getIngestionConfig(): CustomMatchConfig {
+    const config = getH2HConfig()
     return {
-        cutoffDate: process.env.H2H_CUSTOM_CUTOFF || '2025-10-08',
-        minConfidence: (process.env.H2H_CUSTOM_MIN_CONFIDENCE as MatchConfidence) || 'low',
-        pollIntervalSeconds: Number(process.env.H2H_CUSTOM_POLL_INTERVAL_SEC) || 900, // 15 minutes
-        batchSize: Number(process.env.H2H_BATCH_SIZE) || 50,
-        lookbackDays: Number(process.env.H2H_LOOKBACK_DAYS) || 7,
+        cutoffDate: config.cutoffDate,
+        minConfidence: config.minConfidence,
+        pollIntervalSeconds: config.pollIntervalSeconds,
+        batchSize: config.batchSize,
+        lookbackDays: config.lookbackDays,
     }
 }
 
@@ -175,7 +177,7 @@ export class CustomMatchIngestionOrchestrator {
      */
     async getStats() {
         const communityStats = customMatchDiscoveryService.getCommunityStats()
-        const dedupeStats = await matchDeduplicator.getStats()
+        const dedupeStats = await simplifiedMatchDeduplicator.getStats()
         const storageStats = await customMatchStorageService.getStorageStats()
         const scorerConfig = matchConfidenceScorer.getConfig()
 
@@ -198,7 +200,7 @@ export class CustomMatchIngestionOrchestrator {
         logger.info({ feature: 'custom-match-ingestion' }, 'Running system cleanup')
 
         try {
-            await matchDeduplicator.cleanup()
+            await simplifiedMatchDeduplicator.cleanup()
             logger.info({ feature: 'custom-match-ingestion' }, 'Cleanup completed successfully')
         } catch (error) {
             logger.error({ error, feature: 'custom-match-ingestion' }, 'Cleanup failed')
@@ -235,27 +237,11 @@ export class CustomMatchIngestionOrchestrator {
             const rawMatches = await customMatchDiscoveryService.discoverCustomMatches(config)
             result.matchesDiscovered = rawMatches.length
 
-            logger.debug(
-                {
-                    feature: 'custom-match-ingestion',
-                    matchesDiscovered: result.matchesDiscovered,
-                },
-                'Match discovery completed'
-            )
-
             // Step 2: Validate participants
             const validatedMatches = await customMatchDiscoveryService.validateParticipants(
                 rawMatches
             )
             result.matchesWithValidParticipants = validatedMatches.length
-
-            logger.debug(
-                {
-                    feature: 'custom-match-ingestion',
-                    matchesWithValidParticipants: result.matchesWithValidParticipants,
-                },
-                'Participant validation completed'
-            )
 
             // Step 3: Score confidence
             const scoredMatches = matchConfidenceScorer.scoreMatches(validatedMatches)
@@ -267,27 +253,9 @@ export class CustomMatchIngestionOrchestrator {
             )
             result.matchesMeetingThreshold = thresholdMatches.length
 
-            logger.debug(
-                {
-                    feature: 'custom-match-ingestion',
-                    matchesMeetingThreshold: result.matchesMeetingThreshold,
-                    minConfidence: config.minConfidence,
-                },
-                'Confidence filtering completed'
-            )
-
             // Step 5: De-duplicate
-            const dedupeResult = await matchDeduplicator.filterDuplicates(thresholdMatches)
+            const dedupeResult = await simplifiedMatchDeduplicator.filterDuplicates(thresholdMatches)
             result.duplicatesSkipped = dedupeResult.duplicateCount
-
-            logger.debug(
-                {
-                    feature: 'custom-match-ingestion',
-                    uniqueMatches: dedupeResult.uniqueMatches.length,
-                    duplicatesSkipped: result.duplicatesSkipped,
-                },
-                'De-duplication completed'
-            )
 
             // Step 6: Store to Drive
             if (dedupeResult.uniqueMatches.length > 0) {
@@ -297,7 +265,7 @@ export class CustomMatchIngestionOrchestrator {
                 result.newMatchesStored = storageResult.matchesStored
 
                 // Record matches as processed for future de-duplication
-                await matchDeduplicator.recordProcessedMatches(dedupeResult.uniqueMatches)
+                await simplifiedMatchDeduplicator.recordProcessedMatches(dedupeResult.uniqueMatches)
 
                 // Add any storage errors
                 storageResult.errors.forEach((error) => {
@@ -353,56 +321,29 @@ export class CustomMatchIngestionOrchestrator {
     }
 
     /**
-     * Preload deduplication data from Drive for recent dates to improve startup performance
+     * Preload deduplication data from local file and Drive for fast startup
      */
     private async preloadDeduplicationData(): Promise<void> {
-        const config = getIngestionConfig()
-        const today = new Date()
-        
-        // Preload the last few days of deduplication data
-        const datesToPreload: string[] = []
-        for (let i = 0; i < config.lookbackDays; i++) {
-            const date = new Date(today)
-            date.setDate(date.getDate() - i)
-            const dateKey = date.toISOString().split('T')[0]
-            datesToPreload.push(dateKey)
+        logger.info(
+            { feature: 'custom-match-ingestion' },
+            'Starting deduplication data preload'
+        )
+
+        try {
+            // Use the deduplicator's built-in preload method
+            // This loads from local file first, then syncs with Drive in background
+            await simplifiedMatchDeduplicator.preloadDeduplicationData()
+            
+            logger.info(
+                { feature: 'custom-match-ingestion' },
+                'Deduplication data preload completed successfully'
+            )
+        } catch (error) {
+            logger.error(
+                { error, feature: 'custom-match-ingestion' },
+                'Failed to preload deduplication data - continuing with empty cache'
+            )
         }
-
-        logger.info(
-            {
-                feature: 'custom-match-ingestion',
-                dates: datesToPreload,
-            },
-            'Preloading deduplication data for recent dates'
-        )
-
-        // Load deduplication data in parallel
-        const preloadPromises = datesToPreload.map(async (dateKey) => {
-            try {
-                // This will trigger loading from Drive and populate the memory cache
-                await matchDeduplicator.isDuplicate('__preload_check__', dateKey)
-                return { dateKey, success: true }
-            } catch (error) {
-                logger.warn(
-                    { error, dateKey, feature: 'custom-match-ingestion' },
-                    'Failed to preload deduplication data for date'
-                )
-                return { dateKey, success: false }
-            }
-        })
-
-        const results = await Promise.all(preloadPromises)
-        const successCount = results.filter(r => r.success).length
-
-        logger.info(
-            {
-                feature: 'custom-match-ingestion',
-                totalDates: datesToPreload.length,
-                successCount,
-                failureCount: datesToPreload.length - successCount,
-            },
-            'Deduplication data preload completed'
-        )
     }
 }
 

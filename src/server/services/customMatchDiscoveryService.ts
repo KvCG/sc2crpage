@@ -9,21 +9,13 @@
 import { PulseAdapter, pulseAdapter } from './pulseAdapter'
 import { readCsv } from '../utils/csvParser'
 import logger from '../logging/logger'
+import { extractMatchResult } from './winnerTrackingService'
 import {
     RawCustomMatch,
     ValidatedParticipant,
     ProcessedCustomMatch,
     CustomMatchConfig,
 } from '../../shared/customMatchTypes'
-
-/**
- * Configuration for match discovery with environment variable defaults
- */
-const DEFAULT_DISCOVERY_CONFIG = {
-    lookbackDays: Number(process.env.H2H_LOOKBACK_DAYS) || 7,
-    batchSize: Number(process.env.H2H_BATCH_SIZE) || 50,
-    maxConcurrentRequests: Number(process.env.H2H_MAX_CONCURRENT) || 5,
-} as const
 
 /**
  * Service for discovering and validating custom matches from Pulse
@@ -149,6 +141,9 @@ export class CustomMatchDiscoveryService {
 
                 // Only process matches with exactly 2 community participants (H2H)
                 if (validatedParticipants.length === 2) {
+                    // Extract match winner information
+                    const matchResult = extractMatchResult(match, validatedParticipants)
+                    
                     const processedMatch: ProcessedCustomMatch = {
                         matchId: match.match.id,
                         matchDate: match.match.date,
@@ -156,6 +151,7 @@ export class CustomMatchDiscoveryService {
                         map: match.map.name,
                         duration: match.match.duration || undefined,
                         participants: validatedParticipants,
+                        matchResult,
                         confidence: 'low', // Will be computed by confidence service
                         confidenceFactors: {
                             hasValidCharacterIds: validatedParticipants.every(

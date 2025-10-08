@@ -2,14 +2,23 @@
  * Custom Match Drive Storage Service
  *
  * Handles date-partitioned JSON file storage for custom matches using
- * existing Google Drive integration patterns. Creates one file per day
+ * exi    async getMatches(dateKey: string):     async listAvailableDates(): Promise<string[]> {
+        try {
+            await this.driveService.ensureFolder()
+
+            const files = await this.driveService.listFiles()se<ProcessedCustomMatch[]> {
+        try {
+            await this.driveService.ensureFolder()
+
+            const fileName = this.config.fileNamePattern.replace('{date}', dateKey)
+            const fileContent = await this.driveService.readFile(fileName)Google Drive integration patterns. Creates one file per day
  * with structured JSON records for each match.
  */
 
-import { google } from 'googleapis'
 
-import { detectAppEnv } from '../../shared/runtimeEnv'
 import logger from '../logging/logger'
+import { getH2HConfig } from '../config/h2hConfig'
+import { GoogleDriveService } from './googleApi'
 import { ProcessedCustomMatch } from '../../shared/customMatchTypes'
 
 /**
@@ -22,8 +31,6 @@ interface CustomMatchStorageConfig {
     fileNamePattern: string
     /** Maximum matches per file before creating new file */
     maxMatchesPerFile: number
-    /** Whether to compress JSON output */
-    compressOutput: boolean
 }
 
 /**
@@ -32,8 +39,7 @@ interface CustomMatchStorageConfig {
 const DEFAULT_STORAGE_CONFIG: CustomMatchStorageConfig = {
     baseFolderName: 'CustomMatches',
     fileNamePattern: 'custom-matches-{date}.json',
-    maxMatchesPerFile: Number(process.env.H2H_MAX_MATCHES_PER_FILE) || 1000,
-    compressOutput: false,
+    maxMatchesPerFile: 1000, // Will be overridden by H2HConfig
 }
 
 /**
@@ -41,12 +47,20 @@ const DEFAULT_STORAGE_CONFIG: CustomMatchStorageConfig = {
  */
 export class CustomMatchStorageService {
     private config: CustomMatchStorageConfig
-    private folderName: string
-    private folderId: string | null = null
+    private driveService: GoogleDriveService
 
     constructor(config: Partial<CustomMatchStorageConfig> = {}) {
-        this.config = { ...DEFAULT_STORAGE_CONFIG, ...config }
-        this.folderName = `${this.config.baseFolderName}_${detectAppEnv()}`
+        const h2hConfig = getH2HConfig()
+        this.config = { 
+            ...DEFAULT_STORAGE_CONFIG, 
+            ...config,
+            maxMatchesPerFile: h2hConfig.maxMatchesPerFile,
+        }
+        this.driveService = new GoogleDriveService(
+            this.config.baseFolderName, 
+            'custom-match-storage',
+            true // use environment suffix
+        )
     }
 
     /**
@@ -71,7 +85,7 @@ export class CustomMatchStorageService {
         const matchesByDate = this.groupMatchesByDate(matches)
 
         // Ensure folder exists
-        await this.ensureFolder()
+        await this.driveService.ensureFolder()
 
         // Process each date partition
         for (const [dateKey, dateMatches] of matchesByDate) {
@@ -122,17 +136,18 @@ export class CustomMatchStorageService {
      */
     async getMatches(dateKey: string): Promise<ProcessedCustomMatch[]> {
         try {
-            await this.ensureFolder()
+            await this.driveService.ensureFolder()
 
             const fileName = this.config.fileNamePattern.replace('{date}', dateKey)
-            const content = await this.getFileContent(fileName)
-
-            if (!content) {
+            
+            try {
+                const content = await this.driveService.readFile(fileName)
+                const data = JSON.parse(content)
+                return data.matches || []
+            } catch (fileError) {
+                // File doesn't exist, return empty array
                 return []
             }
-
-            const data = JSON.parse(content)
-            return data.matches || []
         } catch (error) {
             logger.error(
                 {
@@ -143,7 +158,6 @@ export class CustomMatchStorageService {
                     } : error,
                     feature: 'custom-match-storage',
                     date: dateKey,
-                    folderId: this.folderId,
                 },
                 'Failed to retrieve matches for date'
             )
@@ -156,9 +170,9 @@ export class CustomMatchStorageService {
      */
     async listAvailableDates(): Promise<string[]> {
         try {
-            await this.ensureFolder()
+            await this.driveService.ensureFolder()
 
-            const files = await this.listFolderFiles()
+            const files = await this.driveService.listFiles()
             const dateKeys: string[] = []
 
             for (const file of files) {
@@ -206,7 +220,7 @@ export class CustomMatchStorageService {
                           }
                         : null,
                 recentDateStats: dateStats,
-                folderName: this.folderName,
+                folderName: this.config.baseFolderName,
             }
         } catch (error) {
             logger.error(
@@ -218,7 +232,7 @@ export class CustomMatchStorageService {
                 sampledMatches: 0,
                 dateRange: null,
                 recentDateStats: [],
-                folderName: this.folderName,
+                folderName: this.config.baseFolderName,
             }
         }
     }
@@ -278,210 +292,14 @@ export class CustomMatchStorageService {
             matches: allMatches,
         }
 
-        const jsonContent = this.config.compressOutput
-            ? JSON.stringify(fileContent)
-            : JSON.stringify(fileContent, null, 2)
+        const jsonContent = JSON.stringify(fileContent, null, 2)
 
         // Upload to Drive
-        await this.uploadFile(fileName, jsonContent)
+        await this.driveService.writeFile(fileName, jsonContent)
 
 
-    }
-
-    /**
-     * Ensure the storage folder exists in Drive
-     */
-    private async ensureFolder(): Promise<void> {
-        if (this.folderId) {
-            return
-        }
-
-        try {
-            // Use existing Drive authentication patterns
-            await this.authenticateGoogleDrive()
-
-            const drive = google.drive({ version: 'v3' })
-
-            // Search for existing folder
-            const response = await drive.files.list({
-                q: `name='${this.folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-                spaces: 'drive',
-            })
-
-            if (response.data.files && response.data.files.length > 0) {
-                this.folderId = response.data.files[0].id!
-            } else {
-                // Create new folder
-                const createResponse = await drive.files.create({
-                    requestBody: {
-                        name: this.folderName,
-                        mimeType: 'application/vnd.google-apps.folder',
-                    },
-                })
-                this.folderId = createResponse.data.id!
-            }
-
-            logger.info(
-                {
-                    feature: 'custom-match-storage',
-                    folderName: this.folderName,
-                    folderId: this.folderId,
-                },
-                'Storage folder initialized'
-            )
-        } catch (error) {
-            logger.error(
-                { error, folderName: this.folderName, feature: 'custom-match-storage' },
-                'Failed to ensure storage folder'
-            )
-            throw error
-        }
-    }
-
-    /**
-     * Authenticate with Google Drive (reusing existing patterns)
-     */
-    private async authenticateGoogleDrive(): Promise<void> {
-        try {
-            const SERVICE_ACCOUNT_KEY = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '{}')
-
-            const auth = new google.auth.GoogleAuth({
-                credentials: SERVICE_ACCOUNT_KEY,
-                scopes: ['https://www.googleapis.com/auth/drive'],
-            })
-
-            const client = await auth.getClient()
-            google.options({ auth: client as any })
-        } catch (error) {
-            logger.error(
-                { error, feature: 'custom-match-storage' },
-                'Failed to authenticate with Google Drive'
-            )
-            throw error
-        }
-    }
-
-    /**
-     * Upload file content to Drive
-     */
-    private async uploadFile(fileName: string, content: string): Promise<void> {
-        const drive = google.drive({ version: 'v3' })
-
-        // Check if file already exists
-        const existingFile = await this.findFile(fileName)
-
-        // Import Readable for stream-based upload
-        const { Readable } = await import('stream')
-        const contentStream = Readable.from([content])
-
-        if (existingFile) {
-            // Update existing file
-            await drive.files.update({
-                fileId: existingFile.id!,
-                media: {
-                    mimeType: 'application/json',
-                    body: contentStream,
-                },
-            })
-        } else {
-            // Create new file
-            await drive.files.create({
-                requestBody: {
-                    name: fileName,
-                    parents: [this.folderId!],
-                    mimeType: 'application/json',
-                },
-                media: {
-                    mimeType: 'application/json',
-                    body: contentStream,
-                },
-            })
-        }
-    }
-
-    /**
-     * Get file content from Drive
-     */
-    private async getFileContent(fileName: string): Promise<string | null> {
-        try {
-            const file = await this.findFile(fileName)
-            if (!file) {
-                return null
-            }
-
-            const drive = google.drive({ version: 'v3' })
-            const response = await drive.files.get({
-                fileId: file.id!,
-                alt: 'media',
-            }, {
-                responseType: 'text'  // Force response as text
-            })
-
-            // Handle different response formats from Google Drive API
-            const rawData = response.data as any
-            let content: string
-            
-            if (Buffer.isBuffer(rawData)) {
-                content = rawData.toString('utf8')
-            } else if (typeof rawData === 'string') {
-                content = rawData
-            } else {
-                content = String(rawData)
-            }
-
-            return content
-        } catch (error) {
-            logger.error(
-                {
-                    error: error instanceof Error ? {
-                        message: error.message,
-                        stack: error.stack,
-                        name: error.name
-                    } : error,
-                    feature: 'custom-match-storage',
-                    fileName,
-                },
-                'Failed to get file content from Drive'
-            )
-            throw error
-        }
-    }
-
-    /**
-     * Find a file in the storage folder
-     */
-    private async findFile(fileName: string): Promise<any> {
-        const drive = google.drive({ version: 'v3' })
-
-        const response = await drive.files.list({
-            q: `name='${fileName}' and parents in '${this.folderId}' and trashed=false`,
-            spaces: 'drive',
-        })
-
-        return response.data.files?.[0] || null
-    }
-
-    /**
-     * List all files in the storage folder
-     */
-    private async listFolderFiles(): Promise<any[]> {
-        const drive = google.drive({ version: 'v3' })
-
-        const response = await drive.files.list({
-            q: `parents in '${this.folderId}' and trashed=false`,
-            spaces: 'drive',
-        })
-
-        return response.data.files || []
     }
 }
 
 // Export singleton instance
 export const customMatchStorageService = new CustomMatchStorageService()
-
-// Export factory function for testing with custom configuration
-export function createCustomMatchStorageService(
-    config?: Partial<CustomMatchStorageConfig>
-): CustomMatchStorageService {
-    return new CustomMatchStorageService(config)
-}

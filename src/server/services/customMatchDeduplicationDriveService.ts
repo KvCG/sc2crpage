@@ -9,6 +9,7 @@
 import { google } from 'googleapis'
 import { detectAppEnv } from '../../shared/runtimeEnv'
 import logger from '../logging/logger'
+import { getH2HConfig } from '../config/h2hConfig'
 
 /**
  * Structure of the deduplication data file (shared with local service)
@@ -36,12 +37,15 @@ interface DeduplicationDriveConfig {
 }
 
 /**
- * Default configuration
+ * Get default configuration using centralized H2H config
  */
-const DEFAULT_DEDUPE_DRIVE_CONFIG: DeduplicationDriveConfig = {
-    baseFolderName: 'CustomMatchDeduplication',
-    fileName: 'processed-matches-map.json',
-    retentionDays: Number(process.env.H2H_DEDUPE_RETENTION_DAYS) || 7,
+function getDefaultDedupeDriveConfig(): DeduplicationDriveConfig {
+    const h2hConfig = getH2HConfig()
+    return {
+        baseFolderName: 'CustomMatchDeduplication',
+        fileName: 'processed-matches-map.json',
+        retentionDays: h2hConfig.dedupeRetentionDays,
+    }
 }
 
 /**
@@ -56,7 +60,7 @@ export class CustomMatchDeduplicationDriveService {
     private readonly CACHE_TTL_MS = 30000 // 30 seconds cache TTL
 
     constructor(config: Partial<DeduplicationDriveConfig> = {}) {
-        this.config = { ...DEFAULT_DEDUPE_DRIVE_CONFIG, ...config }
+        this.config = { ...getDefaultDedupeDriveConfig(), ...config }
         this.folderName = `${this.config.baseFolderName}_${detectAppEnv()}`
     }
 
@@ -68,14 +72,7 @@ export class CustomMatchDeduplicationDriveService {
             const dedupeData = await this.loadDeduplicationData()
             const matchIds = dedupeData.processedMatches[dateKey] || []
             
-            logger.debug(
-                {
-                    feature: 'custom-match-deduplication-drive',
-                    date: dateKey,
-                    matchCount: matchIds.length,
-                },
-                'Loaded processed match IDs from Drive map'
-            )
+
 
             return new Set(matchIds)
         } catch (error) {
@@ -123,15 +120,7 @@ export class CustomMatchDeduplicationDriveService {
                 await this.saveDeduplicationData(dedupeData)
             }
             
-            logger.debug(
-                {
-                    feature: 'custom-match-deduplication-drive',
-                    date: dateKey,
-                    newMatchCount: newUniqueIds.length,
-                    totalForDate: dedupeData.processedMatches[dateKey]?.length || 0,
-                },
-                'Recorded processed match IDs to Drive map'
-            )
+
         } catch (error) {
             logger.error(
                 {
@@ -160,7 +149,7 @@ export class CustomMatchDeduplicationDriveService {
             const cutoffDateKey = cutoffDate.toISOString().split('T')[0]
             
             // Count entries before cleanup
-            const entriesBefore = Object.keys(dedupeData.processedMatches).length
+
             const matchesBefore = Object.values(dedupeData.processedMatches)
                 .reduce((sum, matches) => sum + matches.length, 0)
             
@@ -193,16 +182,6 @@ export class CustomMatchDeduplicationDriveService {
                         cutoffDate: cutoffDateKey,
                     },
                     'Cleaned up old deduplication entries'
-                )
-            } else {
-                logger.debug(
-                    {
-                        feature: 'custom-match-deduplication-drive',
-                        totalEntries: entriesBefore,
-                        totalMatches: matchesBefore,
-                        cutoffDate: cutoffDateKey,
-                    },
-                    'No old deduplication entries to clean up'
                 )
             }
         } catch (error) {
@@ -336,14 +315,7 @@ export class CustomMatchDeduplicationDriveService {
             this.cachedData = dedupeData
             this.lastCacheTime = Date.now()
             
-            logger.debug(
-                {
-                    feature: 'custom-match-deduplication-drive',
-                    totalDates: dedupeData.metadata.totalDates,
-                    totalMatches: dedupeData.metadata.totalMatches,
-                },
-                'Saved deduplication data to Drive'
-            )
+
         } catch (error) {
             logger.error(
                 {
