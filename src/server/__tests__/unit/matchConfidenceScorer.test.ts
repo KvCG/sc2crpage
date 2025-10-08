@@ -23,8 +23,8 @@ describe('MatchConfidenceScorer', () => {
         it('should identify valid character IDs', () => {
             const match = createTestMatch({
                 participants: [
-                    createParticipant({ characterId: 123, isCommunityPlayer: true }),
-                    createParticipant({ characterId: 456, isCommunityPlayer: true })
+                    createTestParticipant({ characterId: 123, isCommunityPlayer: true }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: true })
                 ]
             })
 
@@ -35,8 +35,8 @@ describe('MatchConfidenceScorer', () => {
         it('should detect invalid character IDs', () => {
             const match = createTestMatch({
                 participants: [
-                    { characterId: 0, isCommunityPlayer: true },
-                    { characterId: 456, isCommunityPlayer: true }
+                    createTestParticipant({ characterId: 0, isCommunityPlayer: true }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: true })
                 ]
             })
 
@@ -47,8 +47,8 @@ describe('MatchConfidenceScorer', () => {
         it('should validate community player status', () => {
             const match = createTestMatch({
                 participants: [
-                    { characterId: 123, isCommunityPlayer: true },
-                    { characterId: 456, isCommunityPlayer: true }
+                    createTestParticipant({ characterId: 123, isCommunityPlayer: true }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: true })
                 ]
             })
 
@@ -59,8 +59,8 @@ describe('MatchConfidenceScorer', () => {
         it('should detect non-community players', () => {
             const match = createTestMatch({
                 participants: [
-                    { characterId: 123, isCommunityPlayer: true },
-                    { characterId: 456, isCommunityPlayer: false }
+                    createTestParticipant({ characterId: 123, isCommunityPlayer: true }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: false })
                 ]
             })
 
@@ -92,8 +92,8 @@ describe('MatchConfidenceScorer', () => {
         it('should detect similar skill levels', () => {
             const match = createTestMatch({
                 participants: [
-                    { characterId: 123, isCommunityPlayer: true, rating: 3000 },
-                    { characterId: 456, isCommunityPlayer: true, rating: 3100 }
+                    createTestParticipant({ characterId: 123, isCommunityPlayer: true, rating: 3000 }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: true, rating: 3100 })
                 ]
             })
 
@@ -104,8 +104,8 @@ describe('MatchConfidenceScorer', () => {
         it('should detect dissimilar skill levels', () => {
             const match = createTestMatch({
                 participants: [
-                    { characterId: 123, isCommunityPlayer: true, rating: 2000 },
-                    { characterId: 456, isCommunityPlayer: true, rating: 3000 }
+                    createTestParticipant({ characterId: 123, isCommunityPlayer: true, rating: 2000 }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: true, rating: 3000 })
                 ]
             })
 
@@ -134,8 +134,8 @@ describe('MatchConfidenceScorer', () => {
                 duration: 30, // Too short
                 map: 'Unknown Map',
                 participants: [
-                    { characterId: 123, isCommunityPlayer: true, rating: undefined },
-                    { characterId: 456, isCommunityPlayer: true, rating: undefined }
+                    createTestParticipant({ characterId: 123, isCommunityPlayer: true, rating: undefined }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: true, rating: undefined })
                 ]
             })
 
@@ -146,10 +146,10 @@ describe('MatchConfidenceScorer', () => {
         it('should assign medium confidence for moderate factors', () => {
             const match = createTestMatch({
                 duration: 300, // Good duration
-                map: 'Altitude LE', // Known map
+                map: 'Unknown Custom Map', // Unrecognized map (-1 point)
                 participants: [
-                    { characterId: 123, isCommunityPlayer: true, rating: 3000 },
-                    { characterId: 456, isCommunityPlayer: true, rating: 3100 }
+                    createTestParticipant({ characterId: 123, isCommunityPlayer: true, rating: 3000 }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: true, rating: 3500 }) // Different skill level (-1 point)
                 ]
             })
 
@@ -167,8 +167,8 @@ describe('MatchConfidenceScorer', () => {
                 duration: 300,
                 map: 'Altitude LE',
                 participants: [
-                    { characterId: 123, isCommunityPlayer: true, rating: 3000 },
-                    { characterId: 456, isCommunityPlayer: true, rating: 3100 }
+                    createTestParticipant({ characterId: 123, isCommunityPlayer: true, rating: 3000 }),
+                    createTestParticipant({ characterId: 456, isCommunityPlayer: true, rating: 3100 })
                 ]
             })
 
@@ -199,7 +199,14 @@ describe('MatchConfidenceScorer', () => {
             const initialConfig = scorer.getConfig()
             
             scorer.updateConfig({
-                factorPoints: { hasValidCharacterIds: 10 }
+                factorPoints: { 
+                    hasValidCharacterIds: 10,
+                    bothCommunityPlayers: initialConfig.factorPoints.bothCommunityPlayers,
+                    bothActiveRecently: initialConfig.factorPoints.bothActiveRecently,
+                    hasReasonableDuration: initialConfig.factorPoints.hasReasonableDuration,
+                    similarSkillLevel: initialConfig.factorPoints.similarSkillLevel,
+                    recognizedMap: initialConfig.factorPoints.recognizedMap
+                }
             })
             
             const updatedConfig = scorer.getConfig()
@@ -274,7 +281,7 @@ function createTestMatch(overrides: Partial<ProcessedCustomMatch> = {}): Process
     ]
 
     return {
-        matchId: 'test-match-123',
+        matchId: 123,
         matchDate: '2024-01-15T14:30:00Z',
         dateKey: '2024-01-15',
         map: 'Test Map',

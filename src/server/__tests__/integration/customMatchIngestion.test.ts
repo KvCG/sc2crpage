@@ -38,8 +38,8 @@ vi.mock('../../services/matchConfidenceScorer', () => ({
     }
 }))
 
-vi.mock('../../services/matchDeduplicator', () => ({
-    matchDeduplicator: {
+vi.mock('../../services/simplifiedMatchDeduplicator', () => ({
+    simplifiedMatchDeduplicator: {
         async filterDuplicates(matches: ProcessedCustomMatch[]) {
             return {
                 uniqueMatches: matches,
@@ -50,8 +50,15 @@ vi.mock('../../services/matchDeduplicator', () => ({
         async recordProcessedMatches() {
             return Promise.resolve()
         },
+        async preloadDeduplicationData() {
+            return Promise.resolve()
+        },
         async getStats() {
-            return { trackingDir: '/tmp', cacheSize: 0, cacheKeys: 0, trackedDates: 0 }
+            return { 
+                memoryCache: { cacheSize: 0, totalCachedMatches: 0 },
+                driveStorage: { totalFiles: 0, fileNames: [], lastModified: null },
+                config: { cacheLimit: 100, retentionDays: 30 }
+            }
         },
         async cleanup() {
             return Promise.resolve()
@@ -176,13 +183,13 @@ describe('CustomMatchIngestionOrchestrator Integration', () => {
             // Set test configuration
             process.env.H2H_CUSTOM_CUTOFF = '2024-01-01'
             process.env.H2H_CUSTOM_MIN_CONFIDENCE = 'low'
-            process.env.H2H_CUSTOM_POLL_INTERVAL_SEC = '300'
+            process.env.H2H_CUSTOM_POLL_INTERVAL_SEC = '900'
 
             const status = orchestrator.getStatus()
             
             expect(status.config.cutoffDate).toBe('2024-01-01')
             expect(status.config.minConfidence).toBe('low')
-            expect(status.config.pollIntervalSeconds).toBe(300)
+            expect(status.config.pollIntervalSeconds).toBe(900)
 
             // Cleanup
             delete process.env.H2H_CUSTOM_CUTOFF
@@ -287,6 +294,21 @@ function createProcessedTestMatch(matchId: string): ProcessedCustomMatch {
                 isCommunityPlayer: true
             }
         ],
+        matchResult: {
+            outcome: 'WIN_LOSS',
+            winner: {
+                characterId: 123,
+                battleTag: 'Player1#1234',
+                name: 'Player1',
+                isCommunityPlayer: true
+            },
+            loser: {
+                characterId: 456,
+                battleTag: 'Player2#5678',
+                name: 'Player2',
+                isCommunityPlayer: true
+            }
+        },
         confidence: 'low',
         confidenceFactors: {
             hasValidCharacterIds: true,
