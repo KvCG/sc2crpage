@@ -172,11 +172,11 @@ router.post('/custom-matches/cleanup', async (_req, res) => {
  */
 router.post('/custom-matches/clear-cache', async (_req, res) => {
     try {
-        const { simplifiedMatchDeduplicator } = await import('../services/simplifiedMatchDeduplicator')
+        const { matchDeduplicator } = await import('../services/matchDeduplicator')
         
         // Clear the deduplication cache
-        const stats = await simplifiedMatchDeduplicator.getStats()
-        await simplifiedMatchDeduplicator.cleanup()
+        const stats = await matchDeduplicator.getStats()
+        await matchDeduplicator.cleanup()
         
         res.json({
             success: true,

@@ -20,6 +20,7 @@ import createDebugHandler from './services/debugService'
 import logger from './logging/logger'
 import { getDailySnapshot } from './services/snapshotService'
 import { PlayerAnalyticsScheduler } from './services/playerAnalyticsScheduler'
+import { matchDeduplicator } from './services/matchDeduplicator'
 
 
 const app = express()
@@ -175,4 +176,16 @@ app.listen(port, () => {
     } else {
         logger.info('Player analytics scheduler disabled via configuration')
     }
+
+    // Preload deduplication data on server startup (non-blocking)
+    logger.info('Starting deduplication preload process...')
+    ;(async () => {
+        try {
+            logger.info('Starting preload with statically imported deduplicator...')
+            await matchDeduplicator.preloadDeduplicationData()
+            logger.info('✅ Deduplication data preloaded successfully on server startup')
+        } catch (err) {
+            logger.error({ err }, '❌ Deduplication preload failed on startup - system will work but may be slower initially')
+        }
+    })()
 })

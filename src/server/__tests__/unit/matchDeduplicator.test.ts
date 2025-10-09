@@ -1,10 +1,10 @@
 /**
- * Comprehensive test suite for SimplifiedMatchDeduplicator
+ * Comprehensive test suite for MatchDeduplicator
  */
 
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'fs/promises'
-import { SimplifiedMatchDeduplicator } from '../../services/simplifiedMatchDeduplicator'
+import { MatchDeduplicator } from '../../services/matchDeduplicator'
 import { ProcessedCustomMatch } from '../../../shared/customMatchTypes'
 import { GoogleDriveService } from '../../services/googleApi'
 
@@ -30,8 +30,8 @@ vi.mock('../../logging/logger', () => ({
     }
 }))
 
-describe('SimplifiedMatchDeduplicator', () => {
-    let deduplicator: SimplifiedMatchDeduplicator
+describe('MatchDeduplicator', () => {
+    let deduplicator: MatchDeduplicator
     let mockDriveService: any
     let mockFs: any
 
@@ -95,7 +95,7 @@ describe('SimplifiedMatchDeduplicator', () => {
         }
         vi.mocked(GoogleDriveService).mockImplementation(() => mockDriveService as any)
         
-        deduplicator = new SimplifiedMatchDeduplicator()
+        deduplicator = new MatchDeduplicator()
     })
 
     afterEach(() => {
@@ -339,7 +339,7 @@ describe('SimplifiedMatchDeduplicator', () => {
     describe('Memory Cache Management', () => {
         it('should evict oldest entries when cache limit is reached', async () => {
             // Mock config to use small cache limit
-            const smallCacheDeduplicator = new SimplifiedMatchDeduplicator()
+            const smallCacheDeduplicator = new MatchDeduplicator()
             
             mockFs.readFile.mockResolvedValue(JSON.stringify({
                 metadata: { schemaVersion: '1.0.0', lastUpdated: '2024-01-01T00:00:00Z', totalDates: 0, totalMatches: 0 },

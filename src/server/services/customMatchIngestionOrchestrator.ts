@@ -8,7 +8,7 @@
 
 import { customMatchDiscoveryService } from './customMatchDiscoveryService'
 import { matchConfidenceScorer } from './matchConfidenceScorer'
-import { simplifiedMatchDeduplicator } from './simplifiedMatchDeduplicator'
+import { matchDeduplicator } from './matchDeduplicator'
 import { customMatchStorageService } from './customMatchStorageService'
 import logger from '../logging/logger'
 import { getH2HConfig } from '../config/h2hConfig'
@@ -177,7 +177,7 @@ export class CustomMatchIngestionOrchestrator {
      */
     async getStats() {
         const communityStats = customMatchDiscoveryService.getCommunityStats()
-        const dedupeStats = await simplifiedMatchDeduplicator.getStats()
+        const dedupeStats = await matchDeduplicator.getStats()
         const storageStats = await customMatchStorageService.getStorageStats()
         const scorerConfig = matchConfidenceScorer.getConfig()
 
@@ -200,7 +200,7 @@ export class CustomMatchIngestionOrchestrator {
         logger.info({ feature: 'custom-match-ingestion' }, 'Running system cleanup')
 
         try {
-            await simplifiedMatchDeduplicator.cleanup()
+            await matchDeduplicator.cleanup()
             logger.info({ feature: 'custom-match-ingestion' }, 'Cleanup completed successfully')
         } catch (error) {
             logger.error({ error, feature: 'custom-match-ingestion' }, 'Cleanup failed')
@@ -254,7 +254,7 @@ export class CustomMatchIngestionOrchestrator {
             result.matchesMeetingThreshold = thresholdMatches.length
 
             // Step 5: De-duplicate
-            const dedupeResult = await simplifiedMatchDeduplicator.filterDuplicates(thresholdMatches)
+            const dedupeResult = await matchDeduplicator.filterDuplicates(thresholdMatches)
             result.duplicatesSkipped = dedupeResult.duplicateCount
 
             // Step 6: Store to Drive
@@ -265,7 +265,7 @@ export class CustomMatchIngestionOrchestrator {
                 result.newMatchesStored = storageResult.matchesStored
 
                 // Record matches as processed for future de-duplication
-                await simplifiedMatchDeduplicator.recordProcessedMatches(dedupeResult.uniqueMatches)
+                await matchDeduplicator.recordProcessedMatches(dedupeResult.uniqueMatches)
 
                 // Add any storage errors
                 storageResult.errors.forEach((error) => {
@@ -332,7 +332,7 @@ export class CustomMatchIngestionOrchestrator {
         try {
             // Use the deduplicator's built-in preload method
             // This loads from local file first, then syncs with Drive in background
-            await simplifiedMatchDeduplicator.preloadDeduplicationData()
+            await matchDeduplicator.preloadDeduplicationData()
             
             logger.info(
                 { feature: 'custom-match-ingestion' },

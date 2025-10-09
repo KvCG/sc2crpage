@@ -1,5 +1,5 @@
 /**
- * Simplified Match De-duplication Service
+ * Match De-duplication Service
  * 
  * Uses dual storage (Drive + local JSON file) with memory cache.
  * Provides persistence across pod restarts while maintaining reliability.
@@ -10,7 +10,7 @@ import path from 'path'
 import logger from '../logging/logger'
 import { getH2HConfig } from '../config/h2hConfig'
 import { ProcessedCustomMatch } from '../../shared/customMatchTypes'
-import { GoogleDriveService } from './googleApi'
+import { customMatchDeduplicationDriveService } from './customMatchDeduplicationDriveService'
 
 /**
  * Structure of the deduplication data file (matches old MatchDeduplicator format)
@@ -26,11 +26,10 @@ export interface DeduplicationData {
 }
 
 /**
- * Simplified deduplication service with local persistence
+ * Match deduplication service with local persistence
  */
-export class SimplifiedMatchDeduplicator {
+export class MatchDeduplicator {
     private memoryCache: Map<string, Set<string>> = new Map()
-    private driveService: GoogleDriveService
     private config: { 
         cacheLimit: number
         retentionDays: number
@@ -52,7 +51,13 @@ export class SimplifiedMatchDeduplicator {
             trackingDir: dataDir,
             localFilePath: path.join(dataDir, 'processed-matches-local.json'),
         }
-        this.driveService = new GoogleDriveService('MatchDeduplication', 'match-deduplication', true)
+        // Drive service is handled by the singleton customMatchDeduplicationDriveService
+        
+        // Ensure directory exists on instantiation (non-blocking)
+        this.ensureTrackingDirectory().catch(error => {
+            logger.warn({ error, feature: 'match-deduplication' }, 
+                       'Failed to create tracking directory on startup')
+        })
     }
 
     /**
@@ -68,10 +73,75 @@ export class SimplifiedMatchDeduplicator {
 
             // Load from local file first (fastest)
             const localData = await this.loadLocalDeduplicationData()
+            const localIsEmpty = Object.keys(localData.processedMatches).length === 0
             
-            // Populate memory cache from local data using proper cache management
-            for (const [dateKey, matchIds] of Object.entries(localData.processedMatches)) {
-                this.updateMemoryCache(dateKey, new Set(matchIds as string[]))
+            if (localIsEmpty) {
+                logger.info(
+                    { feature: 'match-deduplication' },
+                    'Local file is empty - performing full Drive sync'
+                )
+                // If local file is empty, do a complete sync to get all historical data
+                await this.fullSyncWithDrive()
+                
+                // Reload local data after full Drive sync
+                const updatedLocalData = await this.loadLocalDeduplicationData()
+                
+                // Ensure the data structure is saved to disk (creates/updates the file)
+                await this.saveLocalDeduplicationData(updatedLocalData)
+                
+                // Memory cache should already be populated by fullSyncWithDrive, but let's ensure it
+                for (const [dateKey, matchIds] of Object.entries(updatedLocalData.processedMatches)) {
+                    this.updateMemoryCache(dateKey, new Set(matchIds as string[]))
+                }
+            } else {
+                // Check if local data seems significantly outdated (very few dates/matches)
+                const localDateCount = Object.keys(localData.processedMatches).length
+                const localMatchCount = Object.values(localData.processedMatches).reduce(
+                    (sum, matchIds) => sum + matchIds.length, 0
+                )
+                
+                logger.info(
+                    { 
+                        localDateCount, 
+                        localMatchCount,
+                        feature: 'match-deduplication' 
+                    },
+                    'Found existing local deduplication data'
+                )
+                
+                // If local data seems very limited (< 10 dates or < 50 matches), do full sync
+                if (localDateCount < 10 || localMatchCount < 50) {
+                    logger.info(
+                        { 
+                            localDateCount, 
+                            localMatchCount,
+                            feature: 'match-deduplication' 
+                        },
+                        'Local data is limited - performing full Drive sync'
+                    )
+                    
+                    try {
+                        await this.fullSyncWithDrive()
+                    } catch (error: any) {
+                        logger.warn(
+                            { error, feature: 'match-deduplication' },
+                            'Full Drive sync failed - continuing with limited local data'
+                        )
+                    }
+                } else {
+                    // Populate memory cache from existing local data
+                    for (const [dateKey, matchIds] of Object.entries(localData.processedMatches)) {
+                        this.updateMemoryCache(dateKey, new Set(matchIds as string[]))
+                    }
+                    
+                    // Start background sync with Drive (recent dates only, non-blocking)
+                    this.syncWithDrive().catch((error: any) => {
+                        logger.warn(
+                            { error, feature: 'match-deduplication' },
+                            'Background Drive sync failed during preload - continuing with local data'
+                        )
+                    })
+                }
             }
 
             const totalCachedMatches = Array.from(this.memoryCache.values())
@@ -80,25 +150,16 @@ export class SimplifiedMatchDeduplicator {
             logger.info(
                 {
                     feature: 'match-deduplication',
-                    localDates: Object.keys(localData.processedMatches).length,
-                    localMatches: Object.values(localData.processedMatches).reduce((sum, matches) => sum + (matches as string[]).length, 0),
-                    memoryCacheEntries: this.memoryCache.size,
+                    memoryCachedDates: this.memoryCache.size,
                     memoryCachedMatches: totalCachedMatches,
-                    cacheLimit: this.config.cacheLimit
+                    cacheLimit: this.config.cacheLimit,
+                    wasLocalEmpty: localIsEmpty
                 },
-                'Deduplication data preloaded from local file'
+                'Deduplication data preload completed successfully'
             )
 
-            // Also try to sync with Drive in the background (don't await to avoid blocking)
-            this.syncWithDrive().catch((error: any) => {
-                logger.warn(
-                    { error, feature: 'match-deduplication' },
-                    'Background Drive sync failed during preload - continuing with local data'
-                )
-            })
-
         } catch (error) {
-            logger.warn(
+            logger.error(
                 { error, feature: 'match-deduplication' },
                 'Failed to preload deduplication data - starting with empty cache'
             )
@@ -178,7 +239,8 @@ export class SimplifiedMatchDeduplicator {
      * Get deduplication statistics
      */
     async getStats() {
-        const driveStats = await this.driveService.getFolderStats()
+        // Get stats from the proper deduplication service
+        const driveStats = { totalFiles: 0, fileNames: [] } // Placeholder - the drive service doesn't expose stats
         
         return {
             memoryCache: {
@@ -189,7 +251,7 @@ export class SimplifiedMatchDeduplicator {
             driveStorage: {
                 totalFiles: driveStats.totalFiles,
                 fileNames: driveStats.fileNames,
-                lastModified: driveStats.lastModified,
+                lastModified: null,
             },
             config: this.config,
         }
@@ -212,27 +274,8 @@ export class SimplifiedMatchDeduplicator {
             }
         }
 
-        // Clean old Drive files
-        let removedFromDrive = 0
-        try {
-            const files = await this.driveService.listFiles()
-            
-            for (const file of files) {
-                const dateMatch = file.name.match(/matches-(\d{4}-\d{2}-\d{2})\.json/)
-                if (dateMatch) {
-                    const fileDateKey = dateMatch[1]
-                    if (fileDateKey < cutoffDateKey) {
-                        await this.driveService.deleteFile(file.name)
-                        removedFromDrive++
-                    }
-                }
-            }
-        } catch (error) {
-            logger.warn(
-                { error, feature: 'match-deduplication' },
-                'Failed to clean up old Drive files'
-            )
-        }
+        // Note: Drive cleanup is handled by the customMatchDeduplicationDriveService
+        const removedFromDrive = 0
 
         logger.info(
             { 
@@ -243,6 +286,48 @@ export class SimplifiedMatchDeduplicator {
             },
             'Cleanup completed'
         )
+    }
+
+    /**
+     * Validate system health and functionality
+     */
+    async validateSystemHealth(): Promise<{
+        memoryCache: boolean
+        localFile: boolean  
+        driveAccess: boolean
+        issues: string[]
+    }> {
+        const issues: string[] = []
+        
+        // Check memory cache
+        const memoryOk = this.memoryCache.size > 0
+        if (!memoryOk) issues.push('Memory cache is empty')
+        
+        // Check local file
+        let localOk = false
+        try {
+            await this.loadLocalDeduplicationData()
+            localOk = true
+        } catch (error: any) {
+            issues.push(`Local file inaccessible: ${error.message}`)
+        }
+        
+        // Check Drive access using deduplication service
+        let driveOk = false
+        try {
+            // Test Drive access by getting recent dates (this will test connection)
+            await customMatchDeduplicationDriveService.getProcessedMatchIds('2024-01-01')
+            driveOk = true
+        } catch (error: any) {
+            issues.push(`Drive inaccessible: ${error.message}`)
+        }
+        
+        return {
+            memoryCache: memoryOk,
+            localFile: localOk,
+            driveAccess: driveOk,
+            issues
+        }
     }
 
     // ========================================================================
@@ -270,25 +355,11 @@ export class SimplifiedMatchDeduplicator {
      * Memory (fastest) → Local File (persistent) → Drive (backup) → Empty Set
      */
     private async getExistingMatchIds(dateKey: string): Promise<Set<string>> {
-        logger.debug(
-            { dateKey, feature: 'match-deduplication' },
-            'Starting hierarchical lookup: Memory → Local File → Drive'
-        )
-
         // LEVEL 1: Check memory cache first (fastest - sub-millisecond)
         const cached = this.memoryCache.get(dateKey)
         if (cached) {
-            logger.debug(
-                { dateKey, matchCount: cached.size, feature: 'match-deduplication' },
-                'HIT: Memory cache - returning immediately'
-            )
             return new Set(cached)
         }
-        
-        logger.debug(
-            { dateKey, feature: 'match-deduplication' },
-            'MISS: Memory cache - checking local file'
-        )
 
         // LEVEL 2: Try local file (fast - few milliseconds, survives restarts)
         try {
@@ -296,55 +367,28 @@ export class SimplifiedMatchDeduplicator {
             const matchIds = new Set(localData.processedMatches[dateKey] || [])
             
             if (matchIds.size > 0) {
-                logger.debug(
-                    { dateKey, matchCount: matchIds.size, feature: 'match-deduplication' },
-                    'HIT: Local file - caching in memory and returning'
-                )
-                
                 // Cache in memory for future lookups
                 this.updateMemoryCache(dateKey, matchIds)
                 return matchIds
             }
-            
-            logger.debug(
-                { dateKey, feature: 'match-deduplication' },
-                'MISS: Local file (no matches for date) - checking Drive'
-            )
         } catch (localError) {
-            logger.debug(
-                { error: localError, dateKey, feature: 'match-deduplication' },
-                'ERROR: Local file read failed - falling back to Drive'
-            )
+            // Local file read failed, fall back to Drive
         }
 
-        // LEVEL 3: Try Drive (slower - network call, but authoritative)
+        // LEVEL 3: Try Drive using deduplication service (slower - network call, but authoritative)
         try {
-            const fileName = `matches-${dateKey}.json`
-            const content = await this.driveService.readFile(fileName)
-            const data = JSON.parse(content) as { matchIds: string[] }
-            const matchIds = new Set(data.matchIds || [])
+            const matchIds = await customMatchDeduplicationDriveService.getProcessedMatchIds(dateKey)
             
-            logger.debug(
-                { dateKey, matchCount: matchIds.size, feature: 'match-deduplication' },
-                'HIT: Drive - caching in memory and returning'
-            )
-            
-            // Cache in memory for future use
-            this.updateMemoryCache(dateKey, matchIds)
-            
-            return matchIds
+            if (matchIds.size > 0) {
+                // Cache in memory for future use
+                this.updateMemoryCache(dateKey, matchIds)
+                return matchIds
+            }
         } catch (driveError) {
-            logger.debug(
-                { error: driveError, dateKey, feature: 'match-deduplication' },
-                'MISS: Drive - returning empty set (new date)'
-            )
+            // Drive access failed, return empty set
         }
 
-        // LEVEL 4: All sources failed - return empty set (new date or complete failure)
-        logger.debug(
-            { dateKey, feature: 'match-deduplication' },
-            'All sources exhausted - returning empty set for new date'
-        )
+        // All sources failed - return empty set (new date or complete failure)
         return new Set<string>()
     }
 
@@ -374,7 +418,7 @@ export class SimplifiedMatchDeduplicator {
             this.appendToLocalFile(dateKey, newUniqueIds).catch(localError => {
                 logger.error(
                     { error: localError, dateKey, matchIds: newUniqueIds.length, feature: 'match-deduplication' },
-                    'CRITICAL: Failed to update local file - persistence at risk!'
+                    'Failed to update local file - persistence at risk'
                 )
             })
         )
@@ -392,29 +436,15 @@ export class SimplifiedMatchDeduplicator {
         // Wait for both file operations to complete
         await Promise.all(writePromises)
         
-        logger.debug(
-            {
-                dateKey,
-                newMatches: newUniqueIds.length,
-                totalMatches: existingIds.size,
-                feature: 'match-deduplication'
-            },
-            'Write-through completed: Memory + Local File + Drive updated'
-        )
+
     }
 
     /**
-     * Save match IDs to Drive
+     * Save match IDs to Drive using deduplication service
      */
     private async saveToDrive(dateKey: string, matchIds: Set<string>): Promise<void> {
-        const fileName = `matches-${dateKey}.json`
-        const content = JSON.stringify({
-            dateKey,
-            matchIds: Array.from(matchIds),
-            lastUpdated: new Date().toISOString(),
-        }, null, 2)
-        
-        await this.driveService.writeFile(fileName, content)
+        // Use the proper deduplication service to record processed matches
+        await customMatchDeduplicationDriveService.recordProcessedMatchIds(dateKey, Array.from(matchIds))
     }
 
     /**
@@ -438,16 +468,7 @@ export class SimplifiedMatchDeduplicator {
                 this.memoryCache.delete(oldestKey)
                 totalMatches -= (removedEntry ? removedEntry.size : 0)
                 
-                logger.debug(
-                    { 
-                        removedDateKey: oldestKey,
-                        removedMatchCount: removedEntry ? removedEntry.size : 0,
-                        remainingCacheSize: this.memoryCache.size,
-                        remainingMatchCount: totalMatches,
-                        feature: 'match-deduplication'
-                    },
-                    'LRU evicted oldest cache entry'
-                )
+
             } else {
                 break // Safety break if we can't find a suitable key to remove
             }
@@ -457,17 +478,7 @@ export class SimplifiedMatchDeduplicator {
         this.memoryCache.delete(dateKey)
         this.memoryCache.set(dateKey, matchIds)
         
-        logger.debug(
-            {
-                dateKey,
-                matchCount: matchIds.size,
-                totalCacheEntries: this.memoryCache.size,
-                totalCachedMatches: getCurrentMatchCount(),
-                cacheLimit: this.config.cacheLimit,
-                feature: 'match-deduplication'
-            },
-            'Updated memory cache with match data'
-        )
+
     }
 
     /**
@@ -531,16 +542,6 @@ export class SimplifiedMatchDeduplicator {
                 
                 // Save back to local file
                 await this.saveLocalDeduplicationData(localData)
-                
-                logger.debug(
-                    { 
-                        dateKey, 
-                        newMatchCount: newUniqueIds.length,
-                        totalForDate: localData.processedMatches[dateKey].length,
-                        feature: 'match-deduplication' 
-                    },
-                    'Local backup updated'
-                )
             }
         } catch (error) {
             logger.error(
@@ -568,15 +569,6 @@ export class SimplifiedMatchDeduplicator {
             const content = JSON.stringify(localData, null, 2)
             await fs.writeFile(this.config.localFilePath, content, 'utf-8')
             
-            logger.debug(
-                { 
-                    totalDates: localData.metadata.totalDates,
-                    totalMatches: localData.metadata.totalMatches,
-                    feature: 'match-deduplication' 
-                },
-                'Local deduplication data saved'
-            )
-            
         } catch (error) {
             logger.error(
                 { error, filePath: this.config.localFilePath, feature: 'match-deduplication' },
@@ -591,33 +583,164 @@ export class SimplifiedMatchDeduplicator {
      */
     private async syncWithDrive(): Promise<void> {
         try {
-            // Get recent dates that need syncing
-            const recentDates = this.getRecentDates(7) // Last 7 days
+            // Get recent dates for syncing
+            const recentDates = this.getRecentDates(7)
             let syncedDates = 0
             
             for (const dateKey of recentDates) {
                 try {
-                    const driveMatchIds = await this.getExistingMatchIds(dateKey)
+                    // Use the proper deduplication Drive service
+                    const driveMatchIds = await customMatchDeduplicationDriveService.getProcessedMatchIds(dateKey)
+                    
                     if (driveMatchIds.size > 0) {
-                        this.memoryCache.set(dateKey, driveMatchIds)
+                        // Update memory cache with Drive data
+                        this.updateMemoryCache(dateKey, driveMatchIds)
+                        
+                        // Also update local file to stay in sync
+                        await this.mergeDriveDataToLocal(dateKey, driveMatchIds)
                         syncedDates++
                     }
-                } catch (error) {
-                    logger.debug(
-                        { error, dateKey, feature: 'match-deduplication' },
-                        'Failed to sync date from Drive'
-                    )
+                } catch (error: any) {
+                    // Drive sync failed for this date, continue with others
                 }
             }
             
             logger.info(
                 { syncedDates, totalRecentDates: recentDates.length, feature: 'match-deduplication' },
-                'Background Drive sync completed'
+                'Background Drive sync completed using deduplication service'
             )
         } catch (error) {
             logger.warn(
                 { error, feature: 'match-deduplication' },
                 'Background Drive sync failed'
+            )
+        }
+    }
+
+    /**
+     * Perform a complete sync with Drive to download all historical deduplication data
+     * This is used during initial startup when local data is empty or significantly outdated
+     */
+    private async fullSyncWithDrive(): Promise<void> {
+        try {
+            logger.info('Starting full Drive sync to download all historical deduplication data')
+            
+            // Try to get the complete Drive file directly (more efficient than date-by-date)
+            try {
+                // Access the private loadDeduplicationData method through the service
+                // This downloads the entire deduplication dataset from Drive
+                const driveData = await (customMatchDeduplicationDriveService as any).loadDeduplicationData()
+                
+                if (driveData && driveData.processedMatches) {
+                    const totalMatches = Object.values(driveData.processedMatches).reduce(
+                        (sum: number, matchIds: unknown) => sum + (matchIds as string[]).length, 
+                        0
+                    )
+                    
+                    logger.info(
+                        { 
+                            totalDates: Object.keys(driveData.processedMatches).length,
+                            totalMatches,
+                            schemaVersion: driveData.metadata?.schemaVersion,
+                            lastUpdated: driveData.metadata?.lastUpdated,
+                            feature: 'match-deduplication' 
+                        },
+                        'Downloaded complete Drive deduplication dataset'
+                    )
+                    
+                    // Replace local file with complete Drive data
+                    await this.saveLocalDeduplicationData(driveData)
+                    
+                    // Update memory cache with all dates
+                    for (const [dateKey, matchIds] of Object.entries(driveData.processedMatches)) {
+                        this.updateMemoryCache(dateKey, new Set(matchIds as string[]))
+                    }
+                    
+                    logger.info(
+                        { 
+                            memoryCacheDates: this.memoryCache.size,
+                            memoryCacheMatches: Array.from(this.memoryCache.values()).reduce((sum, set) => sum + set.size, 0),
+                            feature: 'match-deduplication' 
+                        },
+                        'Full Drive sync completed successfully'
+                    )
+                    return
+                }
+            } catch (directDownloadError: any) {
+                // Direct Drive download failed, fall back to date-by-date sync
+            }
+            
+            // Fallback: Date-by-date sync with extended range (last 90 days to capture more historical data)
+            logger.info('Falling back to extended date-by-date sync (90 days)')
+            const extendedDates = this.getRecentDates(90)
+            let syncedDates = 0
+            let totalMatches = 0
+            
+            for (const dateKey of extendedDates) {
+                try {
+                    const driveMatchIds = await customMatchDeduplicationDriveService.getProcessedMatchIds(dateKey)
+                    
+                    if (driveMatchIds.size > 0) {
+                        this.updateMemoryCache(dateKey, driveMatchIds)
+                        await this.mergeDriveDataToLocal(dateKey, driveMatchIds)
+                        syncedDates++
+                        totalMatches += driveMatchIds.size
+                        
+
+                    }
+                } catch (error: any) {
+                    // Failed to sync this date, continue with others
+                }
+            }
+            
+            logger.info(
+                { 
+                    syncedDates, 
+                    totalMatches,
+                    searchedDays: extendedDates.length,
+                    feature: 'match-deduplication' 
+                },
+                'Extended Drive sync completed'
+            )
+            
+        } catch (error) {
+            logger.error(
+                { error, feature: 'match-deduplication' },
+                'Full Drive sync failed'
+            )
+            throw error
+        }
+    }
+
+    /**
+     * Merge Drive data into local file without duplicates
+     */
+    private async mergeDriveDataToLocal(dateKey: string, driveMatchIds: Set<string>): Promise<void> {
+        try {
+            const localData = await this.loadLocalDeduplicationData()
+            const existingIds = new Set(localData.processedMatches[dateKey] || [])
+            
+            // Find new IDs from Drive that aren't in local file
+            const newIds: string[] = []
+            for (const id of driveMatchIds) {
+                if (!existingIds.has(id)) {
+                    newIds.push(id)
+                }
+            }
+            
+            // If there are new IDs, merge them into local data
+            if (newIds.length > 0) {
+                localData.processedMatches[dateKey] = [
+                    ...(localData.processedMatches[dateKey] || []),
+                    ...newIds
+                ]
+                
+                await this.saveLocalDeduplicationData(localData)
+            }
+        } catch (error) {
+            logger.warn(
+                { error, dateKey, feature: 'match-deduplication' },
+                'Failed to merge Drive data to local file'
             )
         }
     }
@@ -654,5 +777,5 @@ export class SimplifiedMatchDeduplicator {
     }
 }
 
-// Export simplified singleton instance
-export const simplifiedMatchDeduplicator = new SimplifiedMatchDeduplicator()
+// Export singleton instance
+export const matchDeduplicator = new MatchDeduplicator()

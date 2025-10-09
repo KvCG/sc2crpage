@@ -38,8 +38,8 @@ vi.mock('../../services/matchConfidenceScorer', () => ({
     }
 }))
 
-vi.mock('../../services/simplifiedMatchDeduplicator', () => ({
-    simplifiedMatchDeduplicator: {
+vi.mock('../../services/matchDeduplicator', () => ({
+    matchDeduplicator: {
         async filterDuplicates(matches: ProcessedCustomMatch[]) {
             return {
                 uniqueMatches: matches,
