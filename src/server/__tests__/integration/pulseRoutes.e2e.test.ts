@@ -121,19 +121,15 @@ describe('pulseRoutes E2E tests', () => {
             // /top route does not log client info - only /search does
         })
 
-        it('filters out invalid ranking entries', async () => {
+        it('returns unfiltered ranking data as-is', async () => {
             const mockRankingData = [
                 { id: 1, btag: 'Player1#1234', rating: 3500, leagueType: 5, mainRace: 'PROTOSS' },
-                { id: 2, btag: 'Player2#5678', rating: null, leagueType: 4, mainRace: 'ZERG' }, // Invalid
-                { id: 3, btag: 'Player3#9012', rating: 3200, leagueType: null, mainRace: 'TERRAN' }, // Invalid
-                { id: 4, btag: 'Player4#3456', rating: 2800, leagueType: 3, mainRace: null }, // Invalid
-            ]
-            const filteredData = [
-                { id: 1, btag: 'Player1#1234', rating: 3500, leagueType: 5, mainRace: 'PROTOSS' }
+                { id: 2, btag: 'Player2#5678', rating: null, leagueType: 4, mainRace: 'ZERG' }, // Would be invalid if filtered
+                { id: 3, btag: 'Player3#9012', rating: 3200, leagueType: null, mainRace: 'TERRAN' }, // Would be invalid if filtered
+                { id: 4, btag: 'Player4#3456', rating: 2800, leagueType: 3, mainRace: null }, // Would be invalid if filtered
             ]
             
             hoisted.getTopMock.mockResolvedValueOnce(mockRankingData)
-            hoisted.filterRankingMock.mockReturnValueOnce(filteredData)
             
             const req = createMockRequest()
             const res = createMockResponse()
@@ -144,9 +140,9 @@ describe('pulseRoutes E2E tests', () => {
             
             await handler(req, res)
             
-            // Should only return the valid entry
-            expect(res.jsonData).toHaveLength(1)
-            expect(res.jsonData[0].id).toBe(1)
+            // /top route returns unfiltered data - all 4 entries should be returned
+            expect(res.jsonData).toHaveLength(4)
+            expect(res.jsonData).toEqual(mockRankingData)
         })
 
         it('falls back to unfiltered data when all entries are invalid', async () => {

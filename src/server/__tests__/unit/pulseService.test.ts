@@ -26,6 +26,7 @@ const hoisted = vi.hoisted(() => ({
     },
     mockDataDerivationsService: {
         processTeamsToRankedPlayers: vi.fn(),
+        filterByMinimumGames: vi.fn(),
     },
 }))
 
@@ -170,10 +171,10 @@ describe('PulseService', () => {
 
             await service.getRanking()
 
-            const displayName = service.getDisplayNameFromCsv('123')
+            const displayName = service.getDisplayNameFromCsv('Player#1234')
             expect(displayName).toBe('Player One')
 
-            const nonExistentName = service.getDisplayNameFromCsv('999')
+            const nonExistentName = service.getDisplayNameFromCsv('NonExistent#999')
             expect(nonExistentName).toBeNull()
         })
 
@@ -183,7 +184,7 @@ describe('PulseService', () => {
         })
 
         it('handles undefined/null character IDs', () => {
-            expect(service.getDisplayNameFromCsv(undefined)).toBeNull()
+            expect(service.getDisplayNameFromCsv(undefined as any)).toBeNull()
             expect(service.getDisplayNameFromCsv('')).toBeNull()
         })
     })
@@ -241,6 +242,7 @@ describe('PulseService', () => {
             hoisted.mockPulseAdapter.getCurrentSeason.mockResolvedValueOnce('12345')
             hoisted.mockPulseAdapter.fetchRankedTeams.mockResolvedValueOnce([])
             hoisted.mockDataDerivationsService.processTeamsToRankedPlayers.mockReturnValueOnce(mockRankedPlayers)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce(mockRankedPlayers)
 
             const result = await service.getRanking()
 
@@ -256,6 +258,7 @@ describe('PulseService', () => {
             hoisted.mockPulseAdapter.getCurrentSeason.mockResolvedValue('12345')
             hoisted.mockPulseAdapter.fetchRankedTeams.mockResolvedValue([])
             hoisted.mockDataDerivationsService.processTeamsToRankedPlayers.mockReturnValue(mockRankedPlayers)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValue(mockRankedPlayers)
 
             // Start multiple concurrent requests
             const promise1 = service.getRanking()

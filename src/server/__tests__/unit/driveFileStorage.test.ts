@@ -24,19 +24,27 @@ vi.mock('googleapis', () => ({
 }))
 
 // Mock filesystem operations
+const mockWriterEvents: { [key: string]: Function[] } = {}
+
+const mockWriter = {
+    on: vi.fn((event: string, callback: Function) => {
+        if (!mockWriterEvents[event]) mockWriterEvents[event] = []
+        mockWriterEvents[event].push(callback)
+    }),
+    emit: vi.fn((event: string, ...args: any[]) => {
+        if (mockWriterEvents[event]) {
+            mockWriterEvents[event].forEach(callback => callback(...args))
+        }
+    })
+}
+
 vi.mock('fs', () => ({
     default: {
         mkdirSync: vi.fn(),
-        createWriteStream: vi.fn(() => ({
-            on: vi.fn(),
-            pipe: vi.fn()
-        }))
+        createWriteStream: vi.fn(() => mockWriter)
     },
     mkdirSync: vi.fn(),
-    createWriteStream: vi.fn(() => ({
-        on: vi.fn(),
-        pipe: vi.fn()
-    }))
+    createWriteStream: vi.fn(() => mockWriter)
 }))
 
 // Mock path operations
@@ -62,21 +70,31 @@ vi.mock('../../../shared/runtimeEnv', () => ({
 }))
 
 describe('DriveFileStorage', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks()
+        
+        // Clear mock writer events
+        Object.keys(mockWriterEvents).forEach(key => delete mockWriterEvents[key])
+        
         process.env.GOOGLE_SERVICE_ACCOUNT_KEY = JSON.stringify({
             type: 'service_account',
             project_id: 'test-project'
         })
+        
+        // Reset static cache between tests
+        const { DriveFileStorage } = await import('../../services/driveFileStorage')
+        // Access private static property to reset it
+        ;(DriveFileStorage as any).folderId = null
     })
 
     describe('downloadFile', () => {
         it('downloads a file to data directory', async () => {
-            // Mock folder exists
+            // Mock folder exists (first call to get folder)
             driveFilesMock.list
                 .mockResolvedValueOnce({
                     data: { files: [{ id: 'folder-123', name: 'RankedPlayers_test' }] }
                 })
+                // Mock file exists in folder (second call to find file)
                 .mockResolvedValueOnce({
                     data: { files: [{ id: 'file-123', name: 'ladderCR.csv', size: '1024' }] }
                 })
@@ -84,8 +102,10 @@ describe('DriveFileStorage', () => {
             // Mock successful file download with Promise-based stream
             const mockStream = {
                 pipe: vi.fn().mockImplementation((writer) => {
-                    // Simulate successful write
-                    setTimeout(() => writer.emit('finish'), 0)
+                    // Simulate async write completion
+                    setTimeout(() => {
+                        writer.emit('finish')
+                    }, 10)
                     return writer
                 }),
                 on: vi.fn()
@@ -97,7 +117,6 @@ describe('DriveFileStorage', () => {
 
             const { DriveFileStorage } = await import('../../services/driveFileStorage')
             
-            // Wrap in promise to handle async stream operations
             await expect(DriveFileStorage.downloadFile('ladderCR.csv')).resolves.toBeUndefined()
         })
 
@@ -115,7 +134,10 @@ describe('DriveFileStorage', () => {
             // Mock file download
             const mockStream = {
                 pipe: vi.fn().mockImplementation((writer) => {
-                    setTimeout(() => writer.emit('finish'), 0)
+                    // Simulate async write completion
+                    setTimeout(() => {
+                        writer.emit('finish')
+                    }, 10)
                     return writer
                 }),
                 on: vi.fn()
@@ -154,7 +176,7 @@ describe('DriveFileStorage', () => {
         it('uploads a file and replaces existing file', async () => {
             const buffer = Buffer.from('test,data\n1,2')
 
-            // Mock folder exists, existing file found, then successful upload
+            // Mock sequence: 1) Get folder ID, 2) Find existing file to delete
             driveFilesMock.list
                 .mockResolvedValueOnce({
                     data: { files: [{ id: 'folder-123', name: 'RankedPlayers_test' }] }
