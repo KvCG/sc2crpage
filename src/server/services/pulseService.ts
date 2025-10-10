@@ -11,7 +11,7 @@
  * This replaces the previous fragmented approach of separate pulseApi and pulseAdapter services.
  */
 
-import { readCsv } from '../utils/csvParser'
+import { communityDataService } from './communityDataService'
 import cache from '../utils/cache'
 import { metrics } from '../metrics/lite'
 import { bumpCache } from '../observability/requestContext'
@@ -98,27 +98,17 @@ export class PulseService {
      */
     private async loadPlayersFromCsv(): Promise<string[]> {
         try {
-            const players = (await readCsv()) as unknown as Array<{
-                btag: string
-                name?: string
-                challongeId?: string
-                id: string
-            }>
+            const communityData = await communityDataService.getCommunityData()
 
-            // Build display name lookup while we have the CSV data
+            // Build display name lookup from centralized service
             if (!this.displayNameLookup) {
-                this.displayNameLookup = new Map<string, string>()
-                players.forEach((player) => {
-                    if (player.btag && player.name) {
-                        this.displayNameLookup!.set(player.btag, player.name)
-                    }
-                })
+                this.displayNameLookup = new Map<string, string>(communityData.displayNames)
                 console.log(
-                    `[PulseService] Loaded ${this.displayNameLookup.size} display names from CSV`
+                    `[PulseService] Loaded ${this.displayNameLookup.size} display names from CSV via centralized service`
                 )
             }
 
-            return players.map((player) => player.id)
+            return communityData.players.map((player) => player.id)
         } catch (error) {
             console.error(
                 `[PulseService.loadPlayersFromCsv] Error reading CSV: ${(error as Error).message}`
