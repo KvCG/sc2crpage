@@ -239,8 +239,19 @@ export class MatchDeduplicator {
      * Get deduplication statistics
      */
     async getStats() {
-        // Get stats from the proper deduplication service
-        const driveStats = { totalFiles: 0, fileNames: [] } // Placeholder - the drive service doesn't expose stats
+        // Try to get actual drive service stats, fall back to defaults if service doesn't support it
+        let driveStats = { totalFiles: 0, fileNames: [], lastModified: null }
+        try {
+            // Check if the drive service has stats capability
+            if (typeof (customMatchDeduplicationDriveService as any).getFolderStats === 'function') {
+                driveStats = await (customMatchDeduplicationDriveService as any).getFolderStats()
+            } else if (typeof (customMatchDeduplicationDriveService as any).getStats === 'function') {
+                driveStats = await (customMatchDeduplicationDriveService as any).getStats()
+            }
+        } catch (error) {
+            logger.warn({ error, feature: 'match-deduplication' }, 
+                       'Failed to get drive service statistics, using defaults')
+        }
         
         return {
             memoryCache: {
@@ -248,10 +259,14 @@ export class MatchDeduplicator {
                 totalCachedMatches: Array.from(this.memoryCache.values())
                     .reduce((sum, set) => sum + set.size, 0),
             },
+            localStorage: {
+                filePath: this.config.localFilePath,
+                trackingDir: this.config.trackingDir
+            },
             driveStorage: {
                 totalFiles: driveStats.totalFiles,
                 fileNames: driveStats.fileNames,
-                lastModified: null,
+                lastModified: driveStats.lastModified,
             },
             config: this.config,
         }
@@ -420,6 +435,7 @@ export class MatchDeduplicator {
                     { error: localError, dateKey, matchIds: newUniqueIds.length, feature: 'match-deduplication' },
                     'Failed to update local file - persistence at risk'
                 )
+                // Don't re-throw to maintain graceful degradation in production
             })
         )
         
@@ -430,21 +446,28 @@ export class MatchDeduplicator {
                     { error: driveError, dateKey, matchIds: newUniqueIds.length, feature: 'match-deduplication' },
                     'Failed to save to Drive - local persistence still works'
                 )
+                // Don't re-throw to maintain graceful degradation in production
             })
         )
         
         // Wait for both file operations to complete
         await Promise.all(writePromises)
-        
-
     }
 
     /**
      * Save match IDs to Drive using deduplication service
      */
     private async saveToDrive(dateKey: string, matchIds: Set<string>): Promise<void> {
-        // Use the proper deduplication service to record processed matches
-        await customMatchDeduplicationDriveService.recordProcessedMatchIds(dateKey, Array.from(matchIds))
+        try {
+            // Use the proper deduplication service to record processed matches
+            await customMatchDeduplicationDriveService.recordProcessedMatchIds(dateKey, Array.from(matchIds))
+        } catch (error) {
+            logger.error(
+                { error, dateKey, matchCount: matchIds.size, feature: 'match-deduplication' },
+                'Failed to save match IDs to Drive service'
+            )
+            throw error
+        }
     }
 
     /**

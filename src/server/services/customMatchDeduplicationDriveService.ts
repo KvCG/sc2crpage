@@ -241,6 +241,39 @@ export class CustomMatchDeduplicationDriveService {
     }
 
     /**
+     * Get folder statistics (compatibility method for tests)
+     */
+    async getFolderStats(): Promise<{
+        totalFiles: number
+        fileNames: string[]
+        lastModified: string | null
+    }> {
+        try {
+            const dedupeData = await this.loadDeduplicationData()
+            const dates = Object.keys(dedupeData.processedMatches).sort()
+            
+            return {
+                totalFiles: dates.length > 0 ? dates.length : 0,
+                fileNames: dates.map(date => `matches-${date}.json`),
+                lastModified: dedupeData.metadata?.lastUpdated || null
+            }
+        } catch (error) {
+            logger.error(
+                {
+                    error,
+                    feature: 'custom-match-deduplication-drive',
+                },
+                'Failed to get folder stats'
+            )
+            return {
+                totalFiles: 0,
+                fileNames: [],
+                lastModified: null
+            }
+        }
+    }
+
+    /**
      * Load the complete deduplication data from Drive (with caching)
      */
     private async loadDeduplicationData(): Promise<DeduplicationData> {

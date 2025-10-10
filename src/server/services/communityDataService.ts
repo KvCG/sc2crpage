@@ -169,8 +169,8 @@ export class CommunityDataService {
 
             // Process each CSV row
             for (const row of rawData) {
-                // Skip rows without required fields
-                if (!row.id || !row.btag) {
+                // Skip null/undefined rows and rows without required fields
+                if (!row || !row.id || !row.btag) {
                     logger.warn(
                         { feature: 'community-data-service', row },
                         'Skipping CSV row with missing id or btag'
