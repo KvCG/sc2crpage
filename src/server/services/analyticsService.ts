@@ -1,7 +1,7 @@
 import { CacheKeys } from '../utils/cacheKeys'
 import { DataDerivationsService, OnlineStatusCalculator } from '../services/dataDerivations'
 import { pulseService } from '../services/pulseService'
-import { getDailySnapshot } from '../services/snapshotService'
+import { retrieveInitialRankingData } from '../services/snapshotService'
 import logger from '../logging/logger'
 import { DateTime } from 'luxon'
 import { incrementAnalyticsCacheHit, incrementAnalyticsCacheMiss, incrementAnalyticsError } from '../metrics/lite'
@@ -180,7 +180,7 @@ export class AnalyticsService {
      */
     private static async fetchPlayerData(timeframe: 'current' | 'daily'): Promise<RankedPlayer[]> {
         if (timeframe === 'daily') {
-            const snapshot = await getDailySnapshot()
+            const snapshot = await retrieveInitialRankingData()
             return snapshot.data || []
         } else {
             const rawData = await pulseService.getRanking()
