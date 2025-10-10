@@ -12,17 +12,14 @@ import { RawCustomMatch, ProcessedCustomMatch } from '../../../shared/customMatc
 // Mock external dependencies
 vi.mock('../../services/customMatchDiscoveryService', () => ({
     customMatchDiscoveryService: {
-        async initializeCommunityData() {
-            return Promise.resolve()
-        },
         async discoverCustomMatches() {
             return Promise.resolve([createRawTestMatch()])
         },
         async validateParticipants(matches: RawCustomMatch[]) {
-            return Promise.resolve(matches.map(m => createProcessedTestMatch(m.matchId)))
+            return Promise.resolve(matches.map(m => createProcessedTestMatch(String(m.match.id))))
         },
-        getCommunityStats() {
-            return { totalPlayers: 100, playersWithRating: 80, lastUpdated: new Date().toISOString() }
+        async getCommunityStats() {
+            return { totalPlayers: 100, playersWithNames: 80, playersWithChallongeIds: 50, loadedAt: new Date().toISOString() }
         }
     }
 }))
@@ -148,6 +145,7 @@ describe('CustomMatchIngestionOrchestrator Integration', () => {
 
             expect(stats.system.isRunning).toBe(false) // Not started yet
             expect(stats.community.totalPlayers).toBe(100)
+            expect(stats.community.playersWithNames).toBe(80)
         })
     })
 
