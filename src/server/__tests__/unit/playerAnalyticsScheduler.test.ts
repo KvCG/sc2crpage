@@ -148,7 +148,7 @@ describe('PlayerAnalyticsScheduler', () => {
         })
 
         it('should force run snapshot operation', async () => {
-            const { getDailySnapshot } = await import('../../services/snapshotService')
+            const { retrieveInitialRankingData: getDailySnapshot } = await import('../../services/snapshotService')
             
             await PlayerAnalyticsScheduler.forceRun('snapshot')
             
