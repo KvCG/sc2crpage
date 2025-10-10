@@ -1,6 +1,6 @@
 /**
  * Custom Match Ingestion API Routes
- * 
+ *
  * Provides REST endpoints for monitoring and controlling the custom match
  * ingestion system. Follows existing API route patterns for consistency.
  */
@@ -20,18 +20,20 @@ const router = Router()
 router.get('/custom-matches/status', async (_req, res) => {
     try {
         const status = customMatchIngestionOrchestrator.getStatus()
-        
+
         // Add community data stats
-        const { customMatchDiscoveryService } = await import('../services/customMatchDiscoveryService')
-        const communityStats = customMatchDiscoveryService.getCommunityStats()
-        
+        const { customMatchDiscoveryService } = await import(
+            '../services/customMatchDiscoveryService'
+        )
+        const communityStats = await customMatchDiscoveryService.getCommunityStats()
+
         res.json({
             success: true,
             data: {
                 ...status,
                 communityStats,
-                environment: getH2HEnvironmentInfo()
-            }
+                environment: getH2HEnvironmentInfo(),
+            },
         })
     } catch (error) {
         logger.error(
@@ -40,7 +42,7 @@ router.get('/custom-matches/status', async (_req, res) => {
         )
         res.status(500).json({
             success: false,
-            error: 'Failed to get ingestion status'
+            error: 'Failed to get ingestion status',
         })
     }
 })
@@ -52,10 +54,10 @@ router.get('/custom-matches/status', async (_req, res) => {
 router.get('/custom-matches/stats', async (_req, res) => {
     try {
         const stats = await customMatchIngestionOrchestrator.getStats()
-        
+
         res.json({
             success: true,
-            data: stats
+            data: stats,
         })
     } catch (error) {
         logger.error(
@@ -64,7 +66,7 @@ router.get('/custom-matches/stats', async (_req, res) => {
         )
         res.status(500).json({
             success: false,
-            error: 'Failed to get ingestion statistics'
+            error: 'Failed to get ingestion statistics',
         })
     }
 })
@@ -76,10 +78,10 @@ router.get('/custom-matches/stats', async (_req, res) => {
 router.post('/custom-matches/start', async (_req, res) => {
     try {
         await customMatchIngestionOrchestrator.start()
-        
+
         res.json({
             success: true,
-            message: 'Ingestion system started successfully'
+            message: 'Ingestion system started successfully',
         })
     } catch (error) {
         logger.error(
@@ -88,7 +90,7 @@ router.post('/custom-matches/start', async (_req, res) => {
         )
         res.status(500).json({
             success: false,
-            error: 'Failed to start ingestion system'
+            error: 'Failed to start ingestion system',
         })
     }
 })
@@ -100,19 +102,16 @@ router.post('/custom-matches/start', async (_req, res) => {
 router.post('/custom-matches/stop', async (_req, res) => {
     try {
         await customMatchIngestionOrchestrator.stop()
-        
+
         res.json({
             success: true,
-            message: 'Ingestion system stopped successfully'
+            message: 'Ingestion system stopped successfully',
         })
     } catch (error) {
-        logger.error(
-            { error, endpoint: '/custom-matches/stop' },
-            'Failed to stop ingestion system'
-        )
+        logger.error({ error, endpoint: '/custom-matches/stop' }, 'Failed to stop ingestion system')
         res.status(500).json({
             success: false,
-            error: 'Failed to stop ingestion system'
+            error: 'Failed to stop ingestion system',
         })
     }
 })
@@ -124,20 +123,17 @@ router.post('/custom-matches/stop', async (_req, res) => {
 router.post('/custom-matches/run', async (_req, res) => {
     try {
         const result = await customMatchIngestionOrchestrator.runManualIngestion()
-        
+
         res.json({
             success: true,
             data: result,
-            message: 'Manual ingestion completed'
+            message: 'Manual ingestion completed',
         })
     } catch (error) {
-        logger.error(
-            { error, endpoint: '/custom-matches/run' },
-            'Manual ingestion failed'
-        )
+        logger.error({ error, endpoint: '/custom-matches/run' }, 'Manual ingestion failed')
         res.status(500).json({
             success: false,
-            error: 'Manual ingestion failed'
+            error: 'Manual ingestion failed',
         })
     }
 })
@@ -149,19 +145,16 @@ router.post('/custom-matches/run', async (_req, res) => {
 router.post('/custom-matches/cleanup', async (_req, res) => {
     try {
         await customMatchIngestionOrchestrator.cleanup()
-        
+
         res.json({
             success: true,
-            message: 'Cleanup completed successfully'
+            message: 'Cleanup completed successfully',
         })
     } catch (error) {
-        logger.error(
-            { error, endpoint: '/custom-matches/cleanup' },
-            'Cleanup failed'
-        )
+        logger.error({ error, endpoint: '/custom-matches/cleanup' }, 'Cleanup failed')
         res.status(500).json({
             success: false,
-            error: 'Cleanup failed'
+            error: 'Cleanup failed',
         })
     }
 })
@@ -173,26 +166,23 @@ router.post('/custom-matches/cleanup', async (_req, res) => {
 router.post('/custom-matches/clear-cache', async (_req, res) => {
     try {
         const { matchDeduplicator } = await import('../services/matchDeduplicator')
-        
+
         // Clear the deduplication cache
         const stats = await matchDeduplicator.getStats()
         await matchDeduplicator.cleanup()
-        
+
         res.json({
             success: true,
             message: 'Deduplication cache cleared successfully',
             data: {
-                statsBeforeCleanup: stats
-            }
+                statsBeforeCleanup: stats,
+            },
         })
     } catch (error) {
-        logger.error(
-            { error, endpoint: '/custom-matches/clear-cache' },
-            'Cache clearing failed'
-        )
+        logger.error({ error, endpoint: '/custom-matches/clear-cache' }, 'Cache clearing failed')
         res.status(500).json({
             success: false,
-            error: 'Cache clearing failed'
+            error: 'Cache clearing failed',
         })
     }
 })
@@ -204,24 +194,24 @@ router.post('/custom-matches/clear-cache', async (_req, res) => {
 router.get('/custom-matches/date/:dateKey', async (req, res) => {
     try {
         const { dateKey } = req.params
-        
+
         // Validate date format (YYYY-MM-DD)
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
             return res.status(400).json({
                 success: false,
-                error: 'Invalid date format. Expected YYYY-MM-DD'
+                error: 'Invalid date format. Expected YYYY-MM-DD',
             })
         }
-        
+
         const matches = await customMatchStorageService.getMatches(dateKey)
-        
+
         res.json({
             success: true,
             data: {
                 date: dateKey,
                 matchCount: matches.length,
-                matches
-            }
+                matches,
+            },
         })
     } catch (error) {
         logger.error(
@@ -230,7 +220,7 @@ router.get('/custom-matches/date/:dateKey', async (req, res) => {
         )
         res.status(500).json({
             success: false,
-            error: 'Failed to get matches for date'
+            error: 'Failed to get matches for date',
         })
     }
 })
@@ -242,26 +232,26 @@ router.get('/custom-matches/date/:dateKey', async (req, res) => {
 router.get('/custom-matches/dates', async (_req, res) => {
     try {
         const dates = await customMatchStorageService.listAvailableDates()
-        
+
         res.json({
             success: true,
             data: {
                 availableDates: dates,
                 dateCount: dates.length,
-                dateRange: dates.length > 0 ? {
-                    earliest: dates[0],
-                    latest: dates[dates.length - 1]
-                } : null
-            }
+                dateRange:
+                    dates.length > 0
+                        ? {
+                              earliest: dates[0],
+                              latest: dates[dates.length - 1],
+                          }
+                        : null,
+            },
         })
     } catch (error) {
-        logger.error(
-            { error, endpoint: '/custom-matches/dates' },
-            'Failed to list available dates'
-        )
+        logger.error({ error, endpoint: '/custom-matches/dates' }, 'Failed to list available dates')
         res.status(500).json({
             success: false,
-            error: 'Failed to list available dates'
+            error: 'Failed to list available dates',
         })
     }
 })
@@ -273,10 +263,10 @@ router.get('/custom-matches/dates', async (_req, res) => {
 router.get('/custom-matches/storage/stats', async (_req, res) => {
     try {
         const stats = await customMatchStorageService.getStorageStats()
-        
+
         res.json({
             success: true,
-            data: stats
+            data: stats,
         })
     } catch (error) {
         logger.error(
@@ -285,7 +275,7 @@ router.get('/custom-matches/storage/stats', async (_req, res) => {
         )
         res.status(500).json({
             success: false,
-            error: 'Failed to get storage statistics'
+            error: 'Failed to get storage statistics',
         })
     }
 })
@@ -298,7 +288,7 @@ router.get('/custom-matches/health', async (_req, res) => {
     try {
         const status = customMatchIngestionOrchestrator.getStatus()
         const isHealthy = !status.lastRun || status.lastRun.errors.length === 0
-        
+
         res.status(isHealthy ? 200 : 503).json({
             success: true,
             data: {
@@ -307,18 +297,15 @@ router.get('/custom-matches/health', async (_req, res) => {
                     isRunning: status.isRunning,
                     uptimeMs: status.uptimeMs,
                     lastRunErrors: status.lastRun?.errors.length || 0,
-                    lastRunTimestamp: status.lastRun?.timestamp
-                }
-            }
+                    lastRunTimestamp: status.lastRun?.timestamp,
+                },
+            },
         })
     } catch (error) {
-        logger.error(
-            { error, endpoint: '/custom-matches/health' },
-            'Health check failed'
-        )
+        logger.error({ error, endpoint: '/custom-matches/health' }, 'Health check failed')
         res.status(503).json({
             success: false,
-            error: 'Health check failed'
+            error: 'Health check failed',
         })
     }
 })

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { pulseService } from '../services/pulseService'
-import { getDailySnapshot } from '../services/snapshotService'
+import { retrieveInitialRankingData } from '../services/snapshotService'
 import { formatData } from '../utils/formatData'
 import { filterRankingForDisplay } from '../utils/rankingFilters'
 import { getClientInfo } from '../utils/getClientInfo'
@@ -115,7 +115,7 @@ router.get('/snapshot', async (_req: Request, res: Response) => {
         'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
     )
     try {
-        const snapshot = await getDailySnapshot()
+        const snapshot = await retrieveInitialRankingData()
         snapshot.data = filterRankingForDisplay(snapshot.data)
         res.json(snapshot)
     } catch (error) {

@@ -12,16 +12,12 @@ import { isLocalAppEnv } from '../shared/runtimeEnv'
 import { httpLogger, httpMetricsMiddleware } from './logging/httpLogger'
 import { getReqObs, finalizeReq } from './observability/requestObservability'
 import { withRequestContext } from './observability/requestContext'
-import {
-    extractRequestId,
-    resolveOrCreateCorrelationId,
-} from './utils/requestIdentity'
+import { extractRequestId, resolveOrCreateCorrelationId } from './utils/requestIdentity'
 import createDebugHandler from './services/debugService'
 import logger from './logging/logger'
-import { getDailySnapshot } from './services/snapshotService'
+import { retrieveInitialRankingData } from './services/snapshotService'
 import { PlayerAnalyticsScheduler } from './services/playerAnalyticsScheduler'
 import { matchDeduplicator } from './services/matchDeduplicator'
-
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -42,8 +38,8 @@ if (process.env.NODE_ENV === 'development') {
     })
 
     // Handle WebSocket connections
-    wss.on('connection', ws => {
-        ws.on('message', message => {
+    wss.on('connection', (ws) => {
+        ws.on('message', (message) => {
             if (typeof message === 'string' && message === 'reload') {
                 ws.send('reload')
             }
@@ -57,7 +53,7 @@ if (process.env.NODE_ENV === 'development') {
         // Ensure the WebSocket server has clients
         if (wss.clients.size > 0) {
             console.log(`Broadcasting reload to ${wss.clients.size} client(s)`)
-            wss.clients.forEach(client => {
+            wss.clients.forEach((client) => {
                 if (client.readyState === client.OPEN) {
                     client.send('reload')
                 }
@@ -131,7 +127,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(express.static(path.join(__dirname, '../')))
 app.use(express.json({ limit: '30mb' }))
 app.use(express.urlencoded({ limit: '30mb', extended: true }))
-app.use('/api', apiRoutes)
+app.use('/api', apiRoutes) // main API routes
 // General debug endpoint driven by query parameter (unguarded by design)
 app.get('/api/debug', createDebugHandler({ buildInfo }))
 
@@ -149,16 +145,14 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // Start the Express server
 app.listen(port, () => {
     logger.info({ port }, `Express server running at http://localhost:${port}`)
-    
+
     // Warm up snapshot on startup (non-blocking)
     ;(async () => {
         try {
-            const snap = await getDailySnapshot()
+            const snap = await retrieveInitialRankingData()
             logger.info(
                 {
-                    size: Array.isArray(snap?.data)
-                        ? snap.data.length
-                        : undefined,
+                    size: Array.isArray(snap?.data) ? snap.data.length : undefined,
                     expiry: snap?.expiry,
                 },
                 'snapshot loaded into cache on startup'
@@ -181,11 +175,13 @@ app.listen(port, () => {
     logger.info('Starting deduplication preload process...')
     ;(async () => {
         try {
-            logger.info('Starting preload with statically imported deduplicator...')
             await matchDeduplicator.preloadDeduplicationData()
-            logger.info('✅ Deduplication data preloaded successfully on server startup')
+            logger.info('Deduplication data preloaded successfully on server startup')
         } catch (err) {
-            logger.error({ err }, '❌ Deduplication preload failed on startup - system will work but may be slower initially')
+            logger.error(
+                { err },
+                'Deduplication preload failed on startup - system will work but may be slower initially'
+            )
         }
     })()
 })

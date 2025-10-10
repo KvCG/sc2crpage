@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 import logger from '../logging/logger'
-import { getDailySnapshot } from './snapshotService'
+import { retrieveInitialRankingData } from './snapshotService'
 import { PlayerAnalyticsPersistence } from './playerAnalyticsPersistence'
 import { getAnalyticsMetricsSummary } from '../metrics/lite'
 
@@ -231,7 +231,7 @@ export class PlayerAnalyticsScheduler {
         logger.info({ feature: 'scheduler' }, 'Starting snapshot collection')
         
         // Trigger snapshot generation (this will cache the result)
-        const snapshot = await getDailySnapshot()
+        const snapshot = await retrieveInitialRankingData()
         
         // Backup snapshot to Google Drive for disaster recovery
         const backupId = await PlayerAnalyticsPersistence.backupSnapshot(snapshot)
