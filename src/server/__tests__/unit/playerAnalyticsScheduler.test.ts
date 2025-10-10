@@ -3,7 +3,7 @@ import { PlayerAnalyticsScheduler } from '../../services/playerAnalyticsSchedule
 
 // Mock the dependencies
 vi.mock('../../services/snapshotService', () => ({
-    getDailySnapshot: vi.fn().mockResolvedValue({
+    retrieveInitialRankingData: vi.fn().mockResolvedValue({
         data: [{ id: 1, name: 'test' }],
         createdAt: '2025-09-26T00:00:00.000Z',
         expiry: Date.now() + 86400000
