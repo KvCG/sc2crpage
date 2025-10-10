@@ -66,19 +66,6 @@ export class CustomMatchIngestionOrchestrator {
             },
             'Starting custom match ingestion system'
         )
-
-        // Initialize community data
-        try {
-            await customMatchDiscoveryService.initializeCommunityData()
-        } catch (error) {
-            logger.error(
-                { error, feature: 'custom-match-ingestion' },
-                'Failed to initialize community data'
-            )
-            this.isRunning = false
-            throw error
-        }
-
         // Preload deduplication data for recent dates
         try {
             await this.preloadDeduplicationData()
@@ -140,16 +127,7 @@ export class CustomMatchIngestionOrchestrator {
     async runManualIngestion(): Promise<IngestionResult> {
         logger.info({ feature: 'custom-match-ingestion' }, 'Running manual ingestion')
 
-        // Initialize community data if not already done
-        try {
-            await customMatchDiscoveryService.initializeCommunityData()
-        } catch (error) {
-            logger.error(
-                { error, feature: 'custom-match-ingestion' },
-                'Failed to initialize community data for manual ingestion'
-            )
-            throw error
-        }
+        // Community data is now loaded automatically by the centralized service
 
         return await this.runIngestion()
     }
@@ -176,7 +154,7 @@ export class CustomMatchIngestionOrchestrator {
      * Get system statistics
      */
     async getStats() {
-        const communityStats = customMatchDiscoveryService.getCommunityStats()
+        const communityStats = await customMatchDiscoveryService.getCommunityStats()
         const dedupeStats = await matchDeduplicator.getStats()
         const storageStats = await customMatchStorageService.getStorageStats()
         const scorerConfig = matchConfidenceScorer.getConfig()

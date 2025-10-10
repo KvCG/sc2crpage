@@ -1,5 +1,15 @@
 /**
- * Custom Match Discovery Service
+ * Custom Match Dexporexport class CustomMatchDiscoveryService {
+    private adapter: PulseAdapter
+
+    constructor(adapter: PulseAdapter = pulseAdapter) {
+        this.adapter = adapter
+    }CustomMatchDiscoveryService {
+    private adapter: PulseAdapter
+
+    constructor(adapter: PulseAdapter = pulseAdapter) {
+        this.adapter = adapter
+    } Service
  *
  * Discovers custom matches from SC2Pulse API for community players.
  * Currently implements a foundation that can be extended when match history
@@ -7,7 +17,7 @@
  */
 
 import { PulseAdapter, pulseAdapter } from './pulseAdapter'
-import { readCsv } from '../utils/csvParser'
+import { communityDataService } from './communityDataService'
 import logger from '../logging/logger'
 import { extractMatchResult } from './winnerTrackingService'
 import {
@@ -22,55 +32,12 @@ import {
  */
 export class CustomMatchDiscoveryService {
     private adapter: PulseAdapter
-    private communityPlayerIds: Set<string> = new Set()
-    private communityPlayers: Map<string, any> = new Map()
 
     constructor(adapter: PulseAdapter = pulseAdapter) {
         this.adapter = adapter
     }
 
-    /**
-     * Initialize community player dataset from CSV
-     */
-    async initializeCommunityData(): Promise<void> {
-        try {
-            logger.info({ feature: 'custom-match-discovery' }, 'Loading community player data')
 
-            // Read community player data from CSV (following existing patterns)
-            const csvData = (await readCsv()) as any[]
-
-            this.communityPlayerIds.clear()
-            this.communityPlayers.clear()
-
-            for (const row of csvData) {
-                if (row.id) {
-                    const playerId = String(row.id)
-                    this.communityPlayerIds.add(playerId)
-                    this.communityPlayers.set(playerId, {
-                        id: playerId,
-                        name: row.name || 'Unknown',
-                        btag: row.btag,
-                        rating: row.rating,
-                        lastPlayed: row.lastPlayed,
-                    })
-                }
-            }
-
-            logger.info(
-                {
-                    feature: 'custom-match-discovery',
-                    playerCount: this.communityPlayerIds.size,
-                },
-                'Community player data loaded'
-            )
-        } catch (error) {
-            logger.error(
-                { error, feature: 'custom-match-discovery' },
-                'Failed to load community data'
-            )
-            throw error
-        }
-    }
 
     /**
      * Discover custom matches for community players using the /api/character-matches endpoint
@@ -80,17 +47,20 @@ export class CustomMatchDiscoveryService {
         const discoveredMatches: RawCustomMatch[] = []
         const seenMatchIds = new Set<number>()
 
+        // Get community player IDs from centralized service
+        const allCommunityPlayerIds = await communityDataService.getCommunityPlayerIds()
+
         logger.info(
             {
                 feature: 'custom-match-discovery',
                 cutoffDate: config.cutoffDate,
-                communityPlayerCount: this.communityPlayerIds.size,
+                communityPlayerCount: allCommunityPlayerIds.length,
             },
             'Starting custom match discovery'
         )
 
         // Get a sample of community players to query (to avoid overwhelming the API)
-        const playerIds = Array.from(this.communityPlayerIds).slice(0, config.batchSize)
+        const playerIds = allCommunityPlayerIds.slice(0, config.batchSize)
 
         for (const playerId of playerIds) {
             try {
@@ -99,7 +69,7 @@ export class CustomMatchDiscoveryService {
                 // Filter and deduplicate matches
                 for (const matchData of playerMatches) {
                     if (
-                        this.isValidCustomMatch(matchData, cutoffDate) &&
+                        await this.isValidCustomMatch(matchData, cutoffDate) &&
                         !seenMatchIds.has(matchData.match.id)
                     ) {
                         discoveredMatches.push(matchData)
@@ -206,18 +176,18 @@ export class CustomMatchDiscoveryService {
             const characterId = String(participant.playerCharacterId)
 
             // Check if this is a community player
-            const isCommunityPlayer = this.communityPlayerIds.has(characterId)
+            const isCommunityPlayer = await communityDataService.isCommunityPlayer(characterId)
             if (!isCommunityPlayer) {
                 continue
             }
 
-            const communityData = this.communityPlayers.get(characterId)
+            const communityData = await communityDataService.getCommunityPlayer(characterId)
 
             const validated: ValidatedParticipant = {
                 characterId: participant.playerCharacterId,
                 battleTag: communityData?.btag || 'Unknown',
                 name: communityData?.name || 'Unknown',
-                rating: communityData?.rating,
+                // Note: rating not available from CSV, would need to be fetched from Pulse if needed
                 isCommunityPlayer: true,
             }
 
@@ -230,21 +200,15 @@ export class CustomMatchDiscoveryService {
     /**
      * Get community player statistics for monitoring
      */
-    getCommunityStats() {
-        return {
-            totalPlayers: this.communityPlayerIds.size,
-            playersWithRating: Array.from(this.communityPlayers.values()).filter(
-                (p) => p.rating != null
-            ).length,
-            lastUpdated: new Date().toISOString(),
-        }
+    async getCommunityStats() {
+        return await communityDataService.getCommunityStats()
     }
 
     /**
      * Check if a player is in the community dataset
      */
-    isCommunityPlayer(characterId: string | number): boolean {
-        return this.communityPlayerIds.has(String(characterId))
+    async isCommunityPlayer(characterId: string | number): Promise<boolean> {
+        return await communityDataService.isCommunityPlayer(characterId)
     }
 
     /**
@@ -273,7 +237,7 @@ export class CustomMatchDiscoveryService {
     /**
      * Check if a match is a valid custom match within our criteria
      */
-    private isValidCustomMatch(matchData: RawCustomMatch, cutoffDate: Date): boolean {
+    private async isValidCustomMatch(matchData: RawCustomMatch, cutoffDate: Date): Promise<boolean> {
         const match = matchData.match
 
         // Must be a custom match
@@ -297,9 +261,12 @@ export class CustomMatchDiscoveryService {
         }
 
         // Must have both participants as community players
-        const communityParticipants = competitiveParticipants.filter((p) =>
-            this.isCommunityPlayer(p.participant.playerCharacterId)
-        )
+        const communityParticipants = []
+        for (const p of competitiveParticipants) {
+            if (await this.isCommunityPlayer(p.participant.playerCharacterId)) {
+                communityParticipants.push(p)
+            }
+        }
 
         return communityParticipants.length === 2
     }
