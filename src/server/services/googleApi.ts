@@ -716,7 +716,18 @@ export class GoogleDriveService {
 }
 
 /**
- * Folder management service using GoogleDriveService
+ * Folder Management Service
+ * 
+ * Provides comprehensive folder management functionality for replay organization.
+ * Stores folder hierarchy data in Google Drive as JSON and maintains relationships
+ * between folders and replays.
+ * 
+ * Features:
+ * - Hierarchical folder structure with parent-child relationships
+ * - CRUD operations (Create, Read, Update, Delete)
+ * - Replay organization and movement between folders
+ * - Persistent storage in Google Drive
+ * - Proper error handling and logging
  */
 class FolderService {
     private driveService: GoogleDriveService
@@ -726,30 +737,33 @@ class FolderService {
         this.driveService = new GoogleDriveService('ReplayFolders', 'folder-management')
     }
 
+    /**
+     * Retrieves all folders from Google Drive storage
+     * @returns Promise<Folder[]> Array of all folders with hierarchy intact
+     */
     async getFolders(): Promise<Folder[]> {
         try {
-            logger.info('Reading folders from Google Drive')
             const content = await this.driveService.readFile(this.FOLDERS_DATA_FILE)
             const data = JSON.parse(content)
             const folders = data.folders || []
-            logger.info(`Found ${folders.length} folders in Google Drive`)
             return folders
         } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-            logger.info(`No existing folders file found: ${errorMsg}. Creating empty structure`)
+            // File doesn't exist yet - return empty array for new installations
             return []
         }
     }
 
+    /**
+     * Persists folder structure to Google Drive
+     * @param folders Array of folders to save
+     */
     async saveFolders(folders: Folder[]): Promise<void> {
         try {
-            logger.info(`Saving ${folders.length} folders to Google Drive`)
             const data = {
                 folders,
                 lastUpdated: new Date().toISOString()
             }
             await this.driveService.writeFile(this.FOLDERS_DATA_FILE, JSON.stringify(data, null, 2))
-            logger.info('Folders saved to Google Drive successfully')
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : 'Unknown error'
             logger.error(`Failed to save folders to Google Drive: ${errorMsg}`)
@@ -757,12 +771,27 @@ class FolderService {
         }
     }
 
+    /**
+     * Creates a new folder in the hierarchy
+     * @param request Object containing folder name and optional parent ID
+     * @returns Promise<Folder> The newly created folder
+     * @throws Error if a folder with the same name already exists at the same level
+     */
     async createFolder(request: CreateFolderRequest): Promise<Folder> {
         try {
-            logger.info(`Creating folder: ${request.name}`)
             const folders = await this.getFolders()
-            logger.info(`Current folders count: ${folders.length}`)
 
+            // Check for duplicate names at the same level
+            const siblingsWithSameName = folders.filter(f =>
+                f.parentId === request.parentId &&
+                f.name.toLowerCase() === request.name.toLowerCase()
+            )
+
+            if (siblingsWithSameName.length > 0) {
+                throw new Error(`A folder named "${request.name}" already exists at this level`)
+            }
+
+            // Generate unique folder ID
             const newFolder: Folder = {
                 id: `folder_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
                 name: request.name,
@@ -774,21 +803,8 @@ class FolderService {
             }
 
             folders.push(newFolder)
-            logger.info(`Folder added to array: ${newFolder.id}, total: ${folders.length}`)
 
-            // Update parent's children array if this folder has a parent
-            if (request.parentId) {
-                const parent = folders.find(f => f.id === request.parentId)
-                if (parent && !parent.children.find(c => c.id === newFolder.id)) {
-                    parent.children.push(newFolder)
-                    parent.updatedAt = new Date().toISOString()
-                    logger.info(`Updated parent folder: ${request.parentId}`)
-                }
-            }
-
-            logger.info('Attempting to save folders to Google Drive')
             await this.saveFolders(folders)
-            logger.info(`Folders saved successfully: ${newFolder.id}`)
             return newFolder
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : 'Unknown error'
@@ -797,6 +813,10 @@ class FolderService {
         }
     }
 
+    /**
+     * Moves a replay from one folder to another
+     * @param request Object containing replay ID and target folder ID (null for root)
+     */
     async moveReplay(request: MoveReplayRequest): Promise<void> {
         const folders = await this.getFolders()
 
@@ -817,6 +837,10 @@ class FolderService {
         await this.saveFolders(folders)
     }
 
+    /**
+     * Recursively deletes a folder and all its children
+     * @param folderId ID of the folder to delete
+     */
     async deleteFolder(folderId: string): Promise<void> {
         const folders = await this.getFolders()
 
@@ -833,19 +857,34 @@ class FolderService {
         // Remove all marked folders
         const remainingFolders = folders.filter(f => !toDelete.has(f.id))
 
-        // Remove references from parent folders
-        remainingFolders.forEach(folder => {
-            folder.children = folder.children.filter(child => !toDelete.has(child.id))
-        })
+        // Note: We don't manually update children arrays here
+        // The frontend buildFolderHierarchy function handles that dynamically
 
         await this.saveFolders(remainingFolders)
     }
 
+    /**
+     * Renames an existing folder
+     * @param folderId ID of the folder to rename
+     * @param newName New name for the folder
+     * @throws Error if a folder with the same name already exists at the same level
+     */
     async renameFolder(folderId: string, newName: string): Promise<void> {
         const folders = await this.getFolders()
         const folder = folders.find(f => f.id === folderId)
 
         if (folder) {
+            // Check for duplicate names at the same level (excluding the current folder)
+            const siblingsWithSameName = folders.filter(f =>
+                f.parentId === folder.parentId &&
+                f.id !== folderId &&
+                f.name.toLowerCase() === newName.toLowerCase()
+            )
+
+            if (siblingsWithSameName.length > 0) {
+                throw new Error(`A folder named "${newName}" already exists at this level`)
+            }
+
             folder.name = newName
             folder.updatedAt = new Date().toISOString()
             await this.saveFolders(folders)
@@ -853,27 +892,50 @@ class FolderService {
     }
 }
 
+// Folder service instance
 const folderService = new FolderService()
 
+// Public API exports for folder management
+/**
+ * Retrieves all folders from storage
+ * @returns Promise<Folder[]> Array of all folders
+ */
 export const getAllFolders = async (): Promise<Folder[]> => {
     return await folderService.getFolders()
 }
 
+/**
+ * Creates a new folder from HTTP request
+ * @param req Express request containing folder data
+ * @returns Promise<Folder> The created folder
+ */
 export const createFolder = async (req: Request): Promise<Folder> => {
     const { name, parentId } = req.body
     return await folderService.createFolder({ name, parentId })
 }
 
+/**
+ * Moves a replay between folders from HTTP request
+ * @param req Express request containing move data
+ */
 export const moveReplayToFolder = async (req: Request): Promise<void> => {
     const { replayId, targetFolderId } = req.body
     await folderService.moveReplay({ replayId, targetFolderId })
 }
 
+/**
+ * Deletes a folder from HTTP request
+ * @param req Express request containing folder ID
+ */
 export const deleteFolder = async (req: Request): Promise<void> => {
     const { folderId } = req.body
     await folderService.deleteFolder(folderId)
 }
 
+/**
+ * Renames a folder from HTTP request
+ * @param req Express request containing folder ID and new name
+ */
 export const renameFolder = async (req: Request): Promise<void> => {
     const { folderId, name } = req.body
     await folderService.renameFolder(folderId, name)

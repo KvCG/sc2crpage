@@ -1,6 +1,22 @@
+/**
+ * Main Replays Page Component
+ * 
+ * Comprehensive replay management interface with folder organization.
+ * Features hierarchical folder navigation, replay filtering, and CRUD operations.
+ * 
+ * Key Features:
+ * - Folder-based organization with hierarchy
+ * - System views: All Replays, Unorganized Replays
+ * - Inline folder management with optimized performance
+ * - Drag-free folder operations with modal interfaces
+ * - Real-time filtering and search
+ * 
+ * @component
+ */
+
 import { useState, useEffect } from 'react'
 import { useDisclosure } from '@mantine/hooks'
-import { Container, Button, Group, Title, Text } from '@mantine/core'
+import { Container, Button, Group, Title, Text, Notification } from '@mantine/core'
 import { UploadReplayModal } from '../components/Replays/UploadReplayModal'
 import { DeleteReplayModal } from '../components/Replays/DeleteReplayModal'
 import { MoveReplayModal } from '../components/Replays/MoveReplayModal'
@@ -16,6 +32,7 @@ import { usePost } from '../hooks/usePost'
 import { Folder, ReplayWithFolder } from '../../shared/folderTypes'
 
 export const Replay = () => {
+    // Modal state management
     const [opened, { open, close }] = useDisclosure(false)
     const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false)
     const [moveModalOpened, { open: openMoveModal, close: closeMoveModal }] = useDisclosure(false)
@@ -24,31 +41,40 @@ export const Replay = () => {
     const [renameModalOpened, { open: openRenameModal, close: closeRenameModal }] = useDisclosure(false)
     const [deleteConfirmModalOpened, { open: openDeleteConfirmModal, close: closeDeleteConfirmModal }] = useDisclosure(false)
 
+    // Entity state for operations
     const [fileToDelete, setFileToDelete] = useState<object | null>(null)
     const [replayToMove, setReplayToMove] = useState<ReplayWithFolder | null>(null)
     const [parentFolderForNew, setParentFolderForNew] = useState<string | null>(null)
     const [folderToRename, setFolderToRename] = useState<{ id: string; name: string } | null>(null)
     const [folderToDelete, setFolderToDelete] = useState<{ id: string; name: string; hasSubfolders: boolean; hasReplays: boolean } | null>(null)
+
+    // Navigation and UI state
     const [currentFolderId, setCurrentFolderId] = useState('all')
     const [expandedFolders, setExpandedFolders] = useState(new Set(['root']))
 
-    // Loading states for folder operations
+    // Loading states for folder operations (optimized for better UX)
     const [isCreatingFolder, setIsCreatingFolder] = useState(false)
     const [isRenamingFolder, setIsRenamingFolder] = useState(false)
     const [isDeletingFolder, setIsDeletingFolder] = useState(false)
     const [isMovingReplay, setIsMovingReplay] = useState(false)
 
-    // Fetch hooks with optimized caching
+    // Success notification for move operation
+    const [showMoveSuccess, setShowMoveSuccess] = useState(false)
+    const [moveSuccessMessage, setMoveSuccessMessage] = useState('')
+
+    // Data fetching and filtering
     const { data: fetchData, loading: fetchLoading, error: fetchError, fetch } = useFetch('replays')
     const { data: foldersData, fetch: fetchFolders } = useFetch('folders')
     const [folderFilteredData, setFolderFilteredData] = useState<ReplayWithFolder[]>([])
     const [filteredData, setFilteredData] = useState<ReplayWithFolder[]>([])
 
-    const { post: createFolderPost } = usePost('createFolder')
+    // API operations
+    const { post: createFolderPost, error: createFolderError } = usePost('createFolder')
     const { post: moveReplayPost } = usePost('moveReplay')
     const { post: deleteFolderPost } = usePost('deleteFolder')
-    const { post: renameFolderPost } = usePost('renameFolder')
+    const { post: renameFolderPost, error: renameFolderError } = usePost('renameFolder')
 
+    // Helper functions for data fetching
     const fetchReplays = async () => {
         await fetch()
     }
@@ -57,7 +83,13 @@ export const Replay = () => {
         await fetchFolders()
     }
 
-    // Performance optimization: Only filter by folder when data changes
+    /**
+     * Optimized folder filtering effect
+     * Filters replays based on current folder selection:
+     * - 'all': Shows all replays
+     * - 'unorganized': Shows replays without folder assignment
+     * - folder ID: Shows replays in specific folder
+     */
     useEffect(() => {
         if (fetchData && Array.isArray(fetchData)) {
             if (currentFolderId === 'all') {
@@ -80,12 +112,15 @@ export const Replay = () => {
     // Initialize filteredData when folderFilteredData changes
     useEffect(() => {
         setFilteredData(folderFilteredData)
-    }, [folderFilteredData])    // Initial load only
+    }, [folderFilteredData])
+
+    // Initial data load
     useEffect(() => {
         fetchReplays()
         fetchFoldersData()
     }, [])
 
+    // Event handlers for replay operations
     const confirmDelete = (file: object) => {
         setFileToDelete(file)
         openDeleteModal()
@@ -96,10 +131,15 @@ export const Replay = () => {
         openMoveModal()
     }
 
+    // Navigation handlers
     const handleFolderSelect = (folderId: string) => {
         setCurrentFolderId(folderId)
     }
 
+    /**
+     * Toggles folder expansion in tree view
+     * Optimized to handle multiple folder states efficiently
+     */
     const handleToggleExpand = (folderId: string) => {
         const newExpanded = new Set(expandedFolders)
         if (newExpanded.has(folderId)) {
@@ -110,12 +150,20 @@ export const Replay = () => {
         setExpandedFolders(newExpanded)
     }
 
+    /**
+     * Initiates folder creation process
+     * Sets up parent context and opens creation modal
+     */
     const handleCreateFolder = (parentId: string | null) => {
         setParentFolderForNew(parentId)
         closeFolderManageModal()
         openFolderModal()
     }
 
+    /**
+     * Handles folder creation with optimized refresh strategy
+     * Uses delayed fetch to improve perceived performance
+     */
     const handleFolderCreated = async (folderName: string) => {
         setIsCreatingFolder(true)
         try {
@@ -131,6 +179,9 @@ export const Replay = () => {
         }
     }
 
+    /**
+     * Handles replay movement between folders with optimized refresh
+     */
     const handleMoveReplay = async (targetFolderId: string | null) => {
         if (replayToMove) {
             setIsMovingReplay(true)
@@ -139,6 +190,20 @@ export const Replay = () => {
                     replayId: replayToMove.id,
                     targetFolderId
                 })
+
+                // Create success message
+                const currentFolder = replayToMove.folderId ?
+                    folders.find(f => f.id === replayToMove.folderId)?.name || 'Unknown Folder' :
+                    'Unorganized Replays'
+                const destFolder = targetFolderId ?
+                    folders.find(f => f.id === targetFolderId)?.name || 'Unknown Folder' :
+                    'All Replays (Root)'
+
+                setMoveSuccessMessage(`"${replayToMove.name}" moved from ${currentFolder} to ${destFolder}`)
+                setShowMoveSuccess(true)
+
+                // Auto-hide notification after 4 seconds
+                setTimeout(() => setShowMoveSuccess(false), 4000)
 
                 setReplayToMove(null)
 
@@ -150,6 +215,9 @@ export const Replay = () => {
         }
     }
 
+    /**
+     * Initiates folder rename process
+     */
     const handleRenameFolder = async (folderId: string) => {
         const folder = folders.find(f => f.id === folderId)
         if (folder) {
@@ -159,6 +227,9 @@ export const Replay = () => {
         }
     }
 
+    /**
+     * Handles folder rename with optimized refresh
+     */
     const handleRenameFolderSubmit = async (newName: string) => {
         if (folderToRename) {
             setIsRenamingFolder(true)
@@ -177,6 +248,9 @@ export const Replay = () => {
         }
     }
 
+    /**
+     * Initiates folder deletion process with validation
+     */
     const handleDeleteFolder = async (folderId: string) => {
         const folder = folders.find(f => f.id === folderId)
         if (folder) {
@@ -194,6 +268,9 @@ export const Replay = () => {
         }
     }
 
+    /**
+     * Handles folder deletion with immediate UI feedback and optimized refresh
+     */
     const handleDeleteFolderConfirm = async () => {
         if (folderToDelete) {
             setIsDeletingFolder(true)
@@ -214,10 +291,14 @@ export const Replay = () => {
         }
     }
 
+    // Data processing and hierarchy building
     const folders: Folder[] = (foldersData as any)?.folders || []
     const currentFolderName = folders.find(f => f.id === currentFolderId)?.name
 
-    // Build folder hierarchy for management
+    /**
+     * Builds hierarchical folder structure from flat folder array
+     * Creates parent-child relationships and maintains tree structure
+     */
     const buildFolderHierarchy = (folders: Folder[]): Folder[] => {
         const folderMap = new Map<string, Folder>()
 
@@ -248,6 +329,24 @@ export const Replay = () => {
 
     return (
         <Container fluid p="md" style={{ maxWidth: '1400px' }}>
+            {/* Success Notification */}
+            {showMoveSuccess && (
+                <Notification
+                    color="green"
+                    title="Replay Moved Successfully"
+                    onClose={() => setShowMoveSuccess(false)}
+                    style={{
+                        position: 'fixed',
+                        top: '20px',
+                        right: '20px',
+                        zIndex: 1000,
+                        maxWidth: '400px'
+                    }}
+                >
+                    {moveSuccessMessage}
+                </Notification>
+            )}
+
             {/* Header */}
             <Group justify="space-between" mb="lg">
                 <div>
@@ -308,7 +407,7 @@ export const Replay = () => {
                 opened={moveModalOpened}
                 close={closeMoveModal}
                 replayName={replayToMove?.name || ''}
-                currentFolderId={currentFolderId}
+                currentFolderId={replayToMove?.folderId || 'unorganized'}
                 folders={hierarchicalFolders}
                 onMoveReplay={handleMoveReplay}
                 isLoading={isMovingReplay}
@@ -320,6 +419,7 @@ export const Replay = () => {
                 parentFolderName={parentFolderForNew ? folders.find(f => f.id === parentFolderForNew)?.name : undefined}
                 onCreateFolder={handleFolderCreated}
                 isLoading={isCreatingFolder}
+                error={createFolderError}
             />
 
             <RenameFolderModal
@@ -328,6 +428,7 @@ export const Replay = () => {
                 folderName={folderToRename?.name || ''}
                 onRenameFolder={handleRenameFolderSubmit}
                 isLoading={isRenamingFolder}
+                error={renameFolderError}
             />
 
             <DeleteFolderModal

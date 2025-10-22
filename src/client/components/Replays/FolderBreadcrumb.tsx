@@ -1,22 +1,49 @@
+/**
+ * Folder Breadcrumb Navigation Component
+ * 
+ * Provides hierarchical navigation showing the current folder path.
+ * Supports both system views (All Replays, Unorganized) and user folders.
+ * Features dropdown menus for quick navigation to any folder in the hierarchy.
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <FolderBreadcrumb
+ *   currentFolderId="folder123"
+ *   folders={folderHierarchy}
+ *   onFolderSelect={handleNavigation}
+ * />
+ * ```
+ */
+
 import { Group, Button, Text, Menu, UnstyledButton, Flex } from '@mantine/core'
 import { IconFolder, IconChevronRight, IconChevronDown } from '@tabler/icons-react'
 import { useState } from 'react'
 import { Folder } from '../../../shared/folderTypes'
 
 interface FolderBreadcrumbProps {
+    /** ID of the currently selected folder ('all', 'unorganized', or folder ID) */
     currentFolderId: string
+    /** Array of folders in hierarchical structure */
     folders: Folder[]
+    /** Callback when user navigates to a different folder */
     onFolderSelect: (folderId: string) => void
 }
 
+/**
+ * Displays breadcrumb navigation for folder hierarchy
+ */
 export const FolderBreadcrumb = ({
     currentFolderId,
     folders,
     onFolderSelect
 }: FolderBreadcrumbProps) => {
+    // Track which dropdown menu is currently open
     const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
-    // Build a flat folder map for easy lookup
+    /**
+     * Builds a flat map of all folders for efficient lookup
+     */
     const folderMap = new Map<string, Folder>()
     const addToMap = (folderList: Folder[]) => {
         folderList.forEach(folder => {
@@ -28,13 +55,19 @@ export const FolderBreadcrumb = ({
     }
     addToMap(folders)
 
-    // Build breadcrumb path
+    /**
+     * Builds the breadcrumb path from root to current folder
+     * @param folderId The folder ID to build path for
+     * @returns Array of folders representing the path
+     */
     const buildPath = (folderId: string): Folder[] => {
+        // System views don't have breadcrumb paths
         if (folderId === 'all' || folderId === 'unorganized') return []
 
         const path: Folder[] = []
         let currentFolder = folderMap.get(folderId)
 
+        // Walk up the parent chain to build the path
         while (currentFolder) {
             path.unshift(currentFolder)
             currentFolder = currentFolder.parentId ? folderMap.get(currentFolder.parentId) : undefined
@@ -45,7 +78,11 @@ export const FolderBreadcrumb = ({
 
     const currentPath = buildPath(currentFolderId)
 
-    // Render folder options for dropdown
+    /**
+     * Recursively renders folder options in dropdown menus with proper indentation
+     * @param folderList Array of folders to render
+     * @param depth Current nesting depth for indentation
+     */
     const renderFolderOptions = (folderList: Folder[], depth = 0) => {
         return folderList.map(folder => (
             <div key={folder.id}>

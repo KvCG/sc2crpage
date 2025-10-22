@@ -1,4 +1,4 @@
-import { Modal, TextInput, Button, Group } from '@mantine/core'
+import { Modal, TextInput, Button, Group, Text } from '@mantine/core'
 import { useState, useEffect, useRef } from 'react'
 
 interface RenameFolderModalProps {
@@ -7,6 +7,7 @@ interface RenameFolderModalProps {
     folderName: string
     onRenameFolder: (newName: string) => Promise<void>
     isLoading?: boolean
+    error?: string | null
 }
 
 export const RenameFolderModal = ({
@@ -14,7 +15,8 @@ export const RenameFolderModal = ({
     close,
     folderName,
     onRenameFolder,
-    isLoading = false
+    isLoading = false,
+    error = null
 }: RenameFolderModalProps) => {
     const [newName, setNewName] = useState('')
     const inputRef = useRef<HTMLInputElement>(null)
@@ -33,8 +35,12 @@ export const RenameFolderModal = ({
 
     const handleSubmit = async () => {
         if (newName.trim() && newName.trim() !== folderName && !isLoading) {
-            await onRenameFolder(newName.trim())
-            close()
+            try {
+                await onRenameFolder(newName.trim())
+                close()
+            } catch (error) {
+                // Error is handled by the parent component and passed via props
+            }
         }
     }
 
@@ -56,7 +62,13 @@ export const RenameFolderModal = ({
                 onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
                 autoFocus
                 disabled={isLoading}
+                error={error}
             />
+            {error && (
+                <Text c="red" size="sm" mt="xs">
+                    {error}
+                </Text>
+            )}
             <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={handleClose} disabled={isLoading}>
                     Cancel

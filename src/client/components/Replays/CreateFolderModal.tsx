@@ -1,4 +1,4 @@
-import { Modal, TextInput, Button, Group } from '@mantine/core'
+import { Modal, TextInput, Button, Group, Text } from '@mantine/core'
 import { useState } from 'react'
 
 interface CreateFolderModalProps {
@@ -7,6 +7,7 @@ interface CreateFolderModalProps {
     parentFolderName?: string
     onCreateFolder: (folderName: string) => Promise<void>
     isLoading?: boolean
+    error?: string | null
 }
 
 export const CreateFolderModal = ({
@@ -14,15 +15,20 @@ export const CreateFolderModal = ({
     close,
     parentFolderName,
     onCreateFolder,
-    isLoading = false
+    isLoading = false,
+    error = null
 }: CreateFolderModalProps) => {
     const [folderName, setFolderName] = useState('')
 
     const handleSubmit = async () => {
         if (folderName.trim() && !isLoading) {
-            await onCreateFolder(folderName.trim())
-            setFolderName('')
-            close()
+            try {
+                await onCreateFolder(folderName.trim())
+                setFolderName('')
+                close()
+            } catch (error) {
+                // Error is handled by the parent component and passed via props
+            }
         }
     }
 
@@ -43,7 +49,13 @@ export const CreateFolderModal = ({
                 onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
                 autoFocus
                 disabled={isLoading}
+                error={error}
             />
+            {error && (
+                <Text c="red" size="sm" mt="xs">
+                    {error}
+                </Text>
+            )}
             <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={handleClose} disabled={isLoading}>
                     Cancel

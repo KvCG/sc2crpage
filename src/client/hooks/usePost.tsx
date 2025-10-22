@@ -34,11 +34,23 @@ export const usePost = type => {
 
     const post = async body => {
         setLoading(true)
+        setError(null) // Clear previous errors
         try {
-            setSuccess((await postData(body)) ?? '')
-        } catch (error) {
-            setError('Failed to post data. Please try again later.')
+            const result = await postData(body)
+            setSuccess(result?.data ?? result ?? '')
+        } catch (error: any) {
+            // Extract error message from API response
+            let errorMessage = 'Failed to post data. Please try again later.'
+
+            if (error?.response?.data?.error) {
+                errorMessage = error.response.data.error
+            } else if (error?.message) {
+                errorMessage = error.message
+            }
+
+            setError(errorMessage)
             setSuccess('')
+            throw error // Re-throw so calling code can handle it
         } finally {
             setLoading(false)
         }

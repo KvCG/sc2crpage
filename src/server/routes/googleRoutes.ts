@@ -67,7 +67,8 @@ router.post('/createFolder', async (req: Request, res: Response) => {
         const folder = await createFolder(req)
         res.json({ folder, success: true })
     } catch (error) {
-        res.json({ error: 'Error creating folder', success: false })
+        const errorMessage = error instanceof Error ? error.message : 'Error creating folder'
+        res.status(400).json({ error: errorMessage, success: false })
     }
 })
 
@@ -94,7 +95,8 @@ router.post('/renameFolder', async (req: Request, res: Response) => {
         await renameFolder(req)
         res.json({ success: true })
     } catch (error) {
-        res.json({ error: 'Error renaming folder', success: false })
+        const errorMessage = error instanceof Error ? error.message : 'Error renaming folder'
+        res.status(400).json({ error: errorMessage, success: false })
     }
 })
 
