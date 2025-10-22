@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react'
 import { TextInput, Select, Flex, Space } from '@mantine/core'
 import styles from './FilterReplaysBar.module.css'
+import { ReplayWithFolder } from '../../../shared/folderTypes'
 
-export const FilterReplaysBar = ({ fetchData, setFilteredData }) => {
+interface FilterReplaysBarProps {
+    fetchData: ReplayWithFolder[]
+    setFilteredData: (data: ReplayWithFolder[]) => void
+}
+
+export const FilterReplaysBar = ({ fetchData, setFilteredData }: FilterReplaysBarProps) => {
     const [searchQuery, setSearchQuery] = useState('')
     const [race1, setRace1] = useState('')
     const [race2, setRace2] = useState('')
@@ -22,9 +28,9 @@ export const FilterReplaysBar = ({ fetchData, setFilteredData }) => {
         if (!filtered) return
 
         if (searchQuery) {
-            filtered = filtered.filter((replay: any) =>
+            filtered = filtered.filter((replay: ReplayWithFolder) =>
                 Object.values(replay).some((value: any) =>
-                    value
+                    value && value
                         .toString()
                         .toLowerCase()
                         .includes(searchQuery.toLowerCase())
@@ -34,20 +40,20 @@ export const FilterReplaysBar = ({ fetchData, setFilteredData }) => {
 
         if (race1) {
             filtered = filtered.filter(
-                (replay: any) => replay.player1Race === race1
+                (replay: ReplayWithFolder) => replay.player1Race === race1
             )
         }
 
         if (race2) {
             filtered = filtered.filter(
-                (replay: any) => replay.player2Race === race2
+                (replay: ReplayWithFolder) => replay.player2Race === race2
             )
         }
 
         if (date) {
-            filtered = filtered.sort((a: any, b: any) => {
-                const dateA = new Date(a.modifiedTime)
-                const dateB = new Date(b.modifiedTime)
+            filtered = filtered.sort((a: ReplayWithFolder, b: ReplayWithFolder) => {
+                const dateA = new Date(a.modifiedTime).getTime()
+                const dateB = new Date(b.modifiedTime).getTime()
                 return date === 'Oldest first' ? dateA - dateB : dateB - dateA
             })
         }
@@ -78,21 +84,23 @@ export const FilterReplaysBar = ({ fetchData, setFilteredData }) => {
                     placeholder="Race Player 1"
                     data={['Terran', 'Protoss', 'Zerg']}
                     value={race1}
-                    onChange={setRace1}
+                    onChange={(value) => setRace1(value || '')}
                     className={styles.input}
+                    clearable
                 />
                 <Select
                     placeholder="Race Player 2"
                     data={['Terran', 'Protoss', 'Zerg']}
                     value={race2}
-                    onChange={setRace2}
+                    onChange={(value) => setRace2(value || '')}
                     className={styles.input}
+                    clearable
                 />
                 <Select
                     placeholder="Date"
                     data={['Newest first', 'Oldest first']}
                     value={date}
-                    onChange={setDate}
+                    onChange={(value) => setDate(value || 'Newest first')}
                     className={styles.input}
                 />
             </Flex>

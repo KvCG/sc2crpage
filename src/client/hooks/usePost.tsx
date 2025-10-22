@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { deleteReplay, uploadReplay } from '../services/api'
+import { deleteReplay, uploadReplay, createFolder, moveReplay, deleteFolder, renameFolder } from '../services/api'
 
 export const usePost = type => {
     const [success, setSuccess] = useState<string>('')
@@ -14,6 +14,18 @@ export const usePost = type => {
                 break
             case 'deleteReplay':
                 result = await deleteReplay(body)
+                break
+            case 'createFolder':
+                result = await createFolder(body)
+                break
+            case 'moveReplay':
+                result = await moveReplay(body)
+                break
+            case 'deleteFolder':
+                result = await deleteFolder(body)
+                break
+            case 'renameFolder':
+                result = await renameFolder(body)
                 break
         }
 

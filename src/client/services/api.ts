@@ -14,7 +14,7 @@ api.interceptors.request.use((req) => {
             req.headers = req.headers || {}
             // Do not clobber if already explicitly set by caller
             if (!('x-request-id' in req.headers) && !('X-Request-Id' in req.headers)) {
-                ;(req.headers as any)['x-request-id'] = requestId
+                ; (req.headers as any)['x-request-id'] = requestId
             }
         }
     } catch (_) {
@@ -80,6 +80,31 @@ export const uploadReplay = async (body: any) => {
 
 export const deleteReplay = async (body: any) => {
     const response = await api.post(`api/deleteReplay`, body)
+    return response
+}
+
+export const getFolders = async () => {
+    const response = await api.get(`api/getFolders`)
+    return response
+}
+
+export const createFolder = async (body: any) => {
+    const response = await api.post(`api/createFolder`, body)
+    return response
+}
+
+export const moveReplay = async (body: any) => {
+    const response = await api.post(`api/moveReplay`, body)
+    return response
+}
+
+export const deleteFolder = async (body: any) => {
+    const response = await api.post(`api/deleteFolder`, body)
+    return response
+}
+
+export const renameFolder = async (body: any) => {
+    const response = await api.post(`api/renameFolder`, body)
     return response
 }
 
