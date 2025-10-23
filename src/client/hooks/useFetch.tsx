@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import {
-    analyzeReplayBase64, 
-    analyzeReplayUrl, 
+    analyzeReplayBase64,
+    analyzeReplayUrl,
     search,
     getTop,
-	getTournament,
+    getTournament,
     getReplays,
     getReplayAnalysis,
     getPlayerAnalytics,
     getPlayerActivityAnalysis,
+    getFolders,
 } from '../services/api'
 
 export const useFetch = type => {
@@ -30,6 +31,9 @@ export const useFetch = type => {
                 break
             case 'replays':
                 data = (await getReplays()).data
+                break
+            case 'folders':
+                data = (await getFolders()).data
                 break
             case 'analyzeReplayBase64':
                 data = (await analyzeReplayBase64(params)).data
