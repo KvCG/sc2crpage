@@ -22,6 +22,8 @@
 
 - **Features**
   - [Community Analytics](features/community-analytics.md)
+  - [Custom Head-to-Head System](features/custom-head-to-head-system.md)
+  - [Custom Match Ingestion System](features/custom-match-ingestion-system.md)
   - [Ranking System](features/ranking-system.md)
 
 - **Development Process**

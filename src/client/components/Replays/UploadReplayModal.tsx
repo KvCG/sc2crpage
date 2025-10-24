@@ -26,7 +26,6 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
     const [replayAnalysisData, setReplayAnalysisData] = useState(null)
     const [uploadCompleted, setUploadCompleted] = useState(false)
     const MAX_DESCRIPTION_LENGTH = 100
-    
     const {
         success: postSuccess,
         error: postError,
@@ -98,6 +97,26 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
             return
         }
 
+        setErrorMessage('')
+        setShowErrorNotification(false)
+        setShowSuccessNotification(false)
+        setUploadCompleted(false)
+
+        if (description.length > MAX_DESCRIPTION_LENGTH) {
+            setErrorMessage(`Description must be ${MAX_DESCRIPTION_LENGTH} characters or less. Current: ${description.length}`)
+            return
+        }
+
+        if (!fileBase64 || !fileName) {
+            setErrorMessage('Please select a replay file.')
+            return
+        }
+
+        if (!replayAnalysisData) {
+            setErrorMessage('Please wait for replay analysis to complete.')
+            return
+        }
+
         const payload = {
             fileBase64,
             fileName,
@@ -128,7 +147,6 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
         setShowAnalysisError(false)
         setReplayAnalysisData(null)
         setUploadCompleted(false)
-        
         const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
         if (fileInput) {
             fileInput.value = ''
@@ -160,7 +178,6 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
             setShowAnalysisError(false)
             setReplayAnalysisData(null)
             setUploadCompleted(false)
-            
             const reader = new FileReader()
             reader.onloadend = async () => {
                 const base64String = reader.result?.toString().split(',')[1] || ''
@@ -184,8 +201,8 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
     return (
         <Modal opened={opened} onClose={handleModalClose} title="Upload replays" centered>
             {showSuccessNotification && (
-                <Notification 
-                    color="green" 
+                <Notification
+                    color="green"
                     mb="md"
                     onClose={() => setShowSuccessNotification(false)}
                 >
@@ -193,8 +210,8 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
                 </Notification>
             )}
             {showErrorNotification && (
-                <Notification 
-                    color="red" 
+                <Notification
+                    color="red"
                     mb="md"
                     onClose={() => setShowErrorNotification(false)}
                 >
@@ -202,8 +219,8 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
                 </Notification>
             )}
             {errorMessage && (
-                <Notification 
-                    color="red" 
+                <Notification
+                    color="red"
                     mb="md"
                     onClose={() => setErrorMessage('')}
                 >
@@ -222,14 +239,13 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
                         required
                     />
                     <Space h="md" />
-                    
                     {replayAnalysisLoading ? (
                         <Notification color="blue" mb="md" withCloseButton={false}>
                             🔄 Analyzing replay... Please wait before uploading.
                         </Notification>
                     ) : showAnalysisError ? (
-                        <Notification 
-                            color="red" 
+                        <Notification
+                            color="red"
                             mb="md"
                             onClose={() => setShowAnalysisError(false)}
                         >
@@ -271,7 +287,7 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
                             <Space h="md" />
                             <Textarea
                                 label="Description"
-                                placeholder="Enter description (max 50 chars)"
+                                placeholder="Enter description (max 100 chars)"
                                 value={description}
                                 onChange={handleDescriptionChange}
                                 maxLength={MAX_DESCRIPTION_LENGTH}
@@ -287,17 +303,17 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
                             ⏳ Waiting for replay analysis...
                         </Notification>
                     ) : null}
-                    
+
                     <Space h="md" />
-                    <Button 
-                        type="submit" 
+                    <Button
+                        type="submit"
                         disabled={!canUpload || postLoading}
                         loading={postLoading}
                     >
-                        {postLoading ? 'Uploading...' : 
-                         replayAnalysisLoading ? 'Analyzing...' : 
-                         !replayAnalysisData || uploadCompleted ? 'Select a file first' : 
-                         'Upload'}
+                        {postLoading ? 'Uploading...' :
+                            replayAnalysisLoading ? 'Analyzing...' :
+                                !replayAnalysisData || uploadCompleted ? 'Select a file first' :
+                                    'Upload'}
                     </Button>
                 </form>
             </div>
