@@ -1,92 +1,134 @@
 import { useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useFetch } from '../hooks/useFetch'
-import { Container, Grid, Text, Title, Table, Paper, Space } from '@mantine/core'
+import { 
+    Container, 
+    Loader,
+    Alert,
+    Tabs,
+    Card,
+    Group,
+    Text,
+    Stack
+} from '@mantine/core'
+import { 
+    IconUser, 
+    IconTrophy, 
+    IconAlertCircle
+} from '@tabler/icons-react'
+import { 
+    ReplayHeader, 
+    GameDetails, 
+    PlayersOverviewTab, 
+    BuildOrdersTab 
+} from '../components/ReplayInformation'
+
+interface ReplayData {
+    category: string
+    unix_timestamp: number
+    game_type: string
+    region: string
+    map: string
+    frames: number
+    frames_per_second: number
+    players: Record<string, {
+        name: string
+        race: string
+        league: number
+        is_winner: boolean
+        buildOrder?: Array<{
+            supply: number
+            time: string
+            name: string
+        }>
+    }>
+}
 
 export const ReplayInformation = () => {
     const location = useLocation()
     const replayAnalysisFileId = location.state?.replayAnalysisFileId
-    const { data: replayInformation = null, loading: fetchLoading, error: fetchError, fetch } = useFetch('replayAnalysis')
+    const { data: replayInformation, loading: fetchLoading, error: fetchError, fetch } = useFetch('replayAnalysis')
+    const [activeTab, setActiveTab] = useState<string | null>('overview')
 
     useEffect(() => {
         if (replayAnalysisFileId) {
             fetch({ 'replayAnalysisFileId': replayAnalysisFileId })
         }
-    }, [])
+    }, [replayAnalysisFileId])
 
-    const leagueMap = {
-        0: 'Bronze',
-        1: 'Silver',
-        2: 'Gold',
-        3: 'Platinum',
-        4: 'Diamond',
-        5: 'Master',
-        6: 'GrandMaster'
-    }
-
-    const calculateGameTime = (frames, fps) => {
-        const totalSeconds = frames / fps
-        const minutes = Math.floor(totalSeconds / 60)
-        const seconds = Math.floor(totalSeconds % 60)
-        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+    const isReplayData = (data: any): data is ReplayData => {
+        return data && typeof data === 'object' && 'players' in data
     }
 
     return (
-        <Container>
-            <Title order={1} size="h1" c="blue">Replay Information</Title>
-            {fetchLoading && <Text size="md" c="white">Loading...</Text>}
-            {fetchError && <Text size="md" c="red">{fetchError}</Text>}
-            {(!fetchLoading && !replayInformation) || replayInformation && Object.keys(replayInformation).length === 0 && <Text size="md" c="dimmed">No replay information available</Text>}
-            {replayInformation && Object.keys(replayInformation).length != 0 && (
-                <div>
-                    <Text size="md" c="dimmed">Category: {replayInformation.category}</Text>
-                    <Text size="md" c="dimmed">Timestamp: {new Date(replayInformation.unix_timestamp * 1000).toLocaleString()}</Text>
-                    <Text size="md" c="dimmed">Game Type: {replayInformation.game_type}</Text>
-                    <Text size="md" c="dimmed">Region: {replayInformation.region}</Text>
-                    <Text size="md" c="dimmed">Map: {replayInformation.map}</Text>
-                    <Text size="md" c="dimmed">Game Time: {calculateGameTime(replayInformation.frames, replayInformation.frames_per_second)}</Text>
-                    <Grid>
-                        {replayInformation?.players && Object.keys(replayInformation.players).map(playerKey => {
-                            const player = replayInformation.players[playerKey]
-                            return (
-                                <Grid.Col span={6} key={playerKey}>
-                                    <Paper shadow="xs" padding="md">
-                                        <Title order={3} size="h3" c="blue">Player {playerKey}</Title>
-                                        <Text size="md" c="dimmed">Name: {player.name}</Text>
-                                        <Text size="md" c="dimmed">Race: {player.race}</Text>
-                                        <Text size="md" c="dimmed">Peak League: {leagueMap[player.league]}</Text>
-                                        <Text size="md" c="dimmed">Winner: {player.is_winner ? 'Yes' : 'No'}</Text>
+        <Container size="xl" py="md">
+            <ReplayHeader />
 
-                                        <Title order={4} size="h4" c="blue" mt="1em" mb=".5em">Build Order</Title>
+            {fetchLoading && (
+                <Card shadow="sm" p="xl" radius="md">
+                    <Group justify="center" gap="md">
+                        <Loader size="lg" />
+                        <Text size="lg" fw={500}>Loading replay data...</Text>
+                    </Group>
+                </Card>
+            )}
 
-                                        {player.buildOrder.length > 0 ? (
-                                            <Table withBorder withColumnBorders style={{ margin: '0 auto', borderCollapse: 'collapse' }}>
-                                                <thead>
-                                                    <tr>
-                                                        <th style={{ border: '1px solid #ddd', padding: '8px' }}>Supply</th>
-                                                        <th style={{ border: '1px solid #ddd', padding: '8px' }}>Time</th>
-                                                        <th style={{ border: '1px solid #ddd', padding: '8px' }}>Name</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {player.buildOrder.map((order, index) => (
-                                                        <tr key={index}>
-                                                            <td style={{ border: '1px solid #ddd', padding: '8px' }}><Text size="md" c="dimmed">{order.supply}</Text></td>
-                                                            <td style={{ border: '1px solid #ddd', padding: '8px' }}><Text size="md" c="dimmed">{order.time}</Text></td>
-                                                            <td style={{ border: '1px solid #ddd', padding: '8px' }}><Text size="md" c="dimmed">{order.name}</Text></td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </Table>
-                                        ) : (
-                                            <Text size="md" c="dimmed">No build orders available</Text>
-                                        )}
-                                    </Paper>
-                                </Grid.Col>
-                            )
-                        })}
-                    </Grid>
-                </div>
+            {fetchError && (
+                <Alert 
+                    icon={<IconAlertCircle size="1rem" />} 
+                    title="Error Loading Replay" 
+                    color="red" 
+                    radius="md"
+                    mb="xl"
+                >
+                    {fetchError}
+                </Alert>
+            )}
+
+            {(!fetchLoading && !replayInformation) || (replayInformation && Object.keys(replayInformation).length === 0) ? (
+                <Card shadow="sm" p="xl" radius="md">
+                    <Stack align="center" gap="md">
+                        <IconAlertCircle size={48} color="gray" />
+                        <Text size="lg" fw={500} c="dimmed">
+                            No replay information available
+                        </Text>
+                    </Stack>
+                </Card>
+            ) : null}
+
+            {replayInformation && Object.keys(replayInformation).length !== 0 && isReplayData(replayInformation) && (
+                <>
+                    <GameDetails replayInformation={replayInformation} />
+
+                    <Tabs 
+                        value={activeTab} 
+                        onChange={setActiveTab}
+                        variant="pills"
+                    >
+                        <Tabs.List grow>
+                            <Tabs.Tab 
+                                value="overview" 
+                                leftSection={<IconUser size={16} />}
+                            >
+                                Players Overview
+                            </Tabs.Tab>
+                            <Tabs.Tab 
+                                value="buildorders" 
+                                leftSection={<IconTrophy size={16} />}
+                            >
+                                Build Orders
+                            </Tabs.Tab>
+                        </Tabs.List>
+
+                        <Tabs.Panel value="overview" pt="xl">
+                            <PlayersOverviewTab players={replayInformation.players} />
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value="buildorders" pt="xl">
+                            <BuildOrdersTab players={replayInformation.players} />
+                        </Tabs.Panel>
+                    </Tabs>
+                </>
             )}
         </Container>
     )
