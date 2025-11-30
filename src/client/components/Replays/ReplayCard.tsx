@@ -1,17 +1,25 @@
 import { useState, useEffect } from 'react'
 import { Card, Image, Group, Text, Badge, Flex, Button, Stack } from '@mantine/core'
+import { IconDownload, IconInfoCircle, IconFolderOpen, IconTrash } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 
 import { formatFileSize } from '../../utils/common'
+import { ReplayWithFolder } from '../../../shared/folderTypes'
 import terranBanner from '../../assets/terran_banner.png'
 import protossBanner from '../../assets/protoss_banner.png'
 import zergBanner from '../../assets/zerg_banner.png'
 
-export const ReplayCard = ({ replay, confirmDelete }) => {
+interface ReplayCardProps {
+    replay: ReplayWithFolder
+    confirmDelete: (file: object) => void
+    confirmMove?: (replay: object) => void
+}
+
+export const ReplayCard = ({ replay, confirmDelete, confirmMove }: ReplayCardProps) => {
     const [player1Image, setPlayer1Image] = useState('')
     const [player2Image, setPlayer2Image] = useState('')
 
-    const raceImages = {
+    const raceImages: Record<string, string> = {
         Terran: terranBanner,
         Protoss: protossBanner,
         Zerg: zergBanner,
@@ -24,16 +32,16 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
     }
 
     useEffect(() => {
-        setPlayer1Image(raceImages[replay.player1Race])
-        setPlayer2Image(raceImages[replay.player2Race])
+        setPlayer1Image(raceImages[replay.player1Race] || terranBanner)
+        setPlayer2Image(raceImages[replay.player2Race] || terranBanner)
     }, [replay.player1Race, replay.player2Race])
 
     return (
-        <Card 
-            key={replay.id} 
-            shadow="sm" 
-            padding="lg" 
-            radius="md" 
+        <Card
+            key={replay.id}
+            shadow="sm"
+            padding="lg"
+            radius="md"
             withBorder
             style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
         >
@@ -58,7 +66,7 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
                 <Stack gap="xs">
                     <Group justify="space-between" mt="md" mb="xs">
                         <Text fw={500}>{replay.name}</Text>
-                        <Badge color="pink">{formatFileSize(replay.size)}</Badge>
+                        <Badge color="pink">{formatFileSize(parseInt(replay.size) || 0)}</Badge>
                     </Group>
 
                     <Text size="sm" c="dimmed">
@@ -84,6 +92,8 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
                         component="a"
                         href={replay.downloadUrl}
                         download={replay.name}
+                        leftSection={<IconDownload size={16} />}
+                        variant="light"
                     >
                         Download
                     </Button>
@@ -92,14 +102,30 @@ export const ReplayCard = ({ replay, confirmDelete }) => {
                         radius="md"
                         size="sm"
                         onClick={handleInformationClick}
+                        leftSection={<IconInfoCircle size={16} />}
+                        variant="light"
                     >
-                        Information
+                        Info
                     </Button>
+                    {confirmMove && (
+                        <Button
+                            color="orange"
+                            radius="md"
+                            size="sm"
+                            onClick={() => confirmMove(replay)}
+                            leftSection={<IconFolderOpen size={16} />}
+                            variant="light"
+                        >
+                            Move
+                        </Button>
+                    )}
                     <Button
                         color="red"
                         size="sm"
                         radius="md"
-                        onClick={() => confirmDelete({replayFileId: replay.id, replayAnalysisFileId: replay.replayAnalysisFileId})}
+                        onClick={() => confirmDelete({ replayFileId: replay.id, replayAnalysisFileId: replay.replayAnalysisFileId })}
+                        leftSection={<IconTrash size={16} />}
+                        variant="light"
                     >
                         Delete
                     </Button>
