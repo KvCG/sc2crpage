@@ -7,6 +7,11 @@ vi.mock('../../services/snapshotService', () => ({
         data: [{ id: 1, name: 'test' }],
         createdAt: '2025-09-26T00:00:00.000Z',
         expiry: Date.now() + 86400000
+    }),
+    retrieveInitialRankingData: vi.fn().mockResolvedValue({
+        data: [{ id: 1, name: 'test' }],
+        createdAt: '2025-09-26T00:00:00.000Z',
+        expiry: Date.now() + 86400000
     })
 }))
 

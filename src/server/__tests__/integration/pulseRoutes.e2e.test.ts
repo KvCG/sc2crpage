@@ -24,6 +24,7 @@ vi.mock('../../services/pulseService', () => ({
 
 vi.mock('../../services/snapshotService', () => ({
     getDailySnapshot: hoisted.getDailySnapshotMock,
+    retrieveInitialRankingData: hoisted.getDailySnapshotMock,
 }))
 
 vi.mock('../../utils/formatData', () => ({
