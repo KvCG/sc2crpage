@@ -7,6 +7,11 @@ vi.mock('../../services/snapshotService', () => ({
         data: [{ id: 1, name: 'test' }],
         createdAt: '2025-09-26T00:00:00.000Z',
         expiry: Date.now() + 86400000
+    }),
+    retrieveInitialRankingData: vi.fn().mockResolvedValue({
+        data: [{ id: 1, name: 'test' }],
+        createdAt: '2025-09-26T00:00:00.000Z',
+        expiry: Date.now() + 86400000
     })
 }))
 
@@ -148,7 +153,7 @@ describe('PlayerAnalyticsScheduler', () => {
         })
 
         it('should force run snapshot operation', async () => {
-            const { getDailySnapshot } = await import('../../services/snapshotService')
+            const { retrieveInitialRankingData: getDailySnapshot } = await import('../../services/snapshotService')
             
             await PlayerAnalyticsScheduler.forceRun('snapshot')
             

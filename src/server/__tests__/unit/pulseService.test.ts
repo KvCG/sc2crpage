@@ -26,6 +26,7 @@ const hoisted = vi.hoisted(() => ({
     },
     mockDataDerivationsService: {
         processTeamsToRankedPlayers: vi.fn(),
+        filterByMinimumGames: vi.fn(),
     },
 }))
 
@@ -58,6 +59,21 @@ vi.mock('../../services/pulseAdapter', () => ({
 
 vi.mock('../../services/dataDerivations', () => ({
     DataDerivationsService: hoisted.mockDataDerivationsService,
+}))
+
+vi.mock('../../services/communityDataService', () => ({
+    communityDataService: {
+        getCommunityData: vi.fn().mockResolvedValue({
+            players: [
+                { id: '123', btag: 'Player#1234', name: 'Player One' },
+                { id: '456', btag: 'Player2#5678', name: 'Player Two' }
+            ],
+            playerIds: new Set(['123', '456']),
+            displayNames: new Map([['Player#1234', 'Player One'], ['Player2#5678', 'Player Two']]),
+            playerById: new Map(),
+            loadedAt: new Date()
+        })
+    }
 }))
 
 // Import after mocks
@@ -170,10 +186,10 @@ describe('PulseService', () => {
 
             await service.getRanking()
 
-            const displayName = service.getDisplayNameFromCsv('123')
+            const displayName = service.getDisplayNameFromCsv('Player#1234')
             expect(displayName).toBe('Player One')
 
-            const nonExistentName = service.getDisplayNameFromCsv('999')
+            const nonExistentName = service.getDisplayNameFromCsv('NonExistent#999')
             expect(nonExistentName).toBeNull()
         })
 
@@ -183,7 +199,7 @@ describe('PulseService', () => {
         })
 
         it('handles undefined/null character IDs', () => {
-            expect(service.getDisplayNameFromCsv(undefined)).toBeNull()
+            expect(service.getDisplayNameFromCsv(undefined as any)).toBeNull()
             expect(service.getDisplayNameFromCsv('')).toBeNull()
         })
     })
@@ -224,13 +240,14 @@ describe('PulseService', () => {
 
         it('returns cached data when available', async () => {
             hoisted.mockCacheGet.mockReturnValueOnce(mockRankedPlayers)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce(mockRankedPlayers)
 
             const result = await service.getRanking()
 
             expect(result).toEqual(mockRankedPlayers)
             expect(hoisted.mockMetrics.cache_hit_total).toBe(1)
             expect(hoisted.mockBumpCache).toHaveBeenCalledWith(true)
-            expect(hoisted.mockReadCsv).not.toHaveBeenCalled()
+            expect(hoisted.mockDataDerivationsService.filterByMinimumGames).toHaveBeenCalledWith(mockRankedPlayers, 20)
         })
 
         it('fetches fresh data when cache is empty', async () => {
@@ -241,6 +258,7 @@ describe('PulseService', () => {
             hoisted.mockPulseAdapter.getCurrentSeason.mockResolvedValueOnce('12345')
             hoisted.mockPulseAdapter.fetchRankedTeams.mockResolvedValueOnce([])
             hoisted.mockDataDerivationsService.processTeamsToRankedPlayers.mockReturnValueOnce(mockRankedPlayers)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce(mockRankedPlayers)
 
             const result = await service.getRanking()
 
@@ -251,11 +269,20 @@ describe('PulseService', () => {
         })
 
         it('implements anti-stampede protection for concurrent requests', async () => {
+            const { communityDataService } = await import('../../services/communityDataService')
+            
             hoisted.mockCacheGet.mockReturnValue(null) // Always cache miss
-            hoisted.mockReadCsv.mockResolvedValue([{ id: '123', name: 'Player', btag: 'Player#1234' }])
+            vi.mocked(communityDataService.getCommunityData).mockResolvedValue({
+                players: [{ id: '123', btag: 'Player#1234', name: 'Player One' }],
+                playerIds: new Set(['123']),
+                displayNames: new Map([['Player#1234', 'Player One']]),
+                playerById: new Map(),
+                loadedAt: new Date()
+            })
             hoisted.mockPulseAdapter.getCurrentSeason.mockResolvedValue('12345')
             hoisted.mockPulseAdapter.fetchRankedTeams.mockResolvedValue([])
             hoisted.mockDataDerivationsService.processTeamsToRankedPlayers.mockReturnValue(mockRankedPlayers)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValue(mockRankedPlayers)
 
             // Start multiple concurrent requests
             const promise1 = service.getRanking()
@@ -269,15 +296,24 @@ describe('PulseService', () => {
             expect(result2).toEqual(mockRankedPlayers)
             expect(result3).toEqual(mockRankedPlayers)
 
-            // But CSV should only be read once
-            expect(hoisted.mockReadCsv).toHaveBeenCalledTimes(1)
+            // But community data should only be fetched once due to anti-stampede protection
+            expect(vi.mocked(communityDataService.getCommunityData)).toHaveBeenCalledTimes(1)
             expect(hoisted.mockPulseAdapter.fetchRankedTeams).toHaveBeenCalledTimes(1)
         })
 
         it('handles empty CSV data gracefully', async () => {
+            const { communityDataService } = await import('../../services/communityDataService')
+            
             hoisted.mockCacheGet.mockReturnValueOnce(null)
-            hoisted.mockReadCsv.mockResolvedValueOnce([])
+            vi.mocked(communityDataService.getCommunityData).mockResolvedValueOnce({
+                players: [], // Empty players array
+                playerIds: new Set(),
+                displayNames: new Map(),
+                playerById: new Map(),
+                loadedAt: new Date()
+            })
             hoisted.mockPulseAdapter.getCurrentSeason.mockResolvedValueOnce('64')
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce([])
 
             const result = await service.getRanking()
 
@@ -287,8 +323,11 @@ describe('PulseService', () => {
         })
 
         it('handles CSV read errors gracefully', async () => {
+            const { communityDataService } = await import('../../services/communityDataService')
+            
             hoisted.mockCacheGet.mockReturnValueOnce(null)
-            hoisted.mockReadCsv.mockRejectedValueOnce(new Error('CSV read failed'))
+            vi.mocked(communityDataService.getCommunityData).mockRejectedValueOnce(new Error('CSV read failed'))
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce([])
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
             const result = await service.getRanking()
@@ -304,6 +343,7 @@ describe('PulseService', () => {
             hoisted.mockCacheGet.mockReturnValueOnce(null)
             hoisted.mockReadCsv.mockResolvedValueOnce([{ id: '123', name: 'Player', btag: 'Player#1234' }])
             hoisted.mockPulseAdapter.getCurrentSeason.mockResolvedValueOnce(undefined)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce([])
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
             const result = await service.getRanking()
@@ -318,6 +358,7 @@ describe('PulseService', () => {
             hoisted.mockReadCsv.mockResolvedValueOnce([{ id: '123', name: 'Player', btag: 'Player#1234' }])
             hoisted.mockPulseAdapter.getCurrentSeason.mockResolvedValueOnce('12345')
             hoisted.mockPulseAdapter.fetchRankedTeams.mockRejectedValueOnce(new Error('API error'))
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce([])
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
             const result = await service.getRanking()

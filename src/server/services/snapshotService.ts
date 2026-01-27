@@ -1,4 +1,3 @@
-
 import { snapshotCache } from '../utils/cache'
 import { pulseService } from './pulseService'
 import { DateTime } from 'luxon'
@@ -13,10 +12,8 @@ export type SnapshotResponse = {
     expiry: number
 }
 
-export async function getDailySnapshot(): Promise<SnapshotResponse> {
-    const cached = snapshotCache.get(SNAPSHOT_KEY) as
-        | SnapshotResponse
-        | undefined
+export async function retrieveInitialRankingData(): Promise<SnapshotResponse> {
+    const cached = snapshotCache.get(SNAPSHOT_KEY) as SnapshotResponse | undefined
     if (cached) return cached
 
     logger.info('snapshot cache miss; recomputing daily snapshot')
@@ -29,8 +26,7 @@ export async function getDailySnapshot(): Promise<SnapshotResponse> {
 
     // POSITION_INDICATOR_CACHE carries hours (int). Default 24.
     // Expire always at 12:00 AM Costa Rica, advancing by whole-day periods.
-    const hoursRaw = process.env.POSITION_INDICATOR_CACHE
-    const parsedHours = parseInt(String(hoursRaw), 10)
+    const parsedHours = parseInt(String(process.env.POSITION_INDICATOR_CACHE), 10)
     let hours: number
     if (Number.isFinite(parsedHours) && parsedHours > 0) {
         hours = parsedHours
@@ -50,10 +46,7 @@ export async function getDailySnapshot(): Promise<SnapshotResponse> {
 
     const ttlMsForCache = Math.max(1, expiryMs - Date.now())
     snapshotCache.set(SNAPSHOT_KEY, snapshot, ttlMsForCache)
-    logger.info(
-        { expiry: expiryMs },
-        'snapshot cache set with CR midnight expiry'
-    )
+    logger.info({ expiry: expiryMs }, 'snapshot cache set with CR midnight expiry')
 
     return snapshot
 }
@@ -65,6 +58,6 @@ export function clearDailySnapshot(): void {
 // Register background refresh on TTL expiry via LRU dispose hook
 snapshotCache.registerOnExpire(async () => {
     logger.info('daily snapshot expired; refreshing in background')
-    await getDailySnapshot()
+    await retrieveInitialRankingData()
     logger.info('daily snapshot refreshed')
 })

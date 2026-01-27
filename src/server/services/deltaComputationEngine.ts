@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 import { PlayerAnalyticsPersistence } from './playerAnalyticsPersistence'
-import { getDailySnapshot, SnapshotResponse } from './snapshotService'
+import { retrieveInitialRankingData, SnapshotResponse } from './snapshotService'
 import logger from '../logging/logger'
 
 /**
@@ -82,7 +82,7 @@ export class DeltaComputationEngine {
 
         try {
             // Get current snapshot
-            const currentSnapshot = await getDailySnapshot()
+            const currentSnapshot = await retrieveInitialRankingData()
             
             // Find appropriate baseline snapshot
             const baselineSnapshot = await this.findBaselineSnapshot(timeWindowHours, maxDataAge)

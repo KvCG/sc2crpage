@@ -2,9 +2,23 @@
 
 ## Overview
 - Full-stack SC2 stats/replays/tournaments app
-- **Documentation Hub**: README.md at the repository root serves as the central documentation entry point
+- **Documentation Ecosystem**: Comprehensive knowledge base centered at README.md with interconnected docs
+  - **Entry Point**: README.md serves as central navigation hub
+  - **Documentation Hub**: `docs/README.md` provides complete documentation map
+  - **Structured Knowledge Base**: Organized by audience and use case (getting-started/, architecture/, development/, api/, features/, reference/)
+  - **Cross-Referenced**: Documents link to related topics with clear navigation paths
 - **Stack**: React/TS (client) + Node/Express (server)
 - **Deploys**: Vercel (client) + Render prod API + Fly.io dev API
+
+## Documentation Navigation for AI Agents
+When helping users, reference the appropriate documentation:
+- **New users**: Direct to `docs/getting-started/README.md` for onboarding
+- **Setup issues**: Use `docs/getting-started/troubleshooting.md` for common problems
+- **Architecture questions**: Reference `docs/architecture/README.md` and related arch docs
+- **Development help**: Point to `docs/development/workflow.md` for Git flow and standards
+- **API integration**: Use `docs/api/README.md` and `docs/reference/external-apis.md`
+- **Configuration**: Reference `docs/reference/environment-variables.md` for complete config guide
+- **Feature questions**: Direct to relevant docs in `docs/features/`
 
 ## Architecture & Flow
 - **Client** (`src/client`): React/Vite app with Mantine UI library
@@ -12,8 +26,8 @@
   - Config: Environment-aware API selection in `services/config.ts` with host-based switch to `src/client/config/{prod,dev,local}.config.json`
   - Routing: React Router v6 with routes in `App.tsx` (mounted via `main.tsx`)
 - **Server** (`src/server`): Express API with TypeScript
-  - API Routes: Mounted via `routes/apiRoutes.ts` combining routes from `pulse`, `challonge`, `utility`, `google`, `replayAnalyzer`
-  - Services: External API integrations in `services/` directory
+  - API Routes: Mounted via `routes/apiRoutes.ts` combining routes from `analyticsRoutes`, `challongeRoutes`, `googleRoutes`, `pulseRoutes`, `replayAnalyzerRoutes`, `schedulerRoutes`, `utilityRoutes`
+  - Services: External API integrations in `services/` directory (`pulseService.ts`, `analyticsService.ts`, etc.)
   - Caching: LRU in-memory cache with 30s TTL in `utils/cache.ts`
 - **Flow**: Client → `/api/*` → service fetch/transform → cached results → client
 
@@ -33,10 +47,11 @@
 ## Server Patterns
 - **Caching**: `utils/cache.ts` stores snapshots with TTL 30s; prevents request stampedes by sharing in-flight promises
 - **Data Sources**:
-  - SC2Pulse: `services/pulseApi.ts` implements player search and rankings
+  - SC2Pulse: `services/pulseService.ts` + `services/pulseHttpClient.ts` implement player search and rankings
   - Challonge: `services/challongeApi.ts` for tournament data
   - Google Drive: `services/googleApi.ts` for replay uploads/listing and analysis JSON retrieval
   - Google Drive Storage: `services/driveFileStorage.ts` for ladder data storage and file operations
+  - Analytics: `services/analyticsService.ts` for player analytics and statistics
 - **Middleware**: Server serves static assets, mounts API routes, and falls back to SPA
 
 ## Client Patterns
@@ -167,9 +182,10 @@ Avoid:
 
 ## Testing
   - Runner: Vitest (separate configs per side)
-  - Server: `npm run test:server` | coverage: `npm run test:coverage:server`
-  - Client: `npm run test:client` (jsdom; `passWithNoTests` true) | coverage: `npm run test:coverage:client`
+  - Server: `npm run test:server`
+  - Client: `npm run test:client` (jsdom; `passWithNoTests` true)
   - Both in parallel: `npm test` | watch: `npm run test:watch`
+  - Coverage: `npm run coverage` (thresholds currently disabled in configs)
 
 ## Documentation
 - **Main README**: Central hub with links to all documentation

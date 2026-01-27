@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach, Mock } from 'vitest'
 import { DateTime } from 'luxon'
 import { DeltaComputationEngine } from '../../services/deltaComputationEngine'
-import { getDailySnapshot } from '../../services/snapshotService'
+import { retrieveInitialRankingData } from '../../services/snapshotService'
 import { PlayerAnalyticsPersistence } from '../../services/playerAnalyticsPersistence'
 import logger from '../../logging/logger'
 
@@ -36,7 +36,7 @@ describe('Delta Debug Test', () => {
         vi.clearAllMocks()
         
         // Set up mocks
-        ;(getDailySnapshot as Mock).mockResolvedValue(mockCurrentSnapshot)
+        ;(retrieveInitialRankingData as Mock).mockResolvedValue(mockCurrentSnapshot)
         ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([{
             fileId: 'test-backup',
             fileName: 'test-snapshot.json',

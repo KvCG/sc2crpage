@@ -29,8 +29,11 @@ export const search = async (searchTerm: string) => {
     return response
 }
 
-export const getTop = async () => {
-    const response = await api.get(`api/top/?includeInactive=false&minimumGames=20`)
+export const getTop = async (params?: {
+    includeInactive?: boolean
+    minimumGames?: number
+}) => {
+    const response = await api.get(`api/top/`, { params })
     return response
 }
 

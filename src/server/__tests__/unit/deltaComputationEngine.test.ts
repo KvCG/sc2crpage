@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, vi, Mock } from 'vitest'
 import { DateTime } from 'luxon'
 import { DeltaComputationEngine } from '../../services/deltaComputationEngine'
 import { PlayerAnalyticsPersistence } from '../../services/playerAnalyticsPersistence'
-import { getDailySnapshot } from '../../services/snapshotService'
+import { retrieveInitialRankingData } from '../../services/snapshotService'
 import logger from '../../logging/logger'
 
 // Mock external dependencies
@@ -92,7 +92,7 @@ describe('DeltaComputationEngine', () => {
         vi.clearAllMocks()
         
         // Mock getDailySnapshot to return current snapshot
-        ;(getDailySnapshot as Mock).mockResolvedValue(mockCurrentSnapshot)
+        ;(retrieveInitialRankingData as Mock).mockResolvedValue(mockCurrentSnapshot)
         
         // Mock persistence layer methods
         ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([
@@ -205,7 +205,7 @@ describe('DeltaComputationEngine', () => {
                     }
                 ]
             }
-            ;(getDailySnapshot as Mock).mockResolvedValue(snapshotWithInactive)
+            ;(retrieveInitialRankingData as Mock).mockResolvedValue(snapshotWithInactive)
 
             const deltasIncluding = await DeltaComputationEngine.computePlayerDeltas({
                 includeInactive: true,
@@ -234,7 +234,7 @@ describe('DeltaComputationEngine', () => {
         })
 
         test('handles errors gracefully', async () => {
-            ;(getDailySnapshot as Mock).mockRejectedValue(new Error('Snapshot service error'))
+            ;(retrieveInitialRankingData as Mock).mockRejectedValue(new Error('Snapshot service error'))
 
             await expect(DeltaComputationEngine.computePlayerDeltas()).rejects.toThrow('Snapshot service error')
             
@@ -284,7 +284,7 @@ describe('DeltaComputationEngine', () => {
         })
 
         test('handles empty player data', async () => {
-            ;(getDailySnapshot as Mock).mockResolvedValue({
+            ;(retrieveInitialRankingData as Mock).mockResolvedValue({
                 ...mockCurrentSnapshot,
                 data: []
             })
@@ -322,7 +322,7 @@ describe('DeltaComputationEngine', () => {
                 ]
             }
 
-            ;(getDailySnapshot as Mock).mockResolvedValue(dramaticCurrent)
+            ;(retrieveInitialRankingData as Mock).mockResolvedValue(dramaticCurrent)
             ;(PlayerAnalyticsPersistence.restoreSnapshot as Mock).mockResolvedValue(dramaticBaseline)
 
             const topMovers = await DeltaComputationEngine.getTopMovers('both', 3, {
@@ -375,7 +375,7 @@ describe('DeltaComputationEngine', () => {
                 ]
             }
 
-            ;(getDailySnapshot as Mock).mockResolvedValue(testCurrent)
+            ;(retrieveInitialRankingData as Mock).mockResolvedValue(testCurrent)
             ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([{
                 fileId: 'test-backup',
                 fileName: 'test-snapshot.json',
@@ -421,7 +421,7 @@ describe('DeltaComputationEngine', () => {
                     }]
                 }
                 
-                ;(getDailySnapshot as Mock).mockResolvedValue(snapshot)
+                ;(retrieveInitialRankingData as Mock).mockResolvedValue(snapshot)
                 ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([])
                 
                 // This will use computeBaselineDeltas which calls calculateActivityLevel
@@ -489,7 +489,7 @@ describe('DeltaComputationEngine', () => {
             }
 
             // Test high quality deltas
-            ;(getDailySnapshot as Mock).mockResolvedValue(highQualitySnapshot)
+            ;(retrieveInitialRankingData as Mock).mockResolvedValue(highQualitySnapshot)
             ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([{
                 fileId: 'high-quality-backup',
                 fileName: 'high-quality-snapshot.json',
@@ -506,7 +506,7 @@ describe('DeltaComputationEngine', () => {
             vi.clearAllMocks()
 
             // Test low quality deltas
-            ;(getDailySnapshot as Mock).mockResolvedValue(lowQualitySnapshot)
+            ;(retrieveInitialRankingData as Mock).mockResolvedValue(lowQualitySnapshot)
             ;(PlayerAnalyticsPersistence.listBackups as Mock).mockResolvedValue([{
                 fileId: 'low-quality-backup',
                 fileName: 'low-quality-snapshot.json',

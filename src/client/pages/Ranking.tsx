@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { Button, Flex } from '@mantine/core'
@@ -9,9 +10,22 @@ import { getSnapshot } from '../services/api'
 import { DateTime } from 'luxon'
 
 export const Ranking = () => {
+    const [searchParams] = useSearchParams()
     const { data, loading, error, fetch } = useFetch('ranking')
     const [currentData, setCurrentData] = useState<DecoratedRow[] | null>(null)
     const [baseline, setBaseline] = useState<DecoratedRow[] | null>(null)
+
+    // Extract URL parameters for backend override (testing)
+    const getUrlParams = () => {
+        const params: Record<string, any> = {}
+        const inactive = searchParams.get('includeInactive')
+        const games = searchParams.get('minimumGames')
+        
+        if (inactive !== null) params.includeInactive = inactive === 'true'
+        if (games !== null) params.minimumGames = parseInt(games, 10)
+        
+        return Object.keys(params).length > 0 ? params : undefined
+    }
 
     // Remove known legacy keys from older implementations to prevent conflicts with users seeing old data.
     const clearLegacyCache = () => {
@@ -54,7 +68,7 @@ export const Ranking = () => {
                     setBaseline([])
                 }
             }
-            fetch()
+            fetch(getUrlParams())
         }
         init()
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,6 +81,14 @@ export const Ranking = () => {
             setCurrentData(finalRanking)
         }
     }, [data, baseline])
+
+    // Refetch data when URL search params change
+    useEffect(() => {
+        if (baseline !== null) {
+            fetch(getUrlParams())
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams])
 
     const renderResults = () => {
         if (error) {
@@ -87,7 +109,7 @@ export const Ranking = () => {
                         <Button
                             leftSection={<IconRefresh size={16} />}
                             variant="light"
-                            onClick={fetch}
+                            onClick={() => fetch(getUrlParams())}
                             loading={loading}
                         >
                             Refresh

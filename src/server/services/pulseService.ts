@@ -11,7 +11,7 @@
  * This replaces the previous fragmented approach of separate pulseApi and pulseAdapter services.
  */
 
-import { readCsv } from '../utils/csvParser'
+import { communityDataService } from './communityDataService'
 import cache from '../utils/cache'
 import { metrics } from '../metrics/lite'
 import { bumpCache } from '../observability/requestContext'
@@ -98,27 +98,17 @@ export class PulseService {
      */
     private async loadPlayersFromCsv(): Promise<string[]> {
         try {
-            const players = (await readCsv()) as unknown as Array<{
-                btag: string
-                name?: string
-                challongeId?: string
-                id: string
-            }>
+            const communityData = await communityDataService.getCommunityData()
 
-            // Build display name lookup while we have the CSV data
+            // Build display name lookup from centralized service
             if (!this.displayNameLookup) {
-                this.displayNameLookup = new Map<string, string>()
-                players.forEach((player) => {
-                    if (player.btag && player.name) {
-                        this.displayNameLookup!.set(player.btag, player.name)
-                    }
-                })
+                this.displayNameLookup = new Map<string, string>(communityData.displayNames)
                 console.log(
-                    `[PulseService] Loaded ${this.displayNameLookup.size} display names from CSV`
+                    `[PulseService] Loaded ${this.displayNameLookup.size} display names from CSV via centralized service`
                 )
             }
 
-            return players.map((player) => player.id)
+            return communityData.players.map((player) => player.id)
         } catch (error) {
             console.error(
                 `[PulseService.loadPlayersFromCsv] Error reading CSV: ${(error as Error).message}`
@@ -132,41 +122,41 @@ export class PulseService {
      */
     async getRanking(includeInactive: boolean = false, minimumGames: number = 20): Promise<RankedPlayer[]> {
         const cacheKey = 'snapShot'
-        const cachedData = cache.get(cacheKey)
+        let rawData = cache.get(cacheKey) as RankedPlayer[] | undefined
 
-        if (cachedData) {
+        if (!rawData) {
+            metrics.cache_miss_total++
+            bumpCache(false)
+
+            // Anti-stampede: share one ongoing refresh across concurrent callers
+            if (this.inflightRankingPromise) {
+                rawData = await this.inflightRankingPromise
+            } else {
+                this.inflightRankingPromise = this.fetchRankingData()
+                try {
+                    rawData = await this.inflightRankingPromise
+                } finally {
+                    this.inflightRankingPromise = null
+                }
+            }
+        } else {
             metrics.cache_hit_total++
             bumpCache(true)
-            return cachedData
         }
 
-        metrics.cache_miss_total++
-        bumpCache(false)
-
-        // Anti-stampede: share one ongoing refresh across concurrent callers
-        if (this.inflightRankingPromise) {
-            return this.inflightRankingPromise
+        // Apply per-request filtering to unfiltered cached data
+        if (!includeInactive && rawData) {
+            return DataDerivationsService.filterByMinimumGames(rawData, minimumGames)
         }
-
-        // Start new fetch and store the promise
-        this.inflightRankingPromise = this.fetchRankingData(includeInactive, minimumGames)
-
-        try {
-            const result = await this.inflightRankingPromise
-            return result
-        } finally {
-            // Reset inflight promise so future requests can trigger a new fetch if needed
-            this.inflightRankingPromise = null
-        }
+        
+        return rawData || []
     }
 
     /**
      * Internal method to fetch and process ranking data
+     * Returns unfiltered data - filtering applied per-request
      */
-    private async fetchRankingData(
-        includeInactive: boolean,
-        minimumGames: number
-    ): Promise<RankedPlayer[]> {
+    private async fetchRankingData(): Promise<RankedPlayer[]> {
         try {
             const characterIds = await this.loadPlayersFromCsv()
             const currentSeason = await this.getCurrentSeason()
@@ -184,18 +174,12 @@ export class PulseService {
                 Number(currentSeason)
             )
 
-            // Process teams to ranked players with display names automatically included
-            let filteredPlayers = DataDerivationsService.processTeamsToRankedPlayers(allRankedTeams)
-
-            if (!includeInactive) {
-                filteredPlayers = DataDerivationsService.filterByMinimumGames(
-                    filteredPlayers,
-                    minimumGames
-                )
-            }
-            // Cache the results
-            cache.set('snapShot', filteredPlayers)
-            return filteredPlayers
+            // Process teams to ranked players - cache unfiltered data
+            const rankedPlayers = DataDerivationsService.processTeamsToRankedPlayers(allRankedTeams)
+            
+            // Cache unfiltered results for per-request filtering
+            cache.set('snapShot', rankedPlayers)
+            return rankedPlayers
         } catch (error) {
             console.error(`[PulseService.fetchRankingData] Error:`, error)
             return []
