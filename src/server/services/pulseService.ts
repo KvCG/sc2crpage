@@ -17,6 +17,7 @@ import { metrics } from '../metrics/lite'
 import { bumpCache } from '../observability/requestContext'
 import { PulseAdapter, PulseRequestCache } from './pulseAdapter'
 import { DataDerivationsService } from './dataDerivations'
+import { getRankingMinGamesThreshold } from '../utils/rankingFilters'
 import { RankedPlayer } from '../../shared/types'
 
 /**
@@ -119,8 +120,17 @@ export class PulseService {
 
     /**
      * Get current ranking with caching and anti-stampede protection
+     * 
+     * GLOBAL FILTER BOUNDARY: This method enforces the minimum games filter
+     * as the single source of truth for all analytics views (Ranking, Distributions,
+     * Activity Report). The filter is ALWAYS applied using the environment-based
+     * threshold from RANKING_MIN_GAMES.
+     * 
+     * @param overrideMinGames - Optional override for testing purposes only. Use undefined for production.
+     * 
+     * DO NOT bypass this filter or re-implement filtering in consuming services.
      */
-    async getRanking(includeInactive: boolean = false, minimumGames: number = 20): Promise<RankedPlayer[]> {
+    async getRanking(overrideMinGames?: number): Promise<RankedPlayer[]> {
         const cacheKey = 'snapShot'
         let rawData = cache.get(cacheKey) as RankedPlayer[] | undefined
 
@@ -144,12 +154,12 @@ export class PulseService {
             bumpCache(true)
         }
 
-        // Apply per-request filtering to unfiltered cached data
-        if (!includeInactive && rawData) {
-            return DataDerivationsService.filterByMinimumGames(rawData, minimumGames)
-        }
+        // ALWAYS apply minimum games filter at this global boundary
+        // Uses environment variable RANKING_MIN_GAMES (default: 10) or test override
+        const minimumGames = overrideMinGames ?? getRankingMinGamesThreshold()
+        const filteredData = DataDerivationsService.filterByMinimumGames(rawData || [], minimumGames)
         
-        return rawData || []
+        return filteredData
     }
 
     /**

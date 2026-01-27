@@ -15,13 +15,12 @@ export const Ranking = () => {
     const [currentData, setCurrentData] = useState<DecoratedRow[] | null>(null)
     const [baseline, setBaseline] = useState<DecoratedRow[] | null>(null)
 
-    // Extract URL parameters for backend override (testing)
+    // Note: Minimum games filtering is handled server-side at the pulseService.getRanking() boundary
+    // URL parameters are optional for testing purposes
     const getUrlParams = () => {
         const params: Record<string, any> = {}
-        const inactive = searchParams.get('includeInactive')
         const games = searchParams.get('minimumGames')
         
-        if (inactive !== null) params.includeInactive = inactive === 'true'
         if (games !== null) params.minimumGames = parseInt(games, 10)
         
         return Object.keys(params).length > 0 ? params : undefined
@@ -82,7 +81,7 @@ export const Ranking = () => {
         }
     }, [data, baseline])
 
-    // Refetch data when URL search params change
+    // Refetch when URL search params change (for testing)
     useEffect(() => {
         if (baseline !== null) {
             fetch(getUrlParams())

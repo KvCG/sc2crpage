@@ -225,7 +225,8 @@ describe('PulseService Integration (Characterization)', () => {
     describe('Backward Compatibility', () => {
         it('maintains expected method signatures', () => {
             // Ensures existing callers won't break
-            expect(testService.getRanking).toHaveLength(0) // no parameters
+            // getRanking now accepts 1 optional parameter (overrideMinGames)
+            expect(testService.getRanking).toHaveLength(1)
             expect(testService.searchPlayer).toHaveLength(1) // term parameter
             expect(testService.getCurrentSeason).toHaveLength(0) // no parameters
         })

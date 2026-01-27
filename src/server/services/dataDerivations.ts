@@ -420,7 +420,7 @@ export class DataDerivationsService {
      */
     static filterByMinimumGames(
         ranking: RankedPlayer[],
-        minimumGames: number = 20
+        minimumGames: number = 10
     ): RankedPlayer[] {
         return ranking.filter((player) => (player.totalGames || 0) >= minimumGames)
     }

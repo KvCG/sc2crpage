@@ -28,6 +28,7 @@ const hoisted = vi.hoisted(() => ({
         processTeamsToRankedPlayers: vi.fn(),
         filterByMinimumGames: vi.fn(),
     },
+    mockGetRankingMinGamesThreshold: vi.fn(() => 20),
 }))
 
 vi.mock('../../utils/csvParser', () => ({
@@ -59,6 +60,10 @@ vi.mock('../../services/pulseAdapter', () => ({
 
 vi.mock('../../services/dataDerivations', () => ({
     DataDerivationsService: hoisted.mockDataDerivationsService,
+}))
+
+vi.mock('../../utils/rankingFilters', () => ({
+    getRankingMinGamesThreshold: hoisted.mockGetRankingMinGamesThreshold,
 }))
 
 vi.mock('../../services/communityDataService', () => ({
@@ -238,7 +243,8 @@ describe('PulseService', () => {
             },
         ]
 
-        it('returns cached data when available', async () => {
+        it('returns cached data when available and ALWAYS applies minimum games filter', async () => {
+            hoisted.mockGetRankingMinGamesThreshold.mockReturnValueOnce(20)
             hoisted.mockCacheGet.mockReturnValueOnce(mockRankedPlayers)
             hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce(mockRankedPlayers)
 
@@ -247,7 +253,21 @@ describe('PulseService', () => {
             expect(result).toEqual(mockRankedPlayers)
             expect(hoisted.mockMetrics.cache_hit_total).toBe(1)
             expect(hoisted.mockBumpCache).toHaveBeenCalledWith(true)
+            // Verify filter is ALWAYS applied using environment-based threshold
+            expect(hoisted.mockGetRankingMinGamesThreshold).toHaveBeenCalled()
             expect(hoisted.mockDataDerivationsService.filterByMinimumGames).toHaveBeenCalledWith(mockRankedPlayers, 20)
+        })
+
+        it('accepts optional override parameter for testing purposes', async () => {
+            hoisted.mockCacheGet.mockReturnValueOnce(mockRankedPlayers)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce(mockRankedPlayers)
+
+            const result = await service.getRanking(5) // Override with 5 games
+
+            expect(result).toEqual(mockRankedPlayers)
+            // Verify filter uses override instead of environment variable
+            expect(hoisted.mockGetRankingMinGamesThreshold).not.toHaveBeenCalled()
+            expect(hoisted.mockDataDerivationsService.filterByMinimumGames).toHaveBeenCalledWith(mockRankedPlayers, 5)
         })
 
         it('fetches fresh data when cache is empty', async () => {
