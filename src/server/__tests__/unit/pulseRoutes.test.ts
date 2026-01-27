@@ -57,14 +57,14 @@ describe('PulseRoutes', () => {
     })
 
     describe('GET /api/top parameter precedence', () => {
-        it('uses URL params over env vars and defaults', async () => {
+        it('uses URL minimumGames param when provided', async () => {
             process.env.RANKING_MIN_GAMES = '15'
             
             const { pulseService } = await import('../../services/pulseService')
             const routes = await import('../../routes/pulseRoutes')
             
             const req = {
-                query: { minimumGames: '5', includeInactive: 'true' },
+                query: { minimumGames: '5' },
             } as unknown as Request
             
             const res = {
@@ -79,10 +79,10 @@ describe('PulseRoutes', () => {
 
             await handler(req, res)
 
-            expect(pulseService.getRanking).toHaveBeenCalledWith(true, 5)
+            expect(pulseService.getRanking).toHaveBeenCalledWith(5)
         })
 
-        it('uses env var when URL param absent', async () => {
+        it('uses undefined when URL param absent (relies on environment variable in service)', async () => {
             process.env.RANKING_MIN_GAMES = '15'
             
             const { pulseService } = await import('../../services/pulseService')
@@ -101,10 +101,10 @@ describe('PulseRoutes', () => {
 
             await handler(req, res)
 
-            expect(pulseService.getRanking).toHaveBeenCalledWith(false, 15)
+            expect(pulseService.getRanking).toHaveBeenCalledWith(undefined)
         })
 
-        it('uses hardcoded default when both URL param and env var absent', async () => {
+        it('uses undefined when URL param absent and no env var (service will use default)', async () => {
             delete process.env.RANKING_MIN_GAMES
             
             const { pulseService } = await import('../../services/pulseService')
@@ -123,7 +123,7 @@ describe('PulseRoutes', () => {
 
             await handler(req, res)
 
-            expect(pulseService.getRanking).toHaveBeenCalledWith(false, 10)
+            expect(pulseService.getRanking).toHaveBeenCalledWith(undefined)
         })
     })
 })

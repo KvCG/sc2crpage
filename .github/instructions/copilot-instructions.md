@@ -53,6 +53,14 @@ When helping users, reference the appropriate documentation:
   - Google Drive Storage: `services/driveFileStorage.ts` for ladder data storage and file operations
   - Analytics: `services/analyticsService.ts` for player analytics and statistics
 - **Middleware**: Server serves static assets, mounts API routes, and falls back to SPA
+- **Minimum Games Filter Boundary** (CRITICAL):
+  - **Single Source of Truth**: `pulseService.getRanking()` is the ONLY place where minimum games filtering is enforced
+  - **Environment-Based Threshold**: Uses `RANKING_MIN_GAMES` environment variable (default: 10) via `getRankingMinGamesThreshold()`
+  - **Always Applied**: Filter is ALWAYS applied to cached data before returning - no conditional logic, no bypass parameters
+  - **Consumed By**: All analytics views (Ranking, CommunityStats/Distributions, PlayerActivity) consume this same filtered dataset
+  - **DO NOT**: Re-implement filtering in AnalyticsService, route handlers, or client-side code
+  - **Rationale**: Ensures all pages operate on identical player sets, preventing divergent metrics and user confusion
+  - **Tests**: `__tests__/integration/filterConsistency.test.ts` enforces this invariant
 
 ## Client Patterns
 - **Config**: `services/config.ts` selects API endpoint based on hostname:

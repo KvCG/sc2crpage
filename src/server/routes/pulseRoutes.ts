@@ -14,9 +14,11 @@ const router = Router()
  * GET /api/top - Live Ranking Data
  * Returns current top player rankings using clean RankedPlayer interface
  * 
- * Query params (for testing):
- *   - includeInactive: 'true' | 'false' (default from env or false)
- *   - minimumGames: number (default from env or 20)
+ * Query params (optional, for testing):
+ *   - minimumGames: number (overrides RANKING_MIN_GAMES env var)
+ * 
+ * Note: Minimum games filtering is handled by pulseService.getRanking() at the global boundary.
+ * The RANKING_MIN_GAMES environment variable controls the threshold (default: 10).
  */
 router.get('/top', async (req: Request, res: Response) => {
     res.setHeader(
@@ -24,17 +26,13 @@ router.get('/top', async (req: Request, res: Response) => {
         'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
     )
 
-    // Priority: URL param > ENV var > hardcoded default
-    const includeInactive = req.query.includeInactive
-        ? req.query.includeInactive === 'true'
-        : false
-
-    const minimumGames = req.query.minimumGames
-        ? Number(req.query.minimumGames)
-        : (Number(process.env.RANKING_MIN_GAMES) || 10)
-
     try {
-        const ranking = await pulseService.getRanking(includeInactive, minimumGames)
+        // Optional test override (undefined uses environment default)
+        const minimumGames = req.query.minimumGames
+            ? Number(req.query.minimumGames)
+            : undefined
+
+        const ranking = await pulseService.getRanking(minimumGames)
         res.json(ranking)
     } catch (error) {
         logger.error({ error, route: '/api/top' }, 'Failed to fetch ranking data')
@@ -45,6 +43,8 @@ router.get('/top', async (req: Request, res: Response) => {
 /**
  * GET /ranking - Enhanced ranking with analytics (future use)
  * Get current ranking with embedded delta information
+ * 
+ * Note: Minimum games filtering is handled by pulseService.getRanking() at the global boundary.
  */
 router.get('/ranking', async (req, res) => {
     try {
@@ -53,12 +53,12 @@ router.get('/ranking', async (req, res) => {
             includeInactive: req.query.includeInactive === 'true',
             minimumConfidence: parseInt(req.query.minimumConfidence as string) || 75,
             maxDataAge: parseInt(req.query.maxDataAge as string) || 48,
-            minimumGames: parseInt(req.query.minimumGames as string) || 20,
         }
 
         // Get current ranking and deltas in parallel
+        // Ranking data is already filtered by pulseService.getRanking()
         const [currentRanking, deltas] = await Promise.all([
-            pulseService.getRanking(options.includeInactive, Number(options.minimumGames || 20)),
+            pulseService.getRanking(),
             DeltaComputationEngine.computePlayerDeltas(options),
         ])
 

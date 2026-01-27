@@ -18,6 +18,9 @@ export class AnalyticsService {
 
     /**
      * Generate comprehensive player analytics with caching
+     * 
+     * Note: minimumGames filtering is handled by pulseService.getRanking() at the global boundary.
+     * includeInactive parameter is preserved for API compatibility but is not used for filtering.
      */
     static async generatePlayerAnalytics(options: {
         timeframe?: 'current' | 'daily'
@@ -45,15 +48,11 @@ export class AnalyticsService {
         )
 
         try {
-            // Get raw player data
-            const rawData = await this.fetchPlayerData(timeframe)
+            // Get player data (already filtered by pulseService.getRanking())
+            const baseData = await this.fetchPlayerData(timeframe)
 
-            // Apply filters
-            let filteredData = rawData
-
-            if (!includeInactive) {
-                filteredData = DataDerivationsService.filterByMinimumGames(filteredData, minimumGames)
-            }
+            // Apply race filter only (minimum games filter already applied at boundary)
+            let filteredData = baseData
 
             if (race) {
                 filteredData = filteredData.filter((player) => player.mainRace === race)
@@ -103,6 +102,9 @@ export class AnalyticsService {
 
     /**
      * Generate advanced activity analysis with temporal patterns
+     * 
+     * Note: minimumGames filtering is handled by pulseService.getRanking() at the global boundary.
+     * includeInactive parameter is preserved for API compatibility but is not used for filtering.
      */
     static async generateActivityAnalysis(options: {
         includeInactive?: boolean
@@ -124,12 +126,8 @@ export class AnalyticsService {
         )
 
         try {
-            const rawData = await this.fetchPlayerData(timeframe)
-
-            let filteredData = rawData
-            if (!includeInactive) {
-                filteredData = DataDerivationsService.filterByMinimumGames(filteredData, minimumGames)
-            }
+            // Get player data (already filtered by pulseService.getRanking())
+            const filteredData = await this.fetchPlayerData(timeframe)
 
             const analysis: any = {
                 metadata: {
@@ -177,14 +175,17 @@ export class AnalyticsService {
 
     /**
      * Fetch player data based on timeframe
+     * 
+     * Note: Data from pulseService.getRanking() is already filtered by minimum games
+     * at the global boundary. Daily snapshots are also pre-filtered.
      */
     private static async fetchPlayerData(timeframe: 'current' | 'daily'): Promise<RankedPlayer[]> {
         if (timeframe === 'daily') {
             const snapshot = await retrieveInitialRankingData()
             return snapshot.data || []
         } else {
-            const rawData = await pulseService.getRanking()
-            return rawData || []
+            const filteredData = await pulseService.getRanking()
+            return filteredData || []
         }
     }
 
