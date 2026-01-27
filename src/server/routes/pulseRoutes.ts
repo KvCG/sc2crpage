@@ -13,19 +13,28 @@ const router = Router()
 /**
  * GET /api/top - Live Ranking Data
  * Returns current top player rankings using clean RankedPlayer interface
+ * 
+ * Query params (for testing):
+ *   - includeInactive: 'true' | 'false' (default from env or false)
+ *   - minimumGames: number (default from env or 20)
  */
 router.get('/top', async (req: Request, res: Response) => {
     res.setHeader(
         'x-sc2pulse-attribution',
         'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
     )
-    const { includeInactive = false, groupBy, timeframe, minimumGames } = req.query
+
+    // Priority: URL param > ENV var > hardcoded default
+    const includeInactive = req.query.includeInactive
+        ? req.query.includeInactive === 'true'
+        : false
+
+    const minimumGames = req.query.minimumGames
+        ? Number(req.query.minimumGames)
+        : (Number(process.env.RANKING_MIN_GAMES) || 10)
 
     try {
-        const ranking = await pulseService.getRanking(
-            includeInactive === 'true',
-            Number(minimumGames ?? 20)
-        )
+        const ranking = await pulseService.getRanking(includeInactive, minimumGames)
         res.json(ranking)
     } catch (error) {
         logger.error({ error, route: '/api/top' }, 'Failed to fetch ranking data')

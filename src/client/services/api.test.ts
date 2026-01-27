@@ -46,4 +46,26 @@ describe('api client', () => {
         ;(instance.get as any).mockRejectedValueOnce(new Error('boom'))
         await expect(api.getTop()).rejects.toThrow('boom')
     })
+
+    it('sends only provided params to getTop', async () => {
+        const instance = (axios as any).create()
+        ;(instance.get as any).mockResolvedValueOnce({ data: [] })
+        
+        await api.getTop({ minimumGames: 0 })
+        
+        expect(instance.get).toHaveBeenCalledWith('api/top/', {
+            params: { minimumGames: 0 }
+        })
+    })
+
+    it('sends undefined params when no filters specified', async () => {
+        const instance = (axios as any).create()
+        ;(instance.get as any).mockResolvedValueOnce({ data: [] })
+        
+        await api.getTop()
+        
+        expect(instance.get).toHaveBeenCalledWith('api/top/', {
+            params: undefined
+        })
+    })
 })
