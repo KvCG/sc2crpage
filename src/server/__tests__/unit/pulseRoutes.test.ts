@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { Request, Response } from 'express'
 
 // Mock all services
 vi.mock('../../services/pulseService', () => ({
@@ -30,11 +31,99 @@ vi.mock('../../utils/getClientInfo', () => ({
     getClientInfo: vi.fn().mockReturnValue({ device: 'test', os: 'test' }),
 }))
 
+vi.mock('../../logging/logger', () => ({
+    default: {
+        error: vi.fn(),
+        info: vi.fn(),
+    },
+}))
+
 describe('PulseRoutes', () => {
+    let originalEnv: NodeJS.ProcessEnv
+
+    beforeEach(() => {
+        vi.clearAllMocks()
+        originalEnv = { ...process.env }
+    })
+
+    afterEach(() => {
+        process.env = originalEnv
+    })
+
     it('should export routes module successfully', async () => {
-        // Test that the routes module can be imported without errors
         const routes = await import('../../routes/pulseRoutes')
         expect(routes.default).toBeDefined()
         expect(typeof routes.default).toBe('function')
+    })
+
+    describe('GET /api/top parameter precedence', () => {
+        it('uses URL params over env vars and defaults', async () => {
+            process.env.RANKING_MIN_GAMES = '15'
+            
+            const { pulseService } = await import('../../services/pulseService')
+            const routes = await import('../../routes/pulseRoutes')
+            
+            const req = {
+                query: { minimumGames: '5', includeInactive: 'true' },
+            } as unknown as Request
+            
+            const res = {
+                setHeader: vi.fn(),
+                json: vi.fn(),
+                status: vi.fn().mockReturnThis(),
+            } as unknown as Response
+
+            const router = routes.default
+            const topRoute = router.stack?.find((layer: any) => layer.route?.path === '/top')
+            const handler = topRoute?.route?.stack?.[0]?.handle
+
+            await handler(req, res)
+
+            expect(pulseService.getRanking).toHaveBeenCalledWith(true, 5)
+        })
+
+        it('uses env var when URL param absent', async () => {
+            process.env.RANKING_MIN_GAMES = '15'
+            
+            const { pulseService } = await import('../../services/pulseService')
+            const routes = await import('../../routes/pulseRoutes')
+            
+            const req = { query: {} } as unknown as Request
+            const res = {
+                setHeader: vi.fn(),
+                json: vi.fn(),
+                status: vi.fn().mockReturnThis(),
+            } as unknown as Response
+
+            const router = routes.default
+            const topRoute = router.stack?.find((layer: any) => layer.route?.path === '/top')
+            const handler = topRoute?.route?.stack?.[0]?.handle
+
+            await handler(req, res)
+
+            expect(pulseService.getRanking).toHaveBeenCalledWith(false, 15)
+        })
+
+        it('uses hardcoded default when both URL param and env var absent', async () => {
+            delete process.env.RANKING_MIN_GAMES
+            
+            const { pulseService } = await import('../../services/pulseService')
+            const routes = await import('../../routes/pulseRoutes')
+            
+            const req = { query: {} } as unknown as Request
+            const res = {
+                setHeader: vi.fn(),
+                json: vi.fn(),
+                status: vi.fn().mockReturnThis(),
+            } as unknown as Response
+
+            const router = routes.default
+            const topRoute = router.stack?.find((layer: any) => layer.route?.path === '/top')
+            const handler = topRoute?.route?.stack?.[0]?.handle
+
+            await handler(req, res)
+
+            expect(pulseService.getRanking).toHaveBeenCalledWith(false, 10)
+        })
     })
 })

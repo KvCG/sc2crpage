@@ -122,41 +122,41 @@ export class PulseService {
      */
     async getRanking(includeInactive: boolean = false, minimumGames: number = 20): Promise<RankedPlayer[]> {
         const cacheKey = 'snapShot'
-        const cachedData = cache.get(cacheKey)
+        let rawData = cache.get(cacheKey) as RankedPlayer[] | undefined
 
-        if (cachedData) {
+        if (!rawData) {
+            metrics.cache_miss_total++
+            bumpCache(false)
+
+            // Anti-stampede: share one ongoing refresh across concurrent callers
+            if (this.inflightRankingPromise) {
+                rawData = await this.inflightRankingPromise
+            } else {
+                this.inflightRankingPromise = this.fetchRankingData()
+                try {
+                    rawData = await this.inflightRankingPromise
+                } finally {
+                    this.inflightRankingPromise = null
+                }
+            }
+        } else {
             metrics.cache_hit_total++
             bumpCache(true)
-            return cachedData
         }
 
-        metrics.cache_miss_total++
-        bumpCache(false)
-
-        // Anti-stampede: share one ongoing refresh across concurrent callers
-        if (this.inflightRankingPromise) {
-            return this.inflightRankingPromise
+        // Apply per-request filtering to unfiltered cached data
+        if (!includeInactive && rawData) {
+            return DataDerivationsService.filterByMinimumGames(rawData, minimumGames)
         }
-
-        // Start new fetch and store the promise
-        this.inflightRankingPromise = this.fetchRankingData(includeInactive, minimumGames)
-
-        try {
-            const result = await this.inflightRankingPromise
-            return result
-        } finally {
-            // Reset inflight promise so future requests can trigger a new fetch if needed
-            this.inflightRankingPromise = null
-        }
+        
+        return rawData || []
     }
 
     /**
      * Internal method to fetch and process ranking data
+     * Returns unfiltered data - filtering applied per-request
      */
-    private async fetchRankingData(
-        includeInactive: boolean,
-        minimumGames: number
-    ): Promise<RankedPlayer[]> {
+    private async fetchRankingData(): Promise<RankedPlayer[]> {
         try {
             const characterIds = await this.loadPlayersFromCsv()
             const currentSeason = await this.getCurrentSeason()
@@ -174,18 +174,12 @@ export class PulseService {
                 Number(currentSeason)
             )
 
-            // Process teams to ranked players with display names automatically included
-            let filteredPlayers = DataDerivationsService.processTeamsToRankedPlayers(allRankedTeams)
-
-            if (!includeInactive) {
-                filteredPlayers = DataDerivationsService.filterByMinimumGames(
-                    filteredPlayers,
-                    minimumGames
-                )
-            }
-            // Cache the results
-            cache.set('snapShot', filteredPlayers)
-            return filteredPlayers
+            // Process teams to ranked players - cache unfiltered data
+            const rankedPlayers = DataDerivationsService.processTeamsToRankedPlayers(allRankedTeams)
+            
+            // Cache unfiltered results for per-request filtering
+            cache.set('snapShot', rankedPlayers)
+            return rankedPlayers
         } catch (error) {
             console.error(`[PulseService.fetchRankingData] Error:`, error)
             return []
