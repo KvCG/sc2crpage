@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express'
 import { pulseService } from '../services/pulseService'
 import { retrieveInitialRankingData } from '../services/snapshotService'
 import { formatData } from '../utils/formatData'
-import { filterRankingForDisplay } from '../utils/rankingFilters'
 import { getClientInfo } from '../utils/getClientInfo'
 import logger from '../logging/logger'
 import { DeltaComputationEngine } from '../services/deltaComputationEngine'
@@ -124,8 +123,8 @@ router.get('/snapshot', async (_req: Request, res: Response) => {
         'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
     )
     try {
+        // Snapshot data is already filtered by minimum games threshold at pulseService boundary
         const snapshot = await retrieveInitialRankingData()
-        snapshot.data = filterRankingForDisplay(snapshot.data)
         res.json(snapshot)
     } catch (error) {
         logger.error({ error, route: '/api/snapshot' }, 'Failed to fetch daily snapshot')

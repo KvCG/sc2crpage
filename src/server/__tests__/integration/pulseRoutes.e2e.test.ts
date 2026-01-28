@@ -314,10 +314,8 @@ describe('pulseRoutes E2E tests', () => {
                 expiry: Date.now() + 86400000,
             }
             
-            const filteredData = [mockSnapshot.data[0]] // Simulate filtering
-            
+            // Snapshot data is already filtered by pulseService.getRanking() - no re-filtering in route
             hoisted.getDailySnapshotMock.mockResolvedValueOnce(structuredClone(mockSnapshot))
-            hoisted.filterRankingMock.mockReturnValueOnce(filteredData)
             
             const req = createMockRequest()
             const res = createMockResponse()
@@ -328,15 +326,13 @@ describe('pulseRoutes E2E tests', () => {
             
             await handler(req, res)
             
-            expect(hoisted.filterRankingMock).toHaveBeenCalledWith(mockSnapshot.data)
+            // Filter should NOT be called - data is pre-filtered in snapshotService
+            expect(hoisted.filterRankingMock).not.toHaveBeenCalled()
             expect(res.setHeader).toHaveBeenCalledWith(
                 'x-sc2pulse-attribution',
                 'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
             )
-            expect(res.jsonData).toEqual({
-                ...mockSnapshot,
-                data: filteredData
-            })
+            expect(res.jsonData).toEqual(mockSnapshot)
         })
 
         it('handles snapshot service errors', async () => {
