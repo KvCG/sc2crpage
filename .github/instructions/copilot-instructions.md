@@ -74,6 +74,11 @@ See `docs/reference/environment-variables.md` for all env vars.
 - Server-only helpers → `src/server/utils/`
 - Do not mix build-time tooling with runtime app logic
 
+### Do not over-engineer
+- Avoid unnecessary abstractions, patterns, or libraries
+- Favor straightforward, pragmatic solutions
+
+
 ---
 
 ## Conventions
