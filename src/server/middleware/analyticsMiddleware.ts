@@ -3,14 +3,6 @@ import { rateLimit, ipKeyGenerator } from 'express-rate-limit'
 import { z } from 'zod'
 import logger from '../logging/logger'
 import { getClientInfo } from '../utils/getClientInfo'
-import {
-    incrementAnalyticsRequest,
-    incrementAnalyticsRateLimit,
-    incrementAnalyticsFeatureDisabled,
-    incrementAnalyticsError,
-    observeAnalyticsLatency,
-} from '../metrics/lite'
-
 // Validation schemas for analytics requests
 const analyticsQuerySchema = z.object({
     race: z.enum(['TERRAN', 'PROTOSS', 'ZERG', 'RANDOM']).optional(),
@@ -68,8 +60,6 @@ export const analyticsRateLimit = rateLimit({
         return process.env.NODE_ENV === 'test'
     },
     handler: (req: Request, res: Response) => {
-        incrementAnalyticsRateLimit()
-
         const clientInfo = getClientInfo(req.headers['user-agent'] || '')
         logger.warn(
             {
@@ -119,8 +109,6 @@ export const requireAnalyticsFeature = (
         'true'
 
     if (!analyticsEnabled) {
-        incrementAnalyticsFeatureDisabled()
-
         const clientInfo = getClientInfo(req.headers['user-agent'] || '')
         logger.warn(
             {
@@ -169,8 +157,6 @@ export const validateAnalyticsRequest = (schema: z.ZodSchema) => {
             next()
         } catch (error) {
             if (error instanceof z.ZodError) {
-                incrementAnalyticsError('validation')
-
                 return res.status(400).json({
                     error: 'Invalid request parameters',
                     details: error.issues.map((err: any) => ({
@@ -243,16 +229,10 @@ export const analyticsPerformanceMonitoring = (
 ) => {
     const startTime = Date.now()
 
-    // Track analytics request
-    incrementAnalyticsRequest()
-
     // Override res.json to capture response time
     const originalJson = res.json
     res.json = function (data: any) {
         const responseTime = Date.now() - startTime
-
-        // Record latency metrics
-        observeAnalyticsLatency(responseTime)
 
         const clientInfo = getClientInfo(req.headers['user-agent'] || '')
 

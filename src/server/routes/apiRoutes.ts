@@ -5,8 +5,6 @@ import utilityRoutes from './utilityRoutes'
 import googleRoutes from './googleRoutes'
 import replayAnalyzerRoutes from './replayAnalyzerRoutes'
 import analyticsRoutes from './analyticsRoutes'
-import schedulerRoutes from './schedulerRoutes'
-
 const router = Router()
 
 router.use('/', pulseRoutes)
@@ -15,6 +13,5 @@ router.use('/', utilityRoutes)
 router.use('/', googleRoutes)
 router.use('/', replayAnalyzerRoutes)
 router.use('/', analyticsRoutes)
-router.use('/', schedulerRoutes)
 
 export default router

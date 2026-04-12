@@ -35,7 +35,7 @@ export const getLeagueSrc = (leagueType: number) => {
 
 export const addPositionChangeIndicator = (
     current: RowWithBtag[] | null,
-    baseline: RowWithBtag[] | null
+    baseline?: RowWithBtag[] | null
 ): DecoratedRow[] | null => {
     if (!current) return null
     if (!Array.isArray(baseline) || baseline.length === 0) {

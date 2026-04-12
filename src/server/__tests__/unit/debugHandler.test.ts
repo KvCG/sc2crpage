@@ -60,11 +60,12 @@ describe('debugHandler', () => {
         expect(res.body).toHaveProperty('pulse_p99_ms')
     })
 
-    it('errors on req without id', () => {
+    it('returns 400 for unsupported type', () => {
         const req = mockReq({ type: 'req' })
         const res = mockRes()
         handler(req, res)
         expect(res.statusCode).toBe(400)
-        expect(res.body.error).toBe('Missing id')
+        expect(res.body.error).toBe('Unsupported type')
+        expect(res.body.supported).not.toContain('req')
     })
 })

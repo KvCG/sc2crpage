@@ -13,8 +13,7 @@
 
 import { communityDataService } from './communityDataService'
 import cache from '../utils/cache'
-import { metrics } from '../metrics/lite'
-import { bumpCache } from '../observability/requestContext'
+import { metrics, bumpCache } from '../metrics/lite'
 import { PulseAdapter, PulseRequestCache } from './pulseAdapter'
 import { DataDerivationsService } from './dataDerivations'
 import { getRankingMinGamesThreshold } from '../utils/rankingFilters'

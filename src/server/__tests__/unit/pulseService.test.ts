@@ -45,9 +45,6 @@ vi.mock('../../utils/cache', () => ({
 
 vi.mock('../../metrics/lite', () => ({
     metrics: hoisted.mockMetrics,
-}))
-
-vi.mock('../../observability/requestContext', () => ({
     bumpCache: hoisted.mockBumpCache,
     bumpPulseReq: hoisted.mockBumpPulseReq,
     bumpPulseErr: hoisted.mockBumpPulseErr,

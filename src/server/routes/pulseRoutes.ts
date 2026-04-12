@@ -4,9 +4,6 @@ import { retrieveInitialRankingData } from '../services/snapshotService'
 import { formatData } from '../utils/formatData'
 import { getClientInfo } from '../utils/getClientInfo'
 import logger from '../logging/logger'
-import { DeltaComputationEngine } from '../services/deltaComputationEngine'
-import { DateTime } from 'luxon'
-
 const router = Router()
 
 /**
@@ -36,57 +33,6 @@ router.get('/top', async (req: Request, res: Response) => {
     } catch (error) {
         logger.error({ error, route: '/api/top' }, 'Failed to fetch ranking data')
         res.status(500).json({ error: 'Failed to fetch ranking data' })
-    }
-})
-
-/**
- * GET /ranking - Enhanced ranking with analytics (future use)
- * Get current ranking with embedded delta information
- * 
- * Note: Minimum games filtering is handled by pulseService.getRanking() at the global boundary.
- */
-router.get('/ranking', async (req, res) => {
-    try {
-        const options = {
-            timeWindowHours: parseInt(req.query.timeWindowHours as string) || 24,
-            includeInactive: req.query.includeInactive === 'true',
-            minimumConfidence: parseInt(req.query.minimumConfidence as string) || 75,
-            maxDataAge: parseInt(req.query.maxDataAge as string) || 48,
-        }
-
-        // Get current ranking and deltas in parallel
-        // Ranking data is already filtered by pulseService.getRanking()
-        const [currentRanking, deltas] = await Promise.all([
-            pulseService.getRanking(),
-            DeltaComputationEngine.computePlayerDeltas(options),
-        ])
-
-        // Create delta lookup map
-        const deltaMap = new Map(deltas.map((delta: any) => [delta.btag || `${delta.id}`, delta]))
-
-        // Enhance ranking with delta information
-        const enhancedRanking = currentRanking.map((player: any, index: number) => ({
-            ...player,
-            currentRank: index,
-            deltaData: deltaMap.get(String(player.btag)) || null,
-        }))
-
-        res.json({
-            success: true,
-            ranking: enhancedRanking,
-            metadata: {
-                totalPlayers: enhancedRanking.length,
-                withDeltas: Array.from(deltaMap.values()).length,
-                options,
-                timestamp: DateTime.now().toISO(),
-            },
-        })
-    } catch (error) {
-        logger.error({ error, feature: 'analyticsRoutes' }, 'Failed to fetch enhanced ranking')
-        res.status(500).json({
-            success: false,
-            error: 'Failed to generate enhanced ranking',
-        })
     }
 })
 
