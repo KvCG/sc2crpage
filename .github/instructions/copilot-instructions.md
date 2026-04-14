@@ -88,3 +88,5 @@ See `docs/reference/environment-variables.md` for all env vars.
 - See `docs/development-process/contributing.md` and `docs/development-process/branching-strategy.md`
 - Trunk-based: `dev` is the integration branch; all PRs target `dev`
 - Readability is a first-class criterion — clarity over brevity, explicit naming, single-responsibility functions, no magic values, comments explain *why*
+- Use descriptive variable names for API/external responses — `rawSeasons`, `teamData` etc., not bare `data` or `result`
+- Prefer chained array methods (`filter → sort → map`) over intermediate mutation when transforming collections — avoids redundant variables and makes the pipeline obvious at a glance
