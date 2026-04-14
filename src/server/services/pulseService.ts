@@ -148,14 +148,14 @@ export class PulseService {
                 // Keep only US seasons (one entry per region in the response),
                 // sorted newest-first so callers get the current season at index 0.
                 return rawSeasons
-                    .filter((s: any) => s?.region === 'US')
-                    .sort((a: any, b: any) => b.battlenetId - a.battlenetId)
-                    .map((s: any): SeasonEntry => ({
-                        id: s.battlenetId, // battlenetId is the canonical season identifier
-                        year: s.year,
-                        number: s.number,
-                        start: s.start,
-                        end: s.end,
+                    .filter((season: any) => season?.region === 'US')
+                    .sort((left: any, right: any) => right.battlenetId - left.battlenetId)
+                    .map((season: any): SeasonEntry => ({
+                        id: season.battlenetId, // battlenetId is the canonical season identifier
+                        year: season.year,
+                        number: season.number,
+                        start: season.start,
+                        end: season.end,
                     }))
             } catch (error) {
                 const pulseError = this.standardizeError(error, { operation: 'getAllSeasons' })
