@@ -3,10 +3,6 @@ import { Router, Request, Response } from 'express'
 import logger from '../logging/logger'
 import { standardAnalyticsMiddleware, expensiveAnalyticsMiddleware } from '../middleware/analyticsMiddleware'
 import { AnalyticsService } from '../services/analyticsService'
-import { incrementAnalyticsError } from '../metrics/lite'
-import { DeltaComputationEngine } from '../services/deltaComputationEngine'
-import { DateTime } from 'luxon'
-
 const router = Router()
 
 /**
@@ -63,7 +59,6 @@ router.get('/player-analytics', standardAnalyticsMiddleware, async (req: Request
             data: analytics,
         })
     } catch (error) {
-        incrementAnalyticsError('other')
 
         logger.error({ error, feature: 'analytics' }, 'Error generating player analytics')
         res.status(500).json({
@@ -121,46 +116,12 @@ router.get('/player-analytics/activity', expensiveAnalyticsMiddleware, async (re
             data: analysis,
         })
     } catch (error) {
-        incrementAnalyticsError('other')
 
         logger.error({ error, feature: 'analytics' }, 'Error generating activity analysis')
         res.status(500).json({
             success: false,
             error: 'Failed to generate activity analysis',
             message: error instanceof Error ? error.message : 'Unknown error occurred',
-        })
-    }
-})
-
-/**
- * GET /analytics/deltas
- * Get enhanced player deltas with position and rating changes
- */
-router.get('/deltas', async (req, res) => {
-    try {
-        const options = {
-            timeWindowHours: parseInt(req.query.timeWindowHours as string) || 24,
-            includeInactive: req.query.includeInactive === 'true',
-            minimumConfidence: parseInt(req.query.minimumConfidence as string) || 50,
-            maxDataAge: parseInt(req.query.maxDataAge as string) || 48,
-        }
-
-        const deltas = await DeltaComputationEngine.computePlayerDeltas(options)
-
-        res.json({
-            success: true,
-            deltas,
-            metadata: {
-                count: deltas.length,
-                options,
-                timestamp: DateTime.now().toISO(),
-            },
-        })
-    } catch (error) {
-        logger.error({ error, feature: 'analyticsRoutes' }, 'Failed to fetch player deltas')
-        res.status(500).json({
-            success: false,
-            error: 'Failed to compute player deltas',
         })
     }
 })

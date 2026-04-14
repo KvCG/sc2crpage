@@ -4,7 +4,6 @@ import { pulseService } from '../services/pulseService'
 import { retrieveInitialRankingData } from '../services/snapshotService'
 import logger from '../logging/logger'
 import { DateTime } from 'luxon'
-import { incrementAnalyticsCacheHit, incrementAnalyticsCacheMiss, incrementAnalyticsError } from '../metrics/lite'
 import { toCostaRicaTime } from '../utils/pulseApiHelper'
 import { RankedPlayer } from '../../shared/types'
 
@@ -86,7 +85,6 @@ export class AnalyticsService {
 
             return analytics
         } catch (error) {
-            incrementAnalyticsError('service')
 
             logger.error(
                 {
@@ -159,7 +157,6 @@ export class AnalyticsService {
 
             return analysis
         } catch (error) {
-            incrementAnalyticsError('service')
 
             logger.error(
                 {
