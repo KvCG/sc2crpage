@@ -118,3 +118,45 @@ export interface Team {
     leagueType: number
     legacyUid: string
 }
+
+export interface H2HMatch {
+    matchId: number | string
+    date: string
+    map: string
+    durationSeconds: number
+    region: string
+    type: string
+    winnerCharacterId: number
+    player1RatingChange: number | null
+    player2RatingChange: number | null
+    player1RatingAtTime: number | null
+    player2RatingAtTime: number | null
+    source: 'pulse' | 'manual' | 'blizzard'
+    addedBy?: string
+}
+
+export interface H2HPairRecord {
+    player1CharacterId: number
+    player2CharacterId: number
+    pulseSyncedAt: string
+    nextCursor: string | null
+    matches: H2HMatch[]
+}
+
+export interface H2HPlayerMeta {
+    characterId: number
+    btag: string
+    name?: string
+}
+
+export interface H2HResponse {
+    player1: H2HPlayerMeta
+    player2: H2HPlayerMeta
+    summary: {
+        player1Wins: number
+        player2Wins: number
+        totalGames: number
+        lastPlayed: string | null
+    }
+    matches: H2HMatch[]
+}

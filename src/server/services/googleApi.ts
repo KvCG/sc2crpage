@@ -96,6 +96,7 @@ const makeFilePublic = async (fileId: string, auth: any) => {
  * @returns {Promise<Array>} List of files.
  */
 const getFilesFromFolder = async (folderId: string, accessToken: string) => {
+    console.log('Retrieving files from folder ID:', accessToken)
     const response = await axios.get(
         'https://www.googleapis.com/drive/v3/files',
         {
