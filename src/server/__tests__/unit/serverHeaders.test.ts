@@ -32,6 +32,16 @@ vi.mock('../../routes/apiRoutes', () => ({
     default: (_req: any, _res: any, next: any) => next(),
 }))
 
+// Mock snapshotService to prevent real HTTP calls during server module import
+vi.mock('../../services/snapshotService', () => ({
+    retrieveInitialRankingData: vi.fn().mockResolvedValue({
+        data: [],
+        createdAt: new Date().toISOString(),
+        expiry: Date.now() + 86400000,
+    }),
+    clearDailySnapshot: vi.fn(),
+}))
+
 // Utility to build a minimal req/res/next triple
 const buildReqRes = () => {
     const headers: Record<string, string> = {}
@@ -71,22 +81,16 @@ describe('server headers middleware', () => {
         headersMw = findHeadersMiddleware()
     })
 
-    it('sets correlation, powered-by, and start time headers', () => {
+    it('sets powered-by header and records response time on finish', () => {
         const { req, res, next, headers } = buildReqRes()
         headersMw(req, res, next)
         expect(next).toHaveBeenCalled()
         expect(headers['x-powered-by']).toBe('sc2cr')
-        expect(headers['x-correlation-id']).toBeDefined()
-        expect(headers['x-correlation-id']).not.toBe('')
-        expect(headers['x-response-start-ms']).toBeDefined()
-        expect(Number.isNaN(Number(headers['x-response-start-ms']))).toBe(false)
     })
 
-    it('respects incoming x-correlation-id and sets response time on finish', () => {
+    it('sets response time header on finish', () => {
         const { req, res, next, headers, triggerFinish } = buildReqRes()
-        req.headers['x-correlation-id'] = 'test-corr-id'
         headersMw(req, res, next)
-        expect(headers['x-correlation-id']).toBe('test-corr-id')
         // simulate response finish to trigger x-response-time-ms
         triggerFinish()
         expect(headers['x-response-time-ms']).toBeDefined()

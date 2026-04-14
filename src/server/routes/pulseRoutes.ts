@@ -4,9 +4,6 @@ import { retrieveInitialRankingData } from '../services/snapshotService'
 import { formatData } from '../utils/formatData'
 import { getClientInfo } from '../utils/getClientInfo'
 import logger from '../logging/logger'
-import { DeltaComputationEngine } from '../services/deltaComputationEngine'
-import { DateTime } from 'luxon'
-
 const router = Router()
 
 /**
@@ -31,6 +28,16 @@ router.get('/top', async (req: Request, res: Response) => {
             ? Number(req.query.minimumGames)
             : undefined
 
+        // Historical season lookup — validate before interpolating into SC2Pulse URL
+        if (req.query.season !== undefined) {
+            const seasonId = Number(req.query.season)
+            if (!Number.isInteger(seasonId) || seasonId <= 0) {
+                return res.status(400).json({ error: 'season must be a positive integer' })
+            }
+            const ranking = await pulseService.getRankingForSeason(seasonId, minimumGames)
+            return res.json(ranking)
+        }
+
         const ranking = await pulseService.getRanking(minimumGames)
         res.json(ranking)
     } catch (error) {
@@ -39,54 +46,17 @@ router.get('/top', async (req: Request, res: Response) => {
     }
 })
 
-/**
- * GET /ranking - Enhanced ranking with analytics (future use)
- * Get current ranking with embedded delta information
- * 
- * Note: Minimum games filtering is handled by pulseService.getRanking() at the global boundary.
- */
-router.get('/ranking', async (req, res) => {
+router.get('/seasons', async (_req: Request, res: Response) => {
+    res.setHeader(
+        'x-sc2pulse-attribution',
+        'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
+    )
     try {
-        const options = {
-            timeWindowHours: parseInt(req.query.timeWindowHours as string) || 24,
-            includeInactive: req.query.includeInactive === 'true',
-            minimumConfidence: parseInt(req.query.minimumConfidence as string) || 75,
-            maxDataAge: parseInt(req.query.maxDataAge as string) || 48,
-        }
-
-        // Get current ranking and deltas in parallel
-        // Ranking data is already filtered by pulseService.getRanking()
-        const [currentRanking, deltas] = await Promise.all([
-            pulseService.getRanking(),
-            DeltaComputationEngine.computePlayerDeltas(options),
-        ])
-
-        // Create delta lookup map
-        const deltaMap = new Map(deltas.map((delta: any) => [delta.btag || `${delta.id}`, delta]))
-
-        // Enhance ranking with delta information
-        const enhancedRanking = currentRanking.map((player: any, index: number) => ({
-            ...player,
-            currentRank: index,
-            deltaData: deltaMap.get(String(player.btag)) || null,
-        }))
-
-        res.json({
-            success: true,
-            ranking: enhancedRanking,
-            metadata: {
-                totalPlayers: enhancedRanking.length,
-                withDeltas: Array.from(deltaMap.values()).length,
-                options,
-                timestamp: DateTime.now().toISO(),
-            },
-        })
+        const seasons = await pulseService.getAllSeasons()
+        res.json(seasons)
     } catch (error) {
-        logger.error({ error, feature: 'analyticsRoutes' }, 'Failed to fetch enhanced ranking')
-        res.status(500).json({
-            success: false,
-            error: 'Failed to generate enhanced ranking',
-        })
+        logger.error({ error, route: '/api/seasons' }, 'Failed to fetch season list')
+        res.status(500).json({ error: 'Failed to fetch season list' })
     }
 })
 

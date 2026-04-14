@@ -2,28 +2,46 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
+import { SeasonPicker } from '../components/Ranking/SeasonPicker'
 import { Button, Flex } from '@mantine/core'
 import { IconRefresh } from '@tabler/icons-react'
 import { addPositionChangeIndicator, type DecoratedRow } from '../utils/rankingHelper'
 import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
-import { getSnapshot } from '../services/api'
+import { getSnapshot, getSeasons } from '../services/api'
 import { DateTime } from 'luxon'
+import type { SeasonEntry } from '../../shared/types'
 
 export const Ranking = () => {
     const [searchParams] = useSearchParams()
     const { data, loading, error, fetch } = useFetch('ranking')
     const [currentData, setCurrentData] = useState<DecoratedRow[] | null>(null)
     const [baseline, setBaseline] = useState<DecoratedRow[] | null>(null)
+    const [seasons, setSeasons] = useState<SeasonEntry[]>([])
+    const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null)
+
+    const currentSeasonId = seasons.length > 0 ? seasons[0].id : null
+    const isCurrentSeason = selectedSeasonId === null || selectedSeasonId === currentSeasonId
 
     // Note: Minimum games filtering is handled server-side at the pulseService.getRanking() boundary
     // URL parameters are optional for testing purposes
     const getUrlParams = () => {
         const params: Record<string, any> = {}
         const games = searchParams.get('minimumGames')
-        
+
         if (games !== null) params.minimumGames = parseInt(games, 10)
-        
+        if (!isCurrentSeason && selectedSeasonId !== null) params.season = selectedSeasonId
+
         return Object.keys(params).length > 0 ? params : undefined
+    }
+
+    const handleSeasonChange = (id: number) => {
+        setSelectedSeasonId(id)
+        const isNewCurrent = seasons.length === 0 || id === seasons[0].id
+        const params: Record<string, any> = {}
+        const games = searchParams.get('minimumGames')
+        if (games !== null) params.minimumGames = parseInt(games, 10)
+        if (!isNewCurrent) params.season = id
+        fetch(Object.keys(params).length > 0 ? params : undefined)
     }
 
     // Remove known legacy keys from older implementations to prevent conflicts with users seeing old data.
@@ -44,6 +62,18 @@ export const Ranking = () => {
         const init = async () => {
             // Cleanup legacy keys to avoid conflicts with the new dailySnapshot cache
             clearLegacyCache()
+
+            // Fetch season list (stable data; no polling needed)
+            try {
+                const seasonsResp = await getSeasons()
+                const seasonList: SeasonEntry[] = seasonsResp.data
+                setSeasons(seasonList)
+                if (seasonList.length > 0) {
+                    setSelectedSeasonId(seasonList[0].id)
+                }
+            } catch {
+                // Proceed without season picker if the endpoint fails
+            }
 
             const cached = loadData('dailySnapshot')
             if (isValid('dailySnapshot', cached)) {
@@ -74,10 +104,15 @@ export const Ranking = () => {
     }, [])
 
     useEffect(() => {
-        // When live data arrives and we have a baseline, compute indicators
+        // When live data arrives and we have a baseline, compute indicators.
+        // For historical seasons there is no same-day baseline — use data directly.
         if (data && baseline !== null) {
-            const finalRanking = addPositionChangeIndicator(data, baseline)
-            setCurrentData(finalRanking)
+            if (isCurrentSeason) {
+                const finalRanking = addPositionChangeIndicator(data, baseline)
+                setCurrentData(finalRanking)
+            } else {
+                setCurrentData(data as DecoratedRow[])
+            }
         }
     }, [data, baseline])
 
@@ -92,6 +127,9 @@ export const Ranking = () => {
     const renderResults = () => {
         if (error) {
             return <p>{error}</p>
+        }
+        if (!isCurrentSeason && !loading && Array.isArray(currentData) && currentData.length === 0) {
+            return <p>No players found for this season.</p>
         }
         if (currentData || loading) {
             return <RankingTable data={currentData} loading={loading} />
@@ -116,6 +154,15 @@ export const Ranking = () => {
                     </div>
                 </Flex>
             </Flex>
+            {seasons.length > 0 && selectedSeasonId !== null && (
+                <Flex justify={'center'} style={{ paddingBottom: '10px' }}>
+                    <SeasonPicker
+                        seasons={seasons}
+                        value={selectedSeasonId}
+                        onChange={handleSeasonChange}
+                    />
+                </Flex>
+            )}
             {renderResults()}
         </>
     )

@@ -1,0 +1,76 @@
+name: Release
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: 'Release version without "v" prefix (e.g. 0.0.8)'
+                required: true
+                type: string
+
+permissions:
+    contents: write
+
+jobs:
+    release:
+        name: Merge dev → main · Test · Tag · Push
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  # GITHUB_TOKEN works unless main has branch-protection
+                  # rules that block bot pushes. Use a PAT in that case:
+                  # token: ${{ secrets.RELEASE_PAT }}
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+
+            - name: Configure git identity
+              run: |
+                  git config user.name  "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            - name: Fetch all remote refs
+              run: git fetch --all
+
+            - name: Merge dev → main (no-ff)
+              run: |
+                  git checkout main
+                  git merge origin/dev --no-ff -m "Release v${{ inputs.version }}"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Run tests
+              run: npm test
+
+            # ---------------------------------------------------------------
+            # Optional: keeps package.json version in sync.
+            # Remove the next two steps if you prefer not to track it.
+            # ---------------------------------------------------------------
+            - name: Bump package.json version
+              run: npm version ${{ inputs.version }} --no-git-tag-version
+
+            - name: Commit version bump
+              run: |
+                  git add package.json package-lock.json
+                  git commit -m "chore: bump version to v${{ inputs.version }}"
+            # ---------------------------------------------------------------
+
+            - name: Create annotated tag
+              run: git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+
+            - name: Push main with tags
+              run: git push origin main --tags
+
+            - name: Create GitHub Release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  gh release create "v${{ inputs.version }}" \
+                    --title "Release v${{ inputs.version }}" \
+                    --generate-notes

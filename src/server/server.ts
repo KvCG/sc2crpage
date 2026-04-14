@@ -10,14 +10,9 @@ import 'dotenv/config'
 import { getBackendBuildInfo } from './utils/buildInfo'
 import { isLocalAppEnv } from '../shared/runtimeEnv'
 import { httpLogger, httpMetricsMiddleware } from './logging/httpLogger'
-import { getReqObs, finalizeReq } from './observability/requestObservability'
-import { withRequestContext } from './observability/requestContext'
-import { extractRequestId, resolveOrCreateCorrelationId } from './utils/requestIdentity'
 import createDebugHandler from './services/debugService'
 import logger from './logging/logger'
 import { retrieveInitialRankingData } from './services/snapshotService'
-import { PlayerAnalyticsScheduler } from './services/playerAnalyticsScheduler'
-
 const app = express()
 const port = process.env.PORT || 3000
 const wsPort = 4000 // Port for WebSocket server
@@ -64,62 +59,14 @@ if (process.env.NODE_ENV === 'development') {
 // Middleware and routes
 app.use(cors())
 app.use(httpLogger)
-app.use(withRequestContext)
 app.use(httpMetricsMiddleware)
-// Correlation + response time
-app.use((req: Request, res: Response, next: NextFunction) => {
-    // Start latency timer
+// Response time
+app.use((_req, res, next) => {
     const start = Date.now()
-    // Use client correlation ID if provided, else generate one
-    const corr = resolveOrCreateCorrelationId(req)
-    // Expose correlation and response metadata
-    res.setHeader('x-correlation-id', corr)
     res.setHeader('x-powered-by', 'sc2cr')
-    res.setHeader('x-response-start-ms', String(start))
-    // Log request start
-    logger.debug({ route: req.url, method: req.method, corr }, 'request start')
-
-    // Prefer canonical request ID; fall back to corr
-    const requestId = extractRequestId(req, res) || corr
-    if (requestId) {
-        // Minimal object for observability helpers
-        const reqLike: any = { headers: { 'x-request-id': String(requestId) } }
-        getReqObs(reqLike)
-        res.on('finish', () => {
-            // Best-effort response time header
-            try {
-                res.setHeader('x-response-time-ms', String(Date.now() - start))
-            } catch {}
-            finalizeReq(reqLike)
-            // Log request end
-            logger.debug(
-                {
-                    route: req.url,
-                    method: req.method,
-                    corr,
-                    status: res.statusCode,
-                },
-                'request end'
-            )
-        })
-    } else {
-        // No request ID; still set timing and log
-        res.on('finish', () => {
-            try {
-                res.setHeader('x-response-time-ms', String(Date.now() - start))
-            } catch {}
-            logger.debug(
-                {
-                    route: req.url,
-                    method: req.method,
-                    corr,
-                    status: res.statusCode,
-                },
-                'request end'
-            )
-        })
-    }
-    // Continue to next middleware
+    res.on('finish', () => {
+        try { res.setHeader('x-response-time-ms', String(Date.now() - start)) } catch {}
+    })
     next()
 })
 // Remove root debug handler; use canonical /api/build for debug
@@ -161,12 +108,4 @@ app.listen(port, () => {
         }
     })()
 
-    // Start analytics scheduler if enabled
-    const schedulerConfig = PlayerAnalyticsScheduler.getConfig()
-    if (schedulerConfig.enabled) {
-        PlayerAnalyticsScheduler.start()
-        logger.info({ config: schedulerConfig }, 'Player analytics scheduler started')
-    } else {
-        logger.info('Player analytics scheduler disabled via configuration')
-    }
 })

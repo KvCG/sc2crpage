@@ -1,6 +1,5 @@
 import { Request, Response } from 'express' // Express request/response types
-import { metrics, estimateQuantile, getAnalyticsMetricsSummary } from '../metrics/lite' // App metrics and quantile estimator
-import { getReqObsById } from '../observability/requestObservability' // Accessor for per-request observability data
+import { metrics, estimateQuantile } from '../metrics/lite' // App metrics and quantile estimator
 
 // Factory that creates the debug handler with injected build info
 export function createDebugHandler(deps: { buildInfo: any }) {
@@ -9,7 +8,7 @@ export function createDebugHandler(deps: { buildInfo: any }) {
         // Accepts ?type=
         const type = (req.query.type) as string | undefined
         if (!type) {
-            return res.status(400).json({ error: 'Missing query', expected: { type: 'buildInfo|metrics|req' } })
+            return res.status(400).json({ error: 'Missing query', expected: { type: 'buildInfo|metrics' } })
         }
 
         // Return build info payload
@@ -20,8 +19,6 @@ export function createDebugHandler(deps: { buildInfo: any }) {
 
         // Return current metrics snapshot
         if (type === 'metrics') {
-            const analyticsMetrics = getAnalyticsMetricsSummary()
-            
             const body = {
                 http_total: metrics.http_total, // All HTTP requests
                 http_5xx_total: metrics.http_5xx_total, // 5xx responses
@@ -31,30 +28,12 @@ export function createDebugHandler(deps: { buildInfo: any }) {
                 cache_miss_total: metrics.cache_miss_total, // Cache misses
                 pulse_p95_ms: estimateQuantile(0.95), // 95th percentile latency (ms)
                 pulse_p99_ms: estimateQuantile(0.99), // 99th percentile latency (ms)
-                // Analytics metrics
-                analytics_req_total: analyticsMetrics.totalRequests,
-                analytics_cache_hit_rate: analyticsMetrics.cacheHitRate,
-                analytics_rate_limited: analyticsMetrics.rateLimitBlocked,
-                analytics_feature_disabled: analyticsMetrics.featureDisabledBlocked,
-                analytics_error_rate: analyticsMetrics.errorRate,
-                analytics_p50_ms: analyticsMetrics.p50Latency,
-                analytics_p95_ms: analyticsMetrics.p95Latency,
-                analytics_p99_ms: analyticsMetrics.p99Latency
             }
             return res.json(body)
         }
 
-        // Return a single request observability record by id
-        if (type === 'req') {
-            const id = String(req.query.id || '') // ?id= required
-            if (!id) return res.status(400).json({ error: 'Missing id' })
-            const found = getReqObsById(id)
-            if (!found) return res.status(404).json({ error: 'Not found' })
-            return res.json(found)
-        }
-
         // Unknown type
-        return res.status(400).json({ error: 'Unsupported type', supported: ['buildInfo', 'metrics', 'req'] })
+        return res.status(400).json({ error: 'Unsupported type', supported: ['buildInfo', 'metrics'] })
     }
 }
 
