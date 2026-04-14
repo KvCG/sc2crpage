@@ -1,4 +1,5 @@
 import { google } from 'googleapis'
+import { Readable } from 'stream'
 import path from 'path'
 import fs from 'fs'
 import logger from '../logging/logger'
@@ -15,10 +16,12 @@ import { detectAppEnv } from '../../shared/runtimeEnv'
  */
 
 const RANKED_PLAYERS_FOLDER_NAME = 'RankedPlayers_' + detectAppEnv()
+const H2H_FOLDER_NAME = 'H2H_' + detectAppEnv()
 
 export class DriveFileStorage {
     private static auth: any = null
     private static folderId: string | null = null
+    private static h2hFolderId: string | null = null
 
     /**
      * Initialize Google Drive authentication using existing service account
@@ -312,6 +315,102 @@ export class DriveFileStorage {
                 folderName: RANKED_PLAYERS_FOLDER_NAME,
                 folderId: null
             }
+        }
+    }
+
+    // =========================================================================
+    // H2H JSON storage
+    // =========================================================================
+
+    private static async getH2HFolder(): Promise<string> {
+        if (this.h2hFolderId) return this.h2hFolderId
+
+        const auth = await this.authenticate()
+        const drive = google.drive({ version: 'v3', auth })
+
+        const response = await drive.files.list({
+            q: `name='${H2H_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            fields: 'files(id, name)'
+        })
+
+        if (response.data.files && response.data.files.length > 0) {
+            this.h2hFolderId = response.data.files[0].id!
+            logger.info({ folderName: H2H_FOLDER_NAME, folderId: this.h2hFolderId, feature: 'drive-storage' }, 'Found existing H2H folder')
+            return this.h2hFolderId
+        }
+
+        const folder = await drive.files.create({
+            requestBody: { name: H2H_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
+            fields: 'id'
+        })
+
+        this.h2hFolderId = folder.data.id!
+        logger.info({ folderName: H2H_FOLDER_NAME, folderId: this.h2hFolderId, feature: 'drive-storage' }, 'Created H2H folder')
+        return this.h2hFolderId
+    }
+
+    /**
+     * Read a JSON file from the H2H Drive folder.
+     * Returns null if the file does not exist.
+     */
+    static async readH2HJsonFile<T>(fileName: string): Promise<T | null> {
+        try {
+            const auth = await this.authenticate()
+            const drive = google.drive({ version: 'v3', auth })
+            const folderId = await this.getH2HFolder()
+
+            const response = await drive.files.list({
+                q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
+                fields: 'files(id)'
+            })
+
+            if (!response.data.files || response.data.files.length === 0) {
+                return null
+            }
+
+            const fileId = response.data.files[0].id!
+            const fileResponse = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'text' })
+            return JSON.parse(fileResponse.data as string) as T
+        } catch (error) {
+            logger.error({ error, fileName, feature: 'drive-storage' }, 'Failed to read H2H JSON file')
+            throw error
+        }
+    }
+
+    /**
+     * Write (overwrite) a JSON file in the H2H Drive folder.
+     */
+    static async writeH2HJsonFile(fileName: string, data: unknown): Promise<void> {
+        try {
+            const auth = await this.authenticate()
+            const drive = google.drive({ version: 'v3', auth })
+            const folderId = await this.getH2HFolder()
+
+            // Delete existing file if present
+            const existing = await drive.files.list({
+                q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
+                fields: 'files(id)'
+            })
+
+            if (existing.data.files && existing.data.files.length > 0) {
+                for (const file of existing.data.files) {
+                    if (file.id) await drive.files.delete({ fileId: file.id })
+                }
+            }
+
+            const body = JSON.stringify(data)
+            const stream = Readable.from([body])
+
+            await drive.files.create({
+                requestBody: { name: fileName, parents: [folderId] },
+                media: { mimeType: 'application/json', body: stream },
+                fields: 'id'
+            })
+
+            logger.info({ fileName, feature: 'drive-storage' }, 'Wrote H2H JSON file')
+        } catch (error) {
+            logger.error({ error, fileName, feature: 'drive-storage' }, 'Failed to write H2H JSON file')
+            throw error
         }
     }
 }

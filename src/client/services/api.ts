@@ -111,3 +111,13 @@ export const getPlayerActivityAnalysis = async (params?: {
     const response = await api.get(`api/player-analytics/activity`, { params })
     return response
 }
+
+export const getH2H = async (player1: number, player2: number) => {
+    const response = await api.get(`api/h2h`, { params: { player1, player2 } })
+    return response
+}
+
+export const getCommunityPlayers = async () => {
+    const response = await api.get('api/community-players')
+    return response
+}

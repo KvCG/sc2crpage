@@ -322,7 +322,8 @@ export class RankedTeamConsolidator {
                 const lastPlayedStr = this.getlastLastPlayed(mainLastPlayed) // Get the most recent lastPlayed date from all races
 
                 // Get display name from CSV or fallback to account tag
-                const characterId = player.members?.account?.id
+                // Use character.id (SC2 character ID, consistent with CSV) over account.id (BattleNet account ID)
+                const characterId = player.members?.character?.id ?? player.members?.account?.id
                 const btag = player.members?.account?.battleTag
                 const displayName = getDisplayName(String(btag))
                 const playerName =
