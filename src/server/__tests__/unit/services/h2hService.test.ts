@@ -9,7 +9,7 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('../../../services/pulseHttpClient', () => ({
     get: hoisted.mockHttpGet,
-    endpoints: { characterTeams: 'character-teams', versusCommon: 'versus/common' },
+    endpoints: { characterTeams: 'character-teams', versusCommon: 'versus/common', versusMatches: 'versus/matches' },
 }))
 
 vi.mock('../../../logging/logger', () => ({ default: hoisted.mockLogger }))
@@ -164,6 +164,8 @@ describe('syncPair', () => {
             .mockResolvedValueOnce([PISTOLA_1V1_TEAM])
             .mockResolvedValueOnce([WITHER_1V1_TEAM])
             .mockResolvedValueOnce(VERSUS_COMMON_3_MATCHES)
+            // Pagination loop: terminal page — no older matches
+            .mockResolvedValueOnce({ result: [], navigation: { before: null, after: null } })
         hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
 
         const record = await syncPair(49312, 2741271)
@@ -174,6 +176,60 @@ describe('syncPair', () => {
         expect(record.player2CharacterId).toBe(2741271)
         expect(record.nextCursor).toBe('2026-03-01T00:00:00Z')
         expect(hoisted.mockWriteH2HJsonFile).toHaveBeenCalledWith('49312-2741271.json', record)
+    })
+
+    it('fetches all 3 pages, merges matches without duplicates, and stores first-page nextCursor', async () => {
+        // Page 1 (versus/common): matches 1001, 1002 — cursor points to page 2
+        const page1 = {
+            matches: {
+                result: [makeMatch(1001, 49312, 2741271), makeMatch(1002, 2741271, 49312)],
+                navigation: { before: 'cursor-page-2', after: null },
+            },
+        }
+        // Page 2 (versus/matches?before=cursor-page-2): matches 1003, 1004 — cursor points to page 3
+        const page2 = {
+            result: [makeMatch(1003, 49312, 2741271), makeMatch(1004, 2741271, 49312)],
+            navigation: { before: 'cursor-page-3', after: null },
+        }
+        // Page 3 (versus/matches?before=cursor-page-3): match 1005 — no more pages
+        const page3 = {
+            result: [makeMatch(1005, 49312, 2741271)],
+            navigation: { before: null, after: null },
+        }
+
+        hoisted.mockHttpGet
+            .mockResolvedValueOnce([PISTOLA_1V1_TEAM])    // character-teams for charId1
+            .mockResolvedValueOnce([WITHER_1V1_TEAM])     // character-teams for charId2
+            .mockResolvedValueOnce(page1)                 // versus/common
+            .mockResolvedValueOnce(page2)                 // versus/matches?before=cursor-page-2
+            .mockResolvedValueOnce(page3)                 // versus/matches?before=cursor-page-3
+        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
+
+        const record = await syncPair(49312, 2741271)
+
+        // All 5 matches from all 3 pages merged
+        expect(record.matches).toHaveLength(5)
+        const matchIds = record.matches.map((m) => m.matchId)
+        expect(matchIds).toContain(1001)
+        expect(matchIds).toContain(1002)
+        expect(matchIds).toContain(1003)
+        expect(matchIds).toContain(1004)
+        expect(matchIds).toContain(1005)
+        // No duplicates
+        expect(new Set(matchIds).size).toBe(5)
+        // nextCursor is from first page (for future incremental syncs)
+        expect(record.nextCursor).toBe('cursor-page-2')
+        // versusMatches was called twice with correct cursors
+        expect(hoisted.mockHttpGet).toHaveBeenCalledWith('versus/matches', {
+            team1: '201-0-1-2.883917.3',
+            team2: '201-0-1-2.1303229.1',
+            before: 'cursor-page-2',
+        })
+        expect(hoisted.mockHttpGet).toHaveBeenCalledWith('versus/matches', {
+            team1: '201-0-1-2.883917.3',
+            team2: '201-0-1-2.1303229.1',
+            before: 'cursor-page-3',
+        })
     })
 
     it('appends only new matches when an existing record is in Drive', async () => {
@@ -204,6 +260,8 @@ describe('syncPair', () => {
             .mockResolvedValueOnce([PISTOLA_1V1_TEAM])
             .mockResolvedValueOnce([WITHER_1V1_TEAM])
             .mockResolvedValueOnce(VERSUS_COMMON_3_MATCHES)
+            // Pagination loop: terminal page — no older matches
+            .mockResolvedValueOnce({ result: [], navigation: { before: null, after: null } })
         hoisted.mockReadH2HJsonFile.mockResolvedValue(existingRecord)
 
         const record = await syncPair(49312, 2741271)

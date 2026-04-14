@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .env
 secrets
+get-token.mjs
 
 # Test coverage output
 coverage/

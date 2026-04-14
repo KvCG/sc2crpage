@@ -63,6 +63,14 @@ interface VersusCommonResponse {
     }
 }
 
+interface VersusMatchesPage {
+    result: PulseMatchEntry[]
+    navigation: {
+        before: string | null
+        after: string | null
+    }
+}
+
 // ============================================================================
 // Error
 // ============================================================================
@@ -284,6 +292,8 @@ export async function syncPair(charId1: number, charId2: number): Promise<H2HPai
     }
 
     const existingIds = new Set(stored.matches.map((m) => m.matchId))
+
+    // Merge first page
     for (const entry of raw.matches.result) {
         if (!existingIds.has(entry.match.id)) {
             stored.matches.push(buildMatch(entry, player1CharacterId, player2CharacterId))
@@ -291,8 +301,27 @@ export async function syncPair(charId1: number, charId2: number): Promise<H2HPai
         }
     }
 
-    stored.pulseSyncedAt = new Date().toISOString()
+    // Store cursor from first page — position marker for future incremental syncs
     stored.nextCursor = raw.matches.navigation.before
+
+    // Paginate backwards through remaining history pages
+    let cursor = raw.matches.navigation.before
+    while (cursor !== null) {
+        const page = await httpGet<VersusMatchesPage>(endpoints.versusMatches, {
+            team1: uid1,
+            team2: uid2,
+            before: cursor,
+        })
+        for (const entry of page.result) {
+            if (!existingIds.has(entry.match.id)) {
+                stored.matches.push(buildMatch(entry, player1CharacterId, player2CharacterId))
+                existingIds.add(entry.match.id)
+            }
+        }
+        cursor = page.navigation.before
+    }
+
+    stored.pulseSyncedAt = new Date().toISOString()
 
     await savePairRecord(stored)
     logger.info(
