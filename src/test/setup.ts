@@ -31,6 +31,13 @@ vi.mock('luxon', () => ({
     },
 }))
 
+// Mock ResizeObserver for Mantine components that use ScrollArea (e.g. Select) in jsdom
+global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}
+
 // Mock matchMedia for Mantine components in jsdom
 Object.defineProperty(window, 'matchMedia', {
     writable: true,

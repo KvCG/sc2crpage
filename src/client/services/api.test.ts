@@ -68,4 +68,26 @@ describe('api client', () => {
             params: undefined
         })
     })
+
+    it('sends season param to getTop', async () => {
+        const instance = (axios as any).create()
+        ;(instance.get as any).mockResolvedValueOnce({ data: [] })
+
+        await api.getTop({ season: 67 })
+
+        expect(instance.get).toHaveBeenCalledWith('api/top/', {
+            params: { season: 67 },
+        })
+    })
+
+    it('calls api/seasons endpoint for getSeasons', async () => {
+        const instance = (axios as any).create()
+        const mockSeasons = [{ id: 67, year: 2026, number: 2, start: '2026-01-01', end: '2026-04-01' }]
+        ;(instance.get as any).mockResolvedValueOnce({ data: mockSeasons })
+
+        const res = await api.getSeasons()
+
+        expect(instance.get).toHaveBeenCalledWith('api/seasons')
+        expect(res.data).toEqual(mockSeasons)
+    })
 })

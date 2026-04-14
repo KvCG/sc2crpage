@@ -32,8 +32,14 @@ export const search = async (searchTerm: string) => {
 export const getTop = async (params?: {
     includeInactive?: boolean
     minimumGames?: number
+    season?: number
 }) => {
     const response = await api.get(`api/top/`, { params })
+    return response
+}
+
+export const getSeasons = async () => {
+    const response = await api.get(`api/seasons`)
     return response
 }
 
