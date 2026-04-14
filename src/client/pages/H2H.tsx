@@ -57,7 +57,7 @@ export const H2H = () => {
                 const opts: PlayerOption[] = (res.data as Array<{ id: string; btag: string; name?: string | null }>)
                     .map(p => ({
                         value: p.id,
-                        label: (p.name?.trim() || p.btag.trim()),
+                        label: (p.name?.trim() || p.btag.trim().split('#')[0]), // Show name if available, else btag without discriminator. Limit length for display.
                         id: Number(p.id),
                     }))
                     .filter(p => p.label.length > 0)
@@ -115,16 +115,16 @@ export const H2H = () => {
 
     const resolveWinner = (match: H2HMatch): string => {
         if (!h2hData) return String(match.winnerCharacterId)
-        if (match.winnerCharacterId === h2hData.player1.characterId) return h2hData.player1.name ?? h2hData.player1.btag
-        if (match.winnerCharacterId === h2hData.player2.characterId) return h2hData.player2.name ?? h2hData.player2.btag
+        if (match.winnerCharacterId === h2hData.player1.characterId) return h2hData.player1.name ?? h2hData.player1.btag.split('#')[0]
+        if (match.winnerCharacterId === h2hData.player2.characterId) return h2hData.player2.name ?? h2hData.player2.btag.split('#')[0]
         return String(match.winnerCharacterId)
     }
 
     const renderSummaryBanner = () => {
         if (!h2hData) return null
         const { player1, player2, summary } = h2hData
-        const p1Name = player1.name ?? player1.btag
-        const p2Name = player2.name ?? player2.btag
+        const p1Name = player1.name ?? player1.btag.split('#')[0]
+        const p2Name = player2.name ?? player2.btag.split('#')[0]
         const p1Leading = summary.player1Wins > summary.player2Wins
         const p2Leading = summary.player2Wins > summary.player1Wins
 
