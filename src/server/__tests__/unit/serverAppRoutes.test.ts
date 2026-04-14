@@ -29,6 +29,15 @@ vi.mock('../../routes/apiRoutes', () => ({
     default: (_req: any, _res: any, next: any) => next(),
 }))
 
+vi.mock('../../services/snapshotService', () => ({
+    retrieveInitialRankingData: vi.fn().mockResolvedValue({
+        data: [],
+        createdAt: new Date().toISOString(),
+        expiry: Date.now() + 86400000,
+    }),
+    clearDailySnapshot: vi.fn(),
+}))
+
 beforeAll(async () => {
     await import('../../server')
 })

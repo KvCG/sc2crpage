@@ -2,23 +2,73 @@
  * Unified Pulse Service
  *
  * Consolidates all SC2Pulse API operations into a single, well-structured service that:
- * - Combines HTTP operations (via PulseAdapter) with business logic
+ * - Combines HTTP operations (via pulseHttpClient) with business logic
  * - Provides consistent error handling and configuration management
  * - Manages caching and anti-stampede protection
  * - Integrates CSV data for display names and player IDs
  * - Maintains backward compatibility with existing API contracts
- *
- * This replaces the previous fragmented approach of separate pulseApi and pulseAdapter services.
  */
 
 import { communityDataService } from './communityDataService'
-import cache from '../utils/cache'
-import { metrics } from '../metrics/lite'
-import { bumpCache } from '../observability/requestContext'
-import { PulseAdapter, PulseRequestCache } from './pulseAdapter'
+import cache, { historicalRankingCache } from '../utils/cache'
+import { bumpCache } from '../metrics/lite'
+import { get as httpGet, endpoints as httpEndpoints, withBasePath } from './pulseHttpClient'
 import { DataDerivationsService } from './dataDerivations'
 import { getRankingMinGamesThreshold } from '../utils/rankingFilters'
-import { RankedPlayer } from '../../shared/types'
+import { RankedPlayer, SeasonEntry } from '../../shared/types'
+import type { AxiosError } from 'axios'
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface PulseApiError {
+    error: string
+    code: string | number
+    context?: Record<string, any>
+}
+
+// ============================================================================
+// Anti-Stampede Cache
+// ============================================================================
+
+/**
+ * Prevents multiple concurrent requests for the same key by sharing in-flight promises.
+ */
+class PulseRequestCache {
+    private inflightRequests = new Map<string, Promise<any>>()
+
+    async executeWithCache<T>(cacheKey: string, operation: () => Promise<T>): Promise<T> {
+        const existingPromise = this.inflightRequests.get(cacheKey)
+        if (existingPromise) {
+            return existingPromise
+        }
+
+        const requestPromise = operation()
+        this.inflightRequests.set(cacheKey, requestPromise)
+
+        const cleanup = () => {
+            this.inflightRequests.delete(cacheKey)
+        }
+
+        try {
+            const result = await requestPromise
+            setTimeout(cleanup, 100)
+            return result
+        } catch (error) {
+            cleanup()
+            throw error
+        }
+    }
+
+    clearCache(): void {
+        this.inflightRequests.clear()
+    }
+}
+
+// ============================================================================
+// PulseService
+// ============================================================================
 
 /**
  * Configuration interface for the unified service
@@ -48,7 +98,6 @@ const DEFAULT_CONFIG: PulseServiceConfig = {
  * Unified Pulse Service - Single point of integration for all SC2Pulse operations
  */
 export class PulseService {
-    private adapter: PulseAdapter
     private requestCache: PulseRequestCache
     private config: PulseServiceConfig
     private displayNameLookup: Map<string, string> | null = null
@@ -56,34 +105,125 @@ export class PulseService {
 
     constructor(config: Partial<PulseServiceConfig> = {}) {
         this.config = { ...DEFAULT_CONFIG, ...config }
-        this.adapter = new PulseAdapter({
-            maxRetries: this.config.maxRetries,
-            chunkSize: this.config.chunkSize,
-            apiTimeout: this.config.apiTimeout,
-            rateLimit: this.config.rateLimit,
-        })
         this.requestCache = new PulseRequestCache()
     }
 
     /**
-     * Search for players by name or BattleTag with enriched results
+     * Search for players by name or BattleTag
      */
     async searchPlayer(term: string): Promise<any[]> {
         try {
-            return await this.adapter.searchPlayer(term)
+            const data = await httpGet<any>(
+                withBasePath(httpEndpoints.searchCharacter),
+                { term },
+                {},
+                0,
+                this.config.maxRetries
+            )
+            return Array.isArray(data) ? data : [data].filter(Boolean)
         } catch (error) {
-            console.error('[PulseService.searchPlayer] Search failed:', error)
-            throw error
+            const pulseError = this.standardizeError(error, { searchTerm: term })
+            console.error('[PulseService.searchPlayer] Search failed:', pulseError)
+            throw pulseError
         }
     }
 
     /**
-     * Get the current season ID from the API
+     * Get all SC2 seasons, filtered to US region, sorted newest-first.
+     * Deduplication by battlenetId is implicit — each season appears once per region.
+     */
+    async getAllSeasons(): Promise<SeasonEntry[]> {
+        return await this.requestCache.executeWithCache('all-seasons', async () => {
+            try {
+                const rawSeasons = await httpGet<any[]>(
+                    withBasePath(httpEndpoints.listSeasons),
+                    {},
+                    {},
+                    0,
+                    this.config.maxRetries
+                )
+                if (!Array.isArray(rawSeasons)) return []
+
+                // Keep only US seasons (one entry per region in the response),
+                // sorted newest-first so callers get the current season at index 0.
+                return rawSeasons
+                    .filter((season: any) => season?.region === 'US')
+                    .sort((left: any, right: any) => right.battlenetId - left.battlenetId)
+                    .map((season: any): SeasonEntry => ({
+                        id: season.battlenetId, // battlenetId is the canonical season identifier
+                        year: season.year,
+                        number: season.number,
+                        start: season.start,
+                        end: season.end,
+                    }))
+            } catch (error) {
+                const pulseError = this.standardizeError(error, { operation: 'getAllSeasons' })
+                console.error('[PulseService.getAllSeasons] Failed to fetch seasons:', pulseError)
+                throw pulseError
+            }
+        })
+    }
+
+    /**
+     * Get ranking for a specific past season.
+     *
+     * Results are cached indefinitely (historicalRankingCache) because past season
+     * data is immutable. The minimum-games filter is applied on every call, same
+     * as getRanking(), so the invariant holds for historical lookups too.
+     *
+     * @param seasonId - SC2 battlenetId of the season (positive integer)
+     * @param overrideMinGames - Optional override for testing purposes only
+     */
+    async getRankingForSeason(seasonId: number, overrideMinGames?: number): Promise<RankedPlayer[]> {
+        const cacheKey = `season:${seasonId}`
+        const cached = historicalRankingCache.get(cacheKey) as RankedPlayer[] | undefined
+
+        if (cached) {
+            const minimumGames = overrideMinGames ?? getRankingMinGamesThreshold()
+            return DataDerivationsService.filterByMinimumGames(cached, minimumGames)
+        }
+
+        try {
+            const characterIds = await this.loadPlayersFromCsv()
+            if (!characterIds || characterIds.length === 0) {
+                return []
+            }
+
+            const allRankedTeams = await this.fetchRankedTeams(characterIds, seasonId)
+            const rankedPlayers = DataDerivationsService.processTeamsToRankedPlayers(allRankedTeams)
+
+            // Cache unfiltered — historical data is immutable
+            historicalRankingCache.set(cacheKey, rankedPlayers)
+
+            const minimumGames = overrideMinGames ?? getRankingMinGamesThreshold()
+            return DataDerivationsService.filterByMinimumGames(rankedPlayers, minimumGames)
+        } catch (error) {
+            console.error(`[PulseService.getRankingForSeason] Error fetching season ${seasonId}:`, error)
+            return []
+        }
+    }
+
+    /**
+     * Get the current season ID from the SC2Pulse API
      */
     async getCurrentSeason(): Promise<string | undefined> {
-        return await this.requestCache.executeWithCache('current-season', () =>
-            this.adapter.getCurrentSeason()
-        )
+        return await this.requestCache.executeWithCache('current-season', async () => {
+            try {
+                const data = await httpGet<any[]>(
+                    withBasePath(httpEndpoints.listSeasons),
+                    {},
+                    {},
+                    0,
+                    this.config.maxRetries
+                )
+                const usRegion = data?.find((season: any) => season?.region === 'US')
+                return usRegion?.battlenetId ?? data?.[0]?.battlenetId
+            } catch (error) {
+                const pulseError = this.standardizeError(error, { operation: 'getCurrentSeason' })
+                console.error('[PulseService.getCurrentSeason] Failed to fetch season:', pulseError)
+                throw pulseError
+            }
+        })
     }
 
     /**
@@ -135,7 +275,6 @@ export class PulseService {
         let rawData = cache.get(cacheKey) as RankedPlayer[] | undefined
 
         if (!rawData) {
-            metrics.cache_miss_total++
             bumpCache(false)
 
             // Anti-stampede: share one ongoing refresh across concurrent callers
@@ -150,7 +289,6 @@ export class PulseService {
                 }
             }
         } else {
-            metrics.cache_hit_total++
             bumpCache(true)
         }
 
@@ -179,7 +317,7 @@ export class PulseService {
                 throw new Error('Unable to fetch current season')
             }
 
-            const allRankedTeams = await this.adapter.fetchRankedTeams(
+            const allRankedTeams = await this.fetchRankedTeams(
                 characterIds,
                 Number(currentSeason)
             )
@@ -204,14 +342,25 @@ export class PulseService {
         params: Record<string, any> = {},
         options: { headers?: Record<string, any> } = {}
     ): Promise<T> {
-        return await this.adapter.executeRequest<T>(endpoint, params, options)
+        try {
+            return await httpGet<T>(withBasePath(endpoint), params, options, 0, this.config.maxRetries)
+        } catch (error) {
+            const pulseError = this.standardizeError(error, { endpoint, params })
+            console.error(`[PulseService.executeRequest] Request failed for ${endpoint}:`, pulseError)
+            throw pulseError
+        }
     }
 
     /**
-     * Fetch ranked teams for a list of player IDs with batching
+     * Fetch ranked teams for a list of player IDs
      */
     async fetchRankedTeams(playerIds: string[], seasonId: number): Promise<any[]> {
-        return await this.adapter.fetchRankedTeams(playerIds, seasonId)
+        const params = playerIds.map((id) => `characterId=${id}`).join('&')
+        const limit = Math.min(playerIds.length * 4, 400)
+        const url = `${withBasePath(
+            httpEndpoints.characterTeams
+        )}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&limit=${limit}&${params}`
+        return await httpGet<any | any[]>(url, {}, {}, 0, this.config.maxRetries)
     }
 
     /**
@@ -226,14 +375,6 @@ export class PulseService {
      */
     updateConfig(newConfig: Partial<PulseServiceConfig>): void {
         this.config = { ...this.config, ...newConfig }
-
-        // Update adapter configuration as well
-        this.adapter.updateConfig({
-            maxRetries: this.config.maxRetries,
-            chunkSize: this.config.chunkSize,
-            apiTimeout: this.config.apiTimeout,
-            rateLimit: this.config.rateLimit,
-        })
     }
 
     /**
@@ -243,6 +384,24 @@ export class PulseService {
         this.requestCache.clearCache()
         this.inflightRankingPromise = null
         cache.clear?.()
+    }
+
+    /**
+     * Convert various error types to standardized PulseApiError format
+     */
+    private standardizeError(error: unknown, context: Record<string, any> = {}): PulseApiError {
+        if (error && typeof error === 'object' && 'error' in error && 'code' in error) {
+            return error as PulseApiError
+        }
+
+        const axiosError = error as AxiosError
+        const status = axiosError.response?.status
+
+        return {
+            error: axiosError.message ?? 'Unknown Pulse API error',
+            code: status ?? axiosError.code ?? 'UNKNOWN',
+            context,
+        }
     }
 }
 
@@ -254,6 +413,4 @@ export function createPulseService(config?: Partial<PulseServiceConfig>): PulseS
     return new PulseService(config)
 }
 
-// Re-export types and utilities for backward compatibility
-export type { PulseApiError } from './pulseAdapter'
 export { DataDerivationsService } from './dataDerivations'

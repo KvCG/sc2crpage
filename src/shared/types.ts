@@ -80,6 +80,14 @@ export interface Member {
     raceGames?: RaceGames
 }
 
+export interface SeasonEntry {
+    id: number        // battlenetId — SC2 season identifier
+    year: number
+    number: number    // season number within the year
+    start: string     // ISO datetime
+    end: string       // ISO datetime
+}
+
 export interface Team {
     rating: number
     wins: number
