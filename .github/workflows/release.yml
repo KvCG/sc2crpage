@@ -74,3 +74,9 @@ jobs:
                   gh release create "v${{ inputs.version }}" \
                     --title "Release v${{ inputs.version }}" \
                     --generate-notes
+
+            - name: Trigger CI/CD deploy
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  gh workflow run Deploy.yml --ref main
