@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { metrics, observePulseLatency, bumpPulseReq, bumpPulseErr } from '../metrics/lite'
+import { observePulseLatency, bumpPulseReq, bumpPulseErr } from '../metrics/lite'
 import type { AxiosResponse, AxiosError } from 'axios'
 
 /**
@@ -66,7 +66,6 @@ const client = axios.create({
  */
 const handleSuccessResponse = (response: AxiosResponse): AxiosResponse => {
     // Increment success counters
-    metrics.pulse_req_total++
     bumpPulseReq()
 
     // Record response time if provided by server
@@ -115,31 +114,7 @@ function classifyError(errorCode?: string, httpStatus?: number): string {
  * Records error metrics for the determined error type
  */
 function recordErrorMetrics(errorType: string): void {
-    switch (errorType) {
-        case 'timeout':
-            metrics.pulse_err_total.timeout++
-            bumpPulseErr('timeout')
-            break
-        case 'http5xx':
-            metrics.pulse_err_total.http5xx++
-            bumpPulseErr('http5xx')
-            break
-        case 'http4xx':
-            metrics.pulse_err_total.http4xx++
-            bumpPulseErr('http4xx')
-            break
-        case 'network':
-            metrics.pulse_err_total.network++
-            bumpPulseErr('network')
-            break
-        default:
-            // Initialize 'other' counter if not exists
-            if (metrics.pulse_err_total.other === undefined) {
-                metrics.pulse_err_total.other = 0
-            }
-            metrics.pulse_err_total.other++
-            bumpPulseErr('other')
-    }
+    bumpPulseErr(errorType)
 }
 
 /**

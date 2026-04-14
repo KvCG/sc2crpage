@@ -11,7 +11,7 @@
 
 import { communityDataService } from './communityDataService'
 import cache, { historicalRankingCache } from '../utils/cache'
-import { metrics, bumpCache } from '../metrics/lite'
+import { bumpCache } from '../metrics/lite'
 import { get as httpGet, endpoints as httpEndpoints, withBasePath } from './pulseHttpClient'
 import { DataDerivationsService } from './dataDerivations'
 import { getRankingMinGamesThreshold } from '../utils/rankingFilters'
@@ -113,10 +113,9 @@ export class PulseService {
      */
     async searchPlayer(term: string): Promise<any[]> {
         try {
-            const encodedTerm = encodeURIComponent(term)
             const data = await httpGet<any>(
                 withBasePath(httpEndpoints.searchCharacter),
-                { term: encodedTerm },
+                { term },
                 {},
                 0,
                 this.config.maxRetries
@@ -276,7 +275,6 @@ export class PulseService {
         let rawData = cache.get(cacheKey) as RankedPlayer[] | undefined
 
         if (!rawData) {
-            metrics.cache_miss_total++
             bumpCache(false)
 
             // Anti-stampede: share one ongoing refresh across concurrent callers
@@ -291,7 +289,6 @@ export class PulseService {
                 }
             }
         } else {
-            metrics.cache_hit_total++
             bumpCache(true)
         }
 
@@ -363,7 +360,7 @@ export class PulseService {
         const url = `${withBasePath(
             httpEndpoints.characterTeams
         )}?season=${seasonId}&queue=LOTV_1V1&race=TERRAN&race=PROTOSS&race=ZERG&race=RANDOM&limit=${limit}&${params}`
-        return await httpGet<any | any[]>(url)
+        return await httpGet<any | any[]>(url, {}, {}, 0, this.config.maxRetries)
     }
 
     /**

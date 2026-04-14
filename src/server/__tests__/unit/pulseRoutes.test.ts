@@ -13,12 +13,6 @@ vi.mock('../../services/snapshotService', () => ({
     getDailySnapshot: vi.fn().mockResolvedValue({ data: [] }),
 }))
 
-vi.mock('../../services/deltaComputationEngine', () => ({
-    DeltaComputationEngine: {
-        computePlayerDeltas: vi.fn().mockResolvedValue([]),
-    },
-}))
-
 vi.mock('../../utils/formatData', () => ({
     formatData: vi.fn().mockResolvedValue({}),
 }))
