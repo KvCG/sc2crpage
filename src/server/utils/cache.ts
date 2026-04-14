@@ -51,15 +51,22 @@ const internalSnapshotCache = new LRUCache<string, any>({
             if (onSnapshotExpire) {
                 Promise.resolve()
                     .then(() => onSnapshotExpire!())
-                    .catch(err => {
-                        logger.warn(
-                            { err },
-                            'snapshot refresh after expiry failed'
-                        )
+                    .catch((err) => {
+                        logger.warn({ err }, 'snapshot refresh after expiry failed')
                     })
             }
         }
     },
+})
+
+/**
+ * Historical ranking cache — stores past season rankings indefinitely (process lifetime).
+ * Past season data is immutable so no TTL is set. max: 20 bounds memory across seasons.
+ * Kept separate from live/snapshot caches so it can never evict them.
+ */
+export const historicalRankingCache = new LRUCache<string, any>({
+    max: 20,
+    // No TTL — historical rankings are immutable
 })
 
 export const snapshotCache = {

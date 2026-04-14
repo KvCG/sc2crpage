@@ -10,12 +10,12 @@
  */
 
 import { communityDataService } from './communityDataService'
-import cache from '../utils/cache'
+import cache, { historicalRankingCache } from '../utils/cache'
 import { metrics, bumpCache } from '../metrics/lite'
 import { get as httpGet, endpoints as httpEndpoints, withBasePath } from './pulseHttpClient'
 import { DataDerivationsService } from './dataDerivations'
 import { getRankingMinGamesThreshold } from '../utils/rankingFilters'
-import { RankedPlayer } from '../../shared/types'
+import { RankedPlayer, SeasonEntry } from '../../shared/types'
 import type { AxiosError } from 'axios'
 
 // ============================================================================
@@ -126,6 +126,81 @@ export class PulseService {
             const pulseError = this.standardizeError(error, { searchTerm: term })
             console.error('[PulseService.searchPlayer] Search failed:', pulseError)
             throw pulseError
+        }
+    }
+
+    /**
+     * Get all SC2 seasons, filtered to US region, sorted newest-first.
+     * Deduplication by battlenetId is implicit — each season appears once per region.
+     */
+    async getAllSeasons(): Promise<SeasonEntry[]> {
+        return await this.requestCache.executeWithCache('all-seasons', async () => {
+            try {
+                const rawSeasons = await httpGet<any[]>(
+                    withBasePath(httpEndpoints.listSeasons),
+                    {},
+                    {},
+                    0,
+                    this.config.maxRetries
+                )
+                if (!Array.isArray(rawSeasons)) return []
+
+                // Keep only US seasons (one entry per region in the response),
+                // sorted newest-first so callers get the current season at index 0.
+                return rawSeasons
+                    .filter((s: any) => s?.region === 'US')
+                    .sort((a: any, b: any) => b.battlenetId - a.battlenetId)
+                    .map((s: any): SeasonEntry => ({
+                        id: s.battlenetId, // battlenetId is the canonical season identifier
+                        year: s.year,
+                        number: s.number,
+                        start: s.start,
+                        end: s.end,
+                    }))
+            } catch (error) {
+                const pulseError = this.standardizeError(error, { operation: 'getAllSeasons' })
+                console.error('[PulseService.getAllSeasons] Failed to fetch seasons:', pulseError)
+                throw pulseError
+            }
+        })
+    }
+
+    /**
+     * Get ranking for a specific past season.
+     *
+     * Results are cached indefinitely (historicalRankingCache) because past season
+     * data is immutable. The minimum-games filter is applied on every call, same
+     * as getRanking(), so the invariant holds for historical lookups too.
+     *
+     * @param seasonId - SC2 battlenetId of the season (positive integer)
+     * @param overrideMinGames - Optional override for testing purposes only
+     */
+    async getRankingForSeason(seasonId: number, overrideMinGames?: number): Promise<RankedPlayer[]> {
+        const cacheKey = `season:${seasonId}`
+        const cached = historicalRankingCache.get(cacheKey) as RankedPlayer[] | undefined
+
+        if (cached) {
+            const minimumGames = overrideMinGames ?? getRankingMinGamesThreshold()
+            return DataDerivationsService.filterByMinimumGames(cached, minimumGames)
+        }
+
+        try {
+            const characterIds = await this.loadPlayersFromCsv()
+            if (!characterIds || characterIds.length === 0) {
+                return []
+            }
+
+            const allRankedTeams = await this.fetchRankedTeams(characterIds, seasonId)
+            const rankedPlayers = DataDerivationsService.processTeamsToRankedPlayers(allRankedTeams)
+
+            // Cache unfiltered — historical data is immutable
+            historicalRankingCache.set(cacheKey, rankedPlayers)
+
+            const minimumGames = overrideMinGames ?? getRankingMinGamesThreshold()
+            return DataDerivationsService.filterByMinimumGames(rankedPlayers, minimumGames)
+        } catch (error) {
+            console.error(`[PulseService.getRankingForSeason] Error fetching season ${seasonId}:`, error)
+            return []
         }
     }
 

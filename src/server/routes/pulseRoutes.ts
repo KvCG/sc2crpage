@@ -28,11 +28,35 @@ router.get('/top', async (req: Request, res: Response) => {
             ? Number(req.query.minimumGames)
             : undefined
 
+        // Historical season lookup — validate before interpolating into SC2Pulse URL
+        if (req.query.season !== undefined) {
+            const seasonId = Number(req.query.season)
+            if (!Number.isInteger(seasonId) || seasonId <= 0) {
+                return res.status(400).json({ error: 'season must be a positive integer' })
+            }
+            const ranking = await pulseService.getRankingForSeason(seasonId, minimumGames)
+            return res.json(ranking)
+        }
+
         const ranking = await pulseService.getRanking(minimumGames)
         res.json(ranking)
     } catch (error) {
         logger.error({ error, route: '/api/top' }, 'Failed to fetch ranking data')
         res.status(500).json({ error: 'Failed to fetch ranking data' })
+    }
+})
+
+router.get('/seasons', async (_req: Request, res: Response) => {
+    res.setHeader(
+        'x-sc2pulse-attribution',
+        'Data courtesy of sc2pulse.nephest.com (non-commercial use)'
+    )
+    try {
+        const seasons = await pulseService.getAllSeasons()
+        res.json(seasons)
+    } catch (error) {
+        logger.error({ error, route: '/api/seasons' }, 'Failed to fetch season list')
+        res.status(500).json({ error: 'Failed to fetch season list' })
     }
 })
 

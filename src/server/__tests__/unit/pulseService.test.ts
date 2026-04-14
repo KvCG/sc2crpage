@@ -18,6 +18,8 @@ const hoisted = vi.hoisted(() => ({
         cache_miss_total: 0,
     },
     mockBumpCache: vi.fn(),
+    mockHistoricalCacheGet: vi.fn(),
+    mockHistoricalCacheSet: vi.fn(),
     mockDataDerivationsService: {
         processTeamsToRankedPlayers: vi.fn(),
         filterByMinimumGames: vi.fn(),
@@ -36,6 +38,10 @@ vi.mock('../../utils/cache', () => ({
         get: hoisted.mockCacheGet,
         set: hoisted.mockCacheSet,
         clear: hoisted.mockCacheClear,
+    },
+    historicalRankingCache: {
+        get: hoisted.mockHistoricalCacheGet,
+        set: hoisted.mockHistoricalCacheSet,
     },
 }))
 
@@ -413,6 +419,182 @@ describe('PulseService', () => {
             service.clearCaches()
 
             expect(hoisted.mockCacheClear).toHaveBeenCalled()
+        })
+    })
+
+    describe('getAllSeasons', () => {
+        const mockRawSeasons = [
+            { battlenetId: 67, region: 'US', year: 2026, number: 2, start: '2026-04-01T00:00:00Z', end: '2026-07-19T06:00:00Z' },
+            { battlenetId: 67, region: 'EU', year: 2026, number: 2, start: '2026-03-31T15:00:00Z', end: '2026-07-20T06:00:00Z' },
+            { battlenetId: 66, region: 'US', year: 2025, number: 1, start: '2025-10-01T00:00:00Z', end: '2026-03-31T00:00:00Z' },
+            { battlenetId: 66, region: 'KR', year: 2025, number: 1, start: '2025-10-01T00:00:00Z', end: '2026-03-31T00:00:00Z' },
+        ]
+
+        it('filters to US region only', async () => {
+            mockHttpGet.mockResolvedValueOnce(mockRawSeasons)
+
+            const result = await service.getAllSeasons()
+
+            expect(result).toHaveLength(2)
+            expect(result.every((s: any) => s.id !== undefined)).toBe(true)
+        })
+
+        it('returns seasons sorted newest-first by battlenetId', async () => {
+            mockHttpGet.mockResolvedValueOnce(mockRawSeasons)
+
+            const result = await service.getAllSeasons()
+
+            expect(result[0].id).toBe(67)
+            expect(result[1].id).toBe(66)
+        })
+
+        it('maps to SeasonEntry shape with battlenetId as id', async () => {
+            mockHttpGet.mockResolvedValueOnce([mockRawSeasons[0]])
+
+            const result = await service.getAllSeasons()
+
+            expect(result[0]).toEqual({
+                id: 67,
+                year: 2026,
+                number: 2,
+                start: '2026-04-01T00:00:00Z',
+                end: '2026-07-19T06:00:00Z',
+            })
+        })
+
+        it('returns empty array when no US seasons found', async () => {
+            mockHttpGet.mockResolvedValueOnce([
+                { battlenetId: 67, region: 'EU', year: 2026, number: 2, start: '', end: '' },
+            ])
+
+            const result = await service.getAllSeasons()
+
+            expect(result).toEqual([])
+        })
+
+        it('returns empty array when response is not an array', async () => {
+            mockHttpGet.mockResolvedValueOnce(null)
+
+            const result = await service.getAllSeasons()
+
+            expect(result).toEqual([])
+        })
+
+        it('deduplicates concurrent calls via request cache', async () => {
+            mockHttpGet.mockResolvedValue(mockRawSeasons)
+
+            const [r1, r2] = await Promise.all([
+                service.getAllSeasons(),
+                service.getAllSeasons(),
+            ])
+
+            expect(r1).toEqual(r2)
+            expect(mockHttpGet).toHaveBeenCalledTimes(1)
+        })
+
+        it('throws standardized error on HTTP failure', async () => {
+            const mockError = { message: 'API down', response: { status: 503 }, code: 'NET' }
+            mockHttpGet.mockRejectedValueOnce(mockError)
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+            await expect(service.getAllSeasons()).rejects.toMatchObject({ code: 503 })
+
+            consoleSpy.mockRestore()
+        })
+    })
+
+    describe('getRankingForSeason', () => {
+        const mockRankedPlayers: RankedPlayer[] = [
+            {
+                id: 123,
+                name: 'Player One',
+                btag: 'Player#1234',
+                discriminator: 1234,
+                globalRank: 1,
+                regionRank: 1,
+                rating: 4800,
+                wins: 50,
+                losses: 10,
+                ties: 0,
+                leagueType: 6,
+                leagueRank: 1,
+                online: false,
+                lastPlayed: '2025-01-01T00:00:00Z',
+                lastDatePlayed: '2025-01-01',
+                mainRace: 'T',
+                totalGames: 60,
+                gamesPerRace: { TERRAN: 60 },
+                members: { raceGames: { TERRAN: 60 }, account: { id: 123, tag: 'Player', battleTag: 'Player#1234', discriminator: 1234 }, clan: null },
+            },
+        ]
+
+        it('returns filtered cached data on cache hit', async () => {
+            hoisted.mockHistoricalCacheGet.mockReturnValueOnce(mockRankedPlayers)
+            hoisted.mockGetRankingMinGamesThreshold.mockReturnValueOnce(10)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce(mockRankedPlayers)
+
+            const result = await service.getRankingForSeason(67)
+
+            expect(hoisted.mockHistoricalCacheGet).toHaveBeenCalledWith('season:67')
+            expect(mockHttpGet).not.toHaveBeenCalled()
+            expect(hoisted.mockDataDerivationsService.filterByMinimumGames).toHaveBeenCalledWith(mockRankedPlayers, 10)
+            expect(result).toEqual(mockRankedPlayers)
+        })
+
+        it('fetches from API on cache miss, stores unfiltered, returns filtered', async () => {
+            hoisted.mockHistoricalCacheGet.mockReturnValueOnce(undefined)
+            mockHttpGet.mockResolvedValueOnce([]) // fetchRankedTeams
+            hoisted.mockDataDerivationsService.processTeamsToRankedPlayers.mockReturnValueOnce(mockRankedPlayers)
+            hoisted.mockGetRankingMinGamesThreshold.mockReturnValueOnce(10)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce(mockRankedPlayers)
+
+            const result = await service.getRankingForSeason(66)
+
+            expect(hoisted.mockHistoricalCacheSet).toHaveBeenCalledWith('season:66', mockRankedPlayers)
+            expect(result).toEqual(mockRankedPlayers)
+        })
+
+        it('respects overrideMinGames parameter', async () => {
+            hoisted.mockHistoricalCacheGet.mockReturnValueOnce(mockRankedPlayers)
+            hoisted.mockDataDerivationsService.filterByMinimumGames.mockReturnValueOnce(mockRankedPlayers)
+
+            await service.getRankingForSeason(67, 5)
+
+            expect(hoisted.mockGetRankingMinGamesThreshold).not.toHaveBeenCalled()
+            expect(hoisted.mockDataDerivationsService.filterByMinimumGames).toHaveBeenCalledWith(mockRankedPlayers, 5)
+        })
+
+        it('returns empty array when character list is empty', async () => {
+            const { communityDataService } = await import('../../services/communityDataService')
+
+            hoisted.mockHistoricalCacheGet.mockReturnValueOnce(undefined)
+            vi.mocked(communityDataService.getCommunityData).mockResolvedValueOnce({
+                players: [],
+                playerIds: new Set(),
+                displayNames: new Map(),
+                playerById: new Map(),
+                loadedAt: new Date(),
+            })
+
+            const result = await service.getRankingForSeason(67)
+
+            expect(result).toEqual([])
+            expect(mockHttpGet).not.toHaveBeenCalled()
+        })
+
+        it('returns empty array on API error', async () => {
+            hoisted.mockHistoricalCacheGet.mockReturnValueOnce(undefined)
+            mockHttpGet.mockRejectedValueOnce(new Error('API down'))
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+            const result = await service.getRankingForSeason(67)
+
+            expect(result).toEqual([])
+            expect(consoleSpy).toHaveBeenCalledWith(
+                '[PulseService.getRankingForSeason] Error fetching season 67:',
+                expect.any(Error)
+            )
+            consoleSpy.mockRestore()
         })
     })
 })
