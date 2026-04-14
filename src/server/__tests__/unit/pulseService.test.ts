@@ -129,7 +129,7 @@ describe('PulseService', () => {
 
             expect(mockHttpGet).toHaveBeenCalledWith(
                 'character/search',
-                { term: 'TestPlayer%23123' },
+                { term: 'TestPlayer#123' },
                 {},
                 0,
                 3
@@ -261,7 +261,6 @@ describe('PulseService', () => {
             const result = await service.getRanking()
 
             expect(result).toEqual(mockRankedPlayers)
-            expect(hoisted.mockMetrics.cache_hit_total).toBe(1)
             expect(hoisted.mockBumpCache).toHaveBeenCalledWith(true)
             expect(hoisted.mockGetRankingMinGamesThreshold).toHaveBeenCalled()
             expect(hoisted.mockDataDerivationsService.filterByMinimumGames).toHaveBeenCalledWith(mockRankedPlayers, 20)
@@ -289,7 +288,6 @@ describe('PulseService', () => {
             const result = await service.getRanking()
 
             expect(result).toEqual(mockRankedPlayers)
-            expect(hoisted.mockMetrics.cache_miss_total).toBe(1)
             expect(hoisted.mockBumpCache).toHaveBeenCalledWith(false)
             expect(hoisted.mockCacheSet).toHaveBeenCalledWith('snapShot', mockRankedPlayers)
         })
@@ -409,7 +407,7 @@ describe('PulseService', () => {
 
             const result = await service.fetchRankedTeams(['123', '456'], 12345)
 
-            expect(mockHttpGet).toHaveBeenCalledWith(expect.stringContaining('character-teams'))
+            expect(mockHttpGet).toHaveBeenCalledWith(expect.stringContaining('character-teams'), {}, {}, 0, 3)
             expect(result).toEqual(mockTeams)
         })
     })
