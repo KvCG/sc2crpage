@@ -35,7 +35,7 @@ We welcome contributions! Start with our [development workflow](docs/development
 
 - **Frontend**: React + TypeScript + Vite + Mantine UI
 - **Backend**: Node.js + Express + TypeScript  
-- **Data**: SC2Pulse API, Challonge API, Google Drive
+- **Data**: SC2Pulse API, Challonge API, Supabase, Google Drive (replays)
 - **Deploy**: Vercel (frontend) + Render/Fly.io (backend)
 
 ## 🔗 Links

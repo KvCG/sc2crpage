@@ -5,6 +5,10 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'node',
+        env: {
+            SUPABASE_URL: 'https://test.supabase.co',
+            SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
+        },
         include: [
             'src/server/**/*.{test,spec}.{ts,tsx}',
             'src/server/**/__tests__/**/*.{test,spec}.{ts,tsx}',

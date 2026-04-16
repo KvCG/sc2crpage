@@ -1,4 +1,5 @@
 // src/server/server.ts
+import 'dotenv/config'
 import express, { Request, Response, NextFunction } from 'express'
 import apiRoutes from './routes/apiRoutes'
 import path from 'path'
@@ -6,7 +7,6 @@ import cors from 'cors'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
 import chokidar from 'chokidar'
-import 'dotenv/config'
 import { getBackendBuildInfo } from './utils/buildInfo'
 import { isLocalAppEnv } from '../shared/runtimeEnv'
 import { httpLogger, httpMetricsMiddleware } from './logging/httpLogger'

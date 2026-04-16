@@ -25,10 +25,9 @@ Two-tier LRU strategy (`utils/cache.ts`):
 | SC2Pulse rankings/search | `pulseService.ts` + `pulseHttpClient.ts` |
 | Challonge tournaments | `challongeApi.ts` |
 | Google Drive (replays, JSON) | `googleApi.ts` |
-| Google Drive (ladder storage) | `driveFileStorage.ts` |
 | Player analytics | `analyticsService.ts` |
 | Daily snapshot | `snapshotService.ts` |
-| Community CSV (singleton) | `communityDataService.ts` |
+| Community players (Supabase) | `communityDataService.ts` |
 | Pure data transforms | `dataDerivations.ts` |
 
 ## Service Patterns

@@ -37,16 +37,7 @@ EOF
 
 ## Data Setup
 
-The server requires `ladderCR.csv` data:
-
-**Option 1: Auto-download** (if Google Drive configured)
-- Server automatically downloads on first run
-
-**Option 2: Request from maintainers**
-- Contact **NeO** or **Kerverus** for the data file
-- Place in `dist/data/ladderCR.csv` after build
-
-**Option 3: Run without data** (limited features)
+Community player data is loaded from **Supabase** at startup — no CSV file or manual download required. Ensure `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in your environment (contact **NeO** or **Kerverus** for credentials).
 
 ## Running the Application
 
