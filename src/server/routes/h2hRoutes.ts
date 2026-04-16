@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import { loadPairRecord, syncPair, H2HResolutionError } from '../services/h2hService'
+import { submitFlag, FlagServiceError } from '../services/h2hFlagService'
 import { communityDataService } from '../services/communityDataService'
 import logger from '../logging/logger'
-import type { H2HMatch, H2HPlayerMeta, H2HResponse } from '../../shared/types'
+import type { H2HMatch, H2HPlayerMeta, H2HResponse, MatchFlagType } from '../../shared/types'
 
 const router = Router()
 
@@ -133,6 +134,118 @@ router.get('/community-players', async (_req: Request, res: Response) => {
     } catch (error) {
         logger.error({ feature: 'h2h', error }, 'Failed to load community players')
         res.status(500).json({ error: 'Failed to load community players' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/h2h/flags — Submit a community flag for a match
+// ---------------------------------------------------------------------------
+
+const flagBodySchema = z
+    .object({
+        matchId: z.string({ required_error: 'matchId is required' }).min(1, 'matchId is required'),
+        player1CharacterId: z
+            .number({ required_error: 'player1CharacterId is required' })
+            .int()
+            .positive(),
+        player2CharacterId: z
+            .number({ required_error: 'player2CharacterId is required' })
+            .int()
+            .positive(),
+        flagType: z.enum(['void', 'showmatch', 'tournament'] as const, {
+            required_error: 'flagType is required',
+            invalid_type_error: 'flagType must be one of: void, showmatch, tournament',
+        }),
+        reason: z
+            .string()
+            .max(500, 'reason must be 500 characters or fewer')
+            .nullable()
+            .optional()
+            .default(null),
+        submittedBy: z
+            .string({ required_error: 'submittedBy is required' })
+            .min(1, 'submittedBy is required'),
+    })
+    .superRefine((data, ctx) => {
+        if (data.flagType === 'void' && (!data.reason || data.reason.trim().length === 0)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'reason is required when flagType is "void"',
+                path: ['reason'],
+            })
+        }
+    })
+
+/**
+ * POST /api/h2h/flags
+ *
+ * Submits a community flag for an h2h match.
+ *
+ * Body:
+ * - matchId: external match ID string (required)
+ * - player1CharacterId: numeric character ID (required)
+ * - player2CharacterId: numeric character ID (required)
+ * - flagType: 'void' | 'showmatch' | 'tournament' (required)
+ * - reason: explanation string, max 500 chars (required when flagType is 'void')
+ * - submittedBy: battle tag of the flagging player (required)
+ */
+router.post('/h2h/flags', async (req: Request, res: Response) => {
+    const parsed = flagBodySchema.safeParse(req.body)
+
+    if (!parsed.success) {
+        const details = parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: issue.path.length > 0 ? req.body?.[issue.path[0] as string] : undefined,
+        }))
+        return res.status(400).json({ error: 'Invalid request body', details })
+    }
+
+    const { matchId, player1CharacterId, player2CharacterId, flagType, reason, submittedBy } =
+        parsed.data
+    const normalizedSubmitter = submittedBy.trim()
+
+    // Verify the submitter is a known community member before calling the service
+    const communityData = await communityDataService.getCommunityData()
+    const isKnownBtag = communityData.players.some((player) => player.btag === normalizedSubmitter)
+    if (!isKnownBtag) {
+        return res
+            .status(400)
+            .json({ error: `Submitter '${normalizedSubmitter}' is not a known community member` })
+    }
+
+    logger.info(
+        { feature: 'flags', matchId, flagType, submittedBy: normalizedSubmitter },
+        'Processing flag submission',
+    )
+
+    try {
+        const result = await submitFlag({
+            matchId,
+            player1CharacterId,
+            player2CharacterId,
+            flagType: flagType as MatchFlagType,
+            reason: reason ?? null,
+            submittedBy: normalizedSubmitter,
+        })
+
+        return res.status(201).json(result)
+    } catch (error) {
+        if (error instanceof FlagServiceError) {
+            switch (error.code) {
+                case 'MATCH_NOT_FOUND':
+                    return res.status(404).json({ error: error.message })
+                case 'NOT_A_PARTICIPANT':
+                    return res.status(403).json({ error: error.message })
+                case 'DUPLICATE_PENDING_FLAG':
+                    return res.status(409).json({ error: error.message })
+            }
+        }
+        logger.error(
+            { feature: 'flags', matchId, flagType, submittedBy: normalizedSubmitter, error },
+            'Error processing flag submission',
+        )
+        return res.status(500).json({ error: 'Failed to submit flag' })
     }
 })
 
