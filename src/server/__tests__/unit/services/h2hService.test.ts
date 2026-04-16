@@ -381,6 +381,8 @@ const BLIZZARD_MATCH = {
     player1RatingAtTime: null,
     player2RatingAtTime: null,
     source: 'blizzard' as const,
+    isVoided: false,
+    matchLabel: null,
 }
 
 describe('persistMatch', () => {
@@ -553,6 +555,8 @@ describe('loadPairRecord', () => {
             player2_rating: 4500,
             source: 'pulse',
             added_by: null,
+            is_voided: false,
+            match_label: null,
         },
     ]
 

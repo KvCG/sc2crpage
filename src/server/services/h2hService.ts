@@ -229,6 +229,8 @@ export async function loadPairRecord(id1: number, id2: number): Promise<H2HPairR
             player2_rating: number | null
             source: H2HMatch['source']
             added_by: string | null
+            is_voided: boolean
+            match_label: 'showmatch' | 'tournament' | null
         }
 
         const matches: H2HMatch[] = ((matchRows ?? []) as unknown as H2HMatchRow[]).map((row) => ({
@@ -245,6 +247,8 @@ export async function loadPairRecord(id1: number, id2: number): Promise<H2HPairR
                 player2RatingAtTime: row.player2_rating,
                 source: row.source,
                 ...(row.added_by !== null && { addedBy: row.added_by }),
+                isVoided: row.is_voided,
+                matchLabel: row.match_label,
             }),
         )
 
@@ -410,6 +414,8 @@ function buildMatch(
         player1RatingAtTime: p1Part?.teamState?.teamState.rating ?? null,
         player2RatingAtTime: p2Part?.teamState?.teamState.rating ?? null,
         source: 'pulse',
+        isVoided: false,
+        matchLabel: null,
     }
 }
 
