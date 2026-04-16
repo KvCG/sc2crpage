@@ -5,6 +5,7 @@ const hoisted = vi.hoisted(() => ({
     mockLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     mockReadH2HJsonFile: vi.fn(),
     mockWriteH2HJsonFile: vi.fn(),
+    mockSupabaseFrom: vi.fn(),
 }))
 
 vi.mock('../../../services/pulseHttpClient', () => ({
@@ -21,6 +22,10 @@ vi.mock('../../../services/driveFileStorage', () => ({
     },
 }))
 
+vi.mock('../../../db/supabaseClient', () => ({
+    default: { from: hoisted.mockSupabaseFrom },
+}))
+
 import {
     resolveTeamLegacyUid,
     resolveBlizzardProfile,
@@ -29,7 +34,36 @@ import {
     _clearBlizzardProfileCache,
     syncPair,
     persistMatch,
+    savePairRecord,
 } from '../../../services/h2hService'
+
+// ---------------------------------------------------------------------------
+// Supabase mock helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns a chainable builder that can be directly awaited (savePairRecord pattern)
+ * or chained with .select() (persistMatch pattern). Both resolve to resolveValue.
+ */
+function makeSupabaseBuilder(resolveValue: Record<string, unknown>) {
+    return {
+        then: (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+            Promise.resolve(resolveValue).then(onFulfilled, onRejected),
+        catch: (onRejected: (e: unknown) => unknown) =>
+            Promise.resolve(resolveValue).catch(onRejected),
+        finally: (onFinally: () => void) =>
+            Promise.resolve(resolveValue).finally(onFinally),
+        select: vi.fn().mockResolvedValue(resolveValue),
+    }
+}
+
+/** Sets up mockSupabaseFrom to succeed for all table calls. */
+function setupSupabaseSuccess(pairId = 42) {
+    const pairsBuilder = makeSupabaseBuilder({ data: [{ id: pairId }], error: null })
+    hoisted.mockSupabaseFrom.mockImplementation(() => ({
+        upsert: vi.fn().mockReturnValue(pairsBuilder),
+    }))
+}
 
 const PISTOLA_1V1_TEAM = { legacyUid: '201-0-1-2.883917.3', league: { queueType: 201, teamType: 0 }, members: [] }
 const PISTOLA_2V2_TEAM = { legacyUid: '204-0-1-2.883917.5', league: { queueType: 204, teamType: 0 }, members: [] }
@@ -157,6 +191,7 @@ describe('syncPair', () => {
         vi.clearAllMocks()
         _clearLegacyUidCache()
         hoisted.mockWriteH2HJsonFile.mockResolvedValue(undefined)
+        setupSupabaseSuccess()
     })
 
     it('creates a new record with 3 matches when Drive has no existing file', async () => {
@@ -340,6 +375,7 @@ describe('persistMatch', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         hoisted.mockWriteH2HJsonFile.mockResolvedValue(undefined)
+        setupSupabaseSuccess()
     })
 
     it('does not overwrite pulseSyncedAt when a record already exists', async () => {
@@ -379,5 +415,109 @@ describe('persistMatch', () => {
         await persistMatch(49312, 2741271, BLIZZARD_MATCH)
 
         expect(hoisted.mockWriteH2HJsonFile).not.toHaveBeenCalled()
+    })
+
+    it('upserts to h2h_matches with correct pair_id and match_id', async () => {
+        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
+
+        const pairsBuilder = makeSupabaseBuilder({ data: [{ id: 99 }], error: null })
+        const matchesUpsert = vi.fn().mockResolvedValue({ data: null, error: null })
+        hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
+            if (table === 'h2h_pairs') return { upsert: vi.fn().mockReturnValue(pairsBuilder) }
+            if (table === 'h2h_matches') return { upsert: matchesUpsert }
+        })
+
+        await persistMatch(49312, 2741271, BLIZZARD_MATCH)
+
+        expect(matchesUpsert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                pair_id: 99,
+                match_id: 'BZ-1712964000_Ruby_Rock_LE',
+                match_date: BLIZZARD_MATCH.date,
+                map_name: BLIZZARD_MATCH.map,
+                source: 'blizzard',
+            }),
+            { onConflict: 'pair_id,match_id' },
+        )
+    })
+
+    it('Drive write still completes when Supabase errors in persistMatch', async () => {
+        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
+        const errorBuilder = makeSupabaseBuilder({ data: null, error: new Error('db error') })
+        hoisted.mockSupabaseFrom.mockReturnValue({ upsert: vi.fn().mockReturnValue(errorBuilder) })
+
+        await persistMatch(49312, 2741271, BLIZZARD_MATCH)
+
+        expect(hoisted.mockWriteH2HJsonFile).toHaveBeenCalled()
+    })
+
+    it('logs error but does not throw when Supabase errors in persistMatch', async () => {
+        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
+        const dbError = new Error('Network error')
+        const errorBuilder = makeSupabaseBuilder({ data: null, error: dbError })
+        hoisted.mockSupabaseFrom.mockReturnValue({ upsert: vi.fn().mockReturnValue(errorBuilder) })
+
+        await expect(persistMatch(49312, 2741271, BLIZZARD_MATCH)).resolves.toBeUndefined()
+
+        expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+            expect.objectContaining({ feature: 'h2h', matchId: BLIZZARD_MATCH.matchId }),
+            'Supabase upsert failed for h2h_matches',
+        )
+    })
+})
+
+describe('savePairRecord', () => {
+    const PAIR_RECORD = {
+        player1CharacterId: 49312,
+        player2CharacterId: 2741271,
+        pulseSyncedAt: '2026-04-15T00:00:00Z',
+        nextCursor: null,
+        matches: [],
+    }
+
+    beforeEach(() => {
+        vi.clearAllMocks()
+        hoisted.mockWriteH2HJsonFile.mockResolvedValue(undefined)
+        setupSupabaseSuccess()
+    })
+
+    it('upserts to h2h_pairs with correct payload', async () => {
+        const upsert = vi.fn().mockReturnValue(makeSupabaseBuilder({ data: null, error: null }))
+        hoisted.mockSupabaseFrom.mockReturnValue({ upsert })
+
+        await savePairRecord(PAIR_RECORD)
+
+        expect(hoisted.mockSupabaseFrom).toHaveBeenCalledWith('h2h_pairs')
+        expect(upsert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                player1_character_id: 49312,
+                player2_character_id: 2741271,
+                pulse_synced_at: '2026-04-15T00:00:00Z',
+                next_cursor: null,
+            }),
+            { onConflict: 'player1_character_id,player2_character_id' },
+        )
+    })
+
+    it('Drive write still completes when Supabase upsert errors', async () => {
+        const errorBuilder = makeSupabaseBuilder({ data: null, error: new Error('db error') })
+        hoisted.mockSupabaseFrom.mockReturnValue({ upsert: vi.fn().mockReturnValue(errorBuilder) })
+
+        await savePairRecord(PAIR_RECORD)
+
+        expect(hoisted.mockWriteH2HJsonFile).toHaveBeenCalledWith('49312-2741271.json', PAIR_RECORD)
+    })
+
+    it('logs error but does not throw when Supabase upsert errors', async () => {
+        const dbError = new Error('Connection refused')
+        const errorBuilder = makeSupabaseBuilder({ data: null, error: dbError })
+        hoisted.mockSupabaseFrom.mockReturnValue({ upsert: vi.fn().mockReturnValue(errorBuilder) })
+
+        await expect(savePairRecord(PAIR_RECORD)).resolves.toBeUndefined()
+
+        expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+            expect.objectContaining({ feature: 'h2h', err: dbError }),
+            'Supabase upsert failed for h2h_pairs',
+        )
     })
 })

@@ -1,6 +1,7 @@
 import { get as httpGet, endpoints } from './pulseHttpClient'
 import { DriveFileStorage } from './driveFileStorage'
 import logger from '../logging/logger'
+import supabase from '../db/supabaseClient'
 import type { H2HMatch, H2HPairRecord } from '../../shared/types'
 import { type BlizzardProfile, regionToId } from './blizzardMatchClient'
 
@@ -196,6 +197,32 @@ export async function loadPairRecord(id1: number, id2: number): Promise<H2HPairR
 export async function savePairRecord(record: H2HPairRecord): Promise<void> {
     const key = pairKey(record.player1CharacterId, record.player2CharacterId)
     await DriveFileStorage.writeH2HJsonFile(key, record)
+
+    try {
+        const { error } = await supabase
+            .from('h2h_pairs')
+            .upsert(
+                {
+                    player1_character_id: record.player1CharacterId,
+                    player2_character_id: record.player2CharacterId,
+                    pulse_synced_at: record.pulseSyncedAt || null,
+                    next_cursor: record.nextCursor,
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'player1_character_id,player2_character_id' },
+            )
+        if (error) throw error
+    } catch (err) {
+        logger.error(
+            {
+                feature: 'h2h',
+                player1CharacterId: record.player1CharacterId,
+                player2CharacterId: record.player2CharacterId,
+                err,
+            },
+            'Supabase upsert failed for h2h_pairs',
+        )
+    }
 }
 
 /**
@@ -222,6 +249,54 @@ export async function persistMatch(charId1: number, charId2: number, match: H2HM
 
     stored.matches.push(match)
     await savePairRecord(stored)
+
+    try {
+        const { data: pairRows, error: pairError } = await supabase
+            .from('h2h_pairs')
+            .upsert(
+                {
+                    player1_character_id: player1CharacterId,
+                    player2_character_id: player2CharacterId,
+                    pulse_synced_at: stored.pulseSyncedAt || null,
+                    next_cursor: stored.nextCursor,
+                    updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'player1_character_id,player2_character_id' },
+            )
+            .select('id')
+        if (pairError) throw pairError
+
+        const pairId = pairRows?.[0]?.id
+        if (pairId === undefined) throw new Error('h2h_pairs upsert returned no id')
+
+        const { error: matchError } = await supabase
+            .from('h2h_matches')
+            .upsert(
+                {
+                    pair_id: pairId,
+                    match_id: String(match.matchId),
+                    match_date: match.date,
+                    map_name: match.map,
+                    duration_seconds: match.durationSeconds,
+                    region: match.region,
+                    match_type: match.type,
+                    winner_character_id: match.winnerCharacterId,
+                    player1_rating_change: match.player1RatingChange,
+                    player2_rating_change: match.player2RatingChange,
+                    player1_rating: match.player1RatingAtTime,
+                    player2_rating: match.player2RatingAtTime,
+                    source: match.source,
+                    added_by: match.addedBy ?? null,
+                },
+                { onConflict: 'pair_id,match_id' },
+            )
+        if (matchError) throw matchError
+    } catch (err) {
+        logger.error(
+            { feature: 'h2h', player1CharacterId, player2CharacterId, matchId: match.matchId, err },
+            'Supabase upsert failed for h2h_matches',
+        )
+    }
 }
 
 // ============================================================================
