@@ -102,7 +102,7 @@ describe('H2H page', () => {
         const p2Input = screen.getByLabelText('Select Player 2')
 
         fireEvent.change(p1Input, { target: { value: 'Pistola' } })
-        fireEvent.change(p2Input, { target: { value: 'Wither#5678' } })
+        fireEvent.change(p2Input, { target: { value: 'Wither' } })
 
         await waitFor(() =>
             expect(hoisted.mockGetH2H).toHaveBeenCalledWith(101, 202)
@@ -132,7 +132,7 @@ describe('H2H page', () => {
         await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
-        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither#5678' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
 
         await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
         await waitFor(() =>
@@ -149,7 +149,7 @@ describe('H2H page', () => {
         await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
-        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither#5678' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
 
         await waitFor(() =>
             expect(screen.getByText('Players not found')).toBeTruthy()
@@ -161,7 +161,7 @@ describe('H2H page', () => {
         await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
-        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither#5678' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
 
         await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
         await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
@@ -199,7 +199,7 @@ describe('H2H page', () => {
         await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
-        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither#5678' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
 
         await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
         await waitFor(() => expect(screen.getByText('Ruby Rock LE')).toBeTruthy())

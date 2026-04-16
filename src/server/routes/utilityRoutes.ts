@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express'
 import logger from '../logging/logger'
 import { extractRequestId } from '../utils/requestIdentity'
-import { refreshDataCache } from '../utils/csvParser'
+import { communityDataService } from '../services/communityDataService'
 
 const router = Router()
 
 router.get('/refreshCache', async (_req: Request, res: Response) => {
-    await refreshDataCache()
+    await communityDataService.reloadCommunityData()
     res.status(200).json('Done!')
 })
 

@@ -3,15 +3,13 @@
  *
  * Unlike h2hRoutes.test.ts (which mocks h2hService entirely), this test
  * lets the real loadPairRecord run against a mocked Supabase client so
- * we can assert that the Supabase path is exercised end-to-end and that
- * DriveFileStorage.readH2HJsonFile is never consulted.
+ * we can assert that the Supabase path is exercised end-to-end.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Request, Response } from 'express'
 
 const hoisted = vi.hoisted(() => ({
     mockSupabaseFrom: vi.fn(),
-    mockReadH2HJsonFile: vi.fn(),
     mockGetCommunityPlayer: vi.fn(),
     mockLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     // Safety: syncPair calls pulseHttpClient; mock prevents real HTTP if stale-check ever triggers
@@ -21,10 +19,6 @@ const hoisted = vi.hoisted(() => ({
 // Must be mocked first: prevents the env-var guard in supabaseClient.ts from throwing
 vi.mock('../../db/supabaseClient', () => ({
     default: { from: hoisted.mockSupabaseFrom },
-}))
-
-vi.mock('../../services/driveFileStorage', () => ({
-    DriveFileStorage: { readH2HJsonFile: hoisted.mockReadH2HJsonFile },
 }))
 
 vi.mock('../../services/communityDataService', () => ({
@@ -162,7 +156,6 @@ describe('GET /h2h — Supabase happy path', () => {
     beforeEach(async () => {
         vi.resetModules()
         hoisted.mockSupabaseFrom.mockReset()
-        hoisted.mockReadH2HJsonFile.mockReset()
         hoisted.mockGetCommunityPlayer.mockReset()
         hoisted.mockLogger.info.mockReset()
         hoisted.mockLogger.warn.mockReset()
@@ -181,7 +174,7 @@ describe('GET /h2h — Supabase happy path', () => {
         return res
     }
 
-    it('returns 200 with match data reconstructed from Supabase and does not read from Drive', async () => {
+    it('returns 200 with match data reconstructed from Supabase', async () => {
         setupSupabaseForLoad()
         hoisted.mockGetCommunityPlayer.mockImplementation((id: number) => {
             if (Number(id) === player1Id) return Promise.resolve(communityPlayer1)
@@ -226,8 +219,5 @@ describe('GET /h2h — Supabase happy path', () => {
         expect(player1Meta.name).toBe('Alpha')
         expect(player2Meta.characterId).toBe(player2Id)
         expect(player2Meta.btag).toBe('Beta#5678')
-
-        // Drive must never be consulted when Supabase returns a valid pair record
-        expect(hoisted.mockReadH2HJsonFile).not.toHaveBeenCalled()
     })
 })

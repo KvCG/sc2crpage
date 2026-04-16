@@ -1,12 +1,22 @@
 /**
  * Centralized Community Data Service
  *
- * Single source of truth for community player data loaded from CSV.
- * Provides consistent access patterns and avoids duplicate CSV reads.
+ * Single source of truth for community player data loaded from Supabase.
+ * Provides consistent access patterns and avoids duplicate database reads.
  */
 
-import { readCsv } from '../utils/csvParser'
+import supabaseClient from '../db/supabaseClient'
 import logger from '../logging/logger'
+
+/**
+ * Row shape returned by Supabase for the community_players table
+ */
+interface CommunityPlayerRow {
+    character_id: string | number
+    btag: string
+    display_name: string | null
+    challonge_id: string | null
+}
 
 /**
  * Community player record from CSV
@@ -139,25 +149,28 @@ export class CommunityDataService {
     }
 
     /**
-     * Internal method to load and process CSV data
+     * Internal method to load and process data from Supabase
      */
     private async loadCommunityData(): Promise<CommunityData> {
         try {
-            logger.info({ feature: 'community-data-service' }, 'Loading community data from CSV')
+            logger.info({ feature: 'community-data-service' }, 'Loading community data from Supabase')
 
-            const rawData = (await readCsv()) as unknown as Array<{
-                id?: string
-                btag?: string
-                name?: string
-                challongeId?: string
-                [key: string]: any // Allow other CSV fields
-            }>
+            const { data: rawRows, error } = await supabaseClient
+                .from('community_players')
+                .select('*')
 
-            // Handle empty or invalid CSV data
-            if (!Array.isArray(rawData) || rawData.length === 0) {
+            if (error) {
+                logger.error(
+                    { error, feature: 'community-data-service' },
+                    'Supabase query failed, returning empty community data'
+                )
+                return this.createEmptyCommunityData()
+            }
+
+            if (!Array.isArray(rawRows) || rawRows.length === 0) {
                 logger.warn(
                     { feature: 'community-data-service' },
-                    'CSV data is empty or invalid, returning empty community data'
+                    'community_players table returned no rows'
                 )
                 return this.createEmptyCommunityData()
             }
@@ -167,39 +180,35 @@ export class CommunityDataService {
             const displayNames = new Map<string, string>()
             const playerById = new Map<string, CommunityPlayer>()
 
-            // Process each CSV row
-            for (const row of rawData) {
-                // Skip null/undefined rows and rows without required fields
-                if (!row || !row.id || !row.btag) {
+            for (const row of rawRows as CommunityPlayerRow[]) {
+                if (!row || !row.character_id || !row.btag) {
                     logger.warn(
                         { feature: 'community-data-service', row },
-                        'Skipping CSV row with missing id or btag'
+                        'Skipping row with missing character_id or btag'
                     )
                     continue
                 }
 
                 const player: CommunityPlayer = {
-                    id: String(row.id),
+                    id: String(row.character_id),
                     btag: row.btag,
-                    name: row.name,
-                    challongeId: row.challongeId,
+                    name: row.display_name ?? undefined,
+                    challongeId: row.challonge_id ?? undefined,
                 }
 
                 players.push(player)
                 playerIds.add(player.id)
                 playerById.set(player.id, player)
 
-                // Build display name lookup if custom name exists
                 if (player.name && player.btag) {
                     displayNames.set(player.btag, player.name)
                 }
             }
 
-            // Validate we have at least some valid data
             if (players.length === 0) {
                 logger.warn(
                     { feature: 'community-data-service' },
-                    'No valid players found in CSV, returning empty community data'
+                    'No valid players found in community_players table'
                 )
                 return this.createEmptyCommunityData()
             }

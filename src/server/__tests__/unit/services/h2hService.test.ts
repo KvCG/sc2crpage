@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const hoisted = vi.hoisted(() => ({
     mockHttpGet: vi.fn(),
     mockLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-    mockReadH2HJsonFile: vi.fn(),
     mockSupabaseFrom: vi.fn(),
 }))
 
@@ -13,12 +12,6 @@ vi.mock('../../../services/pulseHttpClient', () => ({
 }))
 
 vi.mock('../../../logging/logger', () => ({ default: hoisted.mockLogger }))
-
-vi.mock('../../../services/driveFileStorage', () => ({
-    DriveFileStorage: {
-        readH2HJsonFile: hoisted.mockReadH2HJsonFile,
-    },
-}))
 
 vi.mock('../../../db/supabaseClient', () => ({
     default: { from: hoisted.mockSupabaseFrom },
@@ -199,7 +192,6 @@ describe('syncPair', () => {
             .mockResolvedValueOnce(VERSUS_COMMON_3_MATCHES)
             // Pagination loop: terminal page — no older matches
             .mockResolvedValueOnce({ result: [], navigation: { before: null, after: null } })
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
 
         const record = await syncPair(49312, 2741271)
 
@@ -235,7 +227,6 @@ describe('syncPair', () => {
             .mockResolvedValueOnce(page1)                 // versus/common
             .mockResolvedValueOnce(page2)                 // versus/matches?before=cursor-page-2
             .mockResolvedValueOnce(page3)                 // versus/matches?before=cursor-page-3
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
 
         const record = await syncPair(49312, 2741271)
 
@@ -264,29 +255,54 @@ describe('syncPair', () => {
         })
     })
 
-    it('appends only new matches when an existing record is in Drive', async () => {
-        const existingRecord = {
-            player1CharacterId: 49312,
-            player2CharacterId: 2741271,
-            pulseSyncedAt: '2026-04-01T00:00:00Z',
-            nextCursor: null,
-            matches: [
-                {
-                    matchId: 1001,
-                    date: '2026-04-01T00:00:00Z',
-                    map: 'Ruby Rock LE',
-                    durationSeconds: 600,
-                    region: 'US',
-                    type: '_1V1',
-                    winnerCharacterId: 49312,
-                    player1RatingChange: 20,
-                    player2RatingChange: -17,
-                    player1RatingAtTime: 5000,
-                    player2RatingAtTime: 4500,
-                    source: 'pulse',
-                },
-            ],
-        }
+    it('merges new Pulse matches without duplicating an existing Supabase match', async () => {
+        const pairsBuilder = makeSupabaseBuilder({ data: [{ id: 42 }], error: null })
+        hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
+            if (table === 'h2h_pairs') {
+                const readBuilder: Record<string, unknown> = {
+                    maybeSingle: vi.fn().mockResolvedValue({
+                        data: {
+                            id: 42,
+                            player1_character_id: 49312,
+                            player2_character_id: 2741271,
+                            pulse_synced_at: '2026-04-01T00:00:00Z',
+                            next_cursor: null,
+                        },
+                        error: null,
+                    }),
+                }
+                readBuilder.select = vi.fn().mockReturnValue(readBuilder)
+                readBuilder.eq = vi.fn().mockReturnValue(readBuilder)
+                return { select: vi.fn().mockReturnValue(readBuilder), upsert: vi.fn().mockReturnValue(pairsBuilder) }
+            }
+            if (table === 'h2h_matches') {
+                // Return match 1001 as already stored
+                const matchBuilder: Record<string, unknown> = {}
+                matchBuilder.select = vi.fn().mockReturnValue(matchBuilder)
+                matchBuilder.eq = vi.fn().mockReturnValue(
+                    Promise.resolve({
+                        data: [{
+                            match_id: 1001, // number so Set dedup works with Pulse entry.match.id
+                            match_date: '2026-04-01T00:00:00Z',
+                            map_name: 'Ruby Rock LE',
+                            duration_seconds: 600,
+                            region: 'US',
+                            match_type: '_1V1',
+                            winner_character_id: 49312,
+                            player1_rating_change: 20,
+                            player2_rating_change: -17,
+                            player1_rating: 5000,
+                            player2_rating: 4500,
+                            source: 'pulse',
+                            added_by: null,
+                        }],
+                        error: null,
+                    }),
+                )
+                return matchBuilder
+            }
+            return { upsert: vi.fn().mockReturnValue(pairsBuilder) }
+        })
 
         hoisted.mockHttpGet
             .mockResolvedValueOnce([PISTOLA_1V1_TEAM])
@@ -294,11 +310,10 @@ describe('syncPair', () => {
             .mockResolvedValueOnce(VERSUS_COMMON_3_MATCHES)
             // Pagination loop: terminal page — no older matches
             .mockResolvedValueOnce({ result: [], navigation: { before: null, after: null } })
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(existingRecord)
 
         const record = await syncPair(49312, 2741271)
 
-        // match 1001 already stored; 1002 and 1003 are new → total 3
+        // match 1001 already in Supabase; 1002 and 1003 are new → total 3
         expect(record.matches).toHaveLength(3)
         const ids = record.matches.map((m) => m.matchId)
         expect(ids).toContain(1001)
@@ -376,17 +391,31 @@ describe('persistMatch', () => {
 
     it('does not overwrite pulseSyncedAt when a record already exists', async () => {
         const pulseSyncTime = '2026-04-10T12:00:00.000Z'
-        hoisted.mockReadH2HJsonFile.mockResolvedValue({
-            player1CharacterId: 49312,
-            player2CharacterId: 2741271,
-            pulseSyncedAt: pulseSyncTime,
-            nextCursor: null,
-            matches: [],
-        })
         const pairsUpsert = vi.fn().mockReturnValue(makeSupabaseBuilder({ data: [{ id: 42 }], error: null }))
         hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
-            if (table === 'h2h_pairs') return { upsert: pairsUpsert }
-            if (table === 'h2h_matches') return { upsert: vi.fn().mockResolvedValue({ data: null, error: null }) }
+            if (table === 'h2h_pairs') {
+                const readBuilder: Record<string, unknown> = {
+                    maybeSingle: vi.fn().mockResolvedValue({
+                        data: {
+                            id: 42,
+                            player1_character_id: 49312,
+                            player2_character_id: 2741271,
+                            pulse_synced_at: pulseSyncTime,
+                            next_cursor: null,
+                        },
+                        error: null,
+                    }),
+                }
+                readBuilder.select = vi.fn().mockReturnValue(readBuilder)
+                readBuilder.eq = vi.fn().mockReturnValue(readBuilder)
+                return { select: vi.fn().mockReturnValue(readBuilder), upsert: pairsUpsert }
+            }
+            if (table === 'h2h_matches') {
+                const matchBuilder: Record<string, unknown> = {}
+                matchBuilder.select = vi.fn().mockReturnValue(matchBuilder)
+                matchBuilder.eq = vi.fn().mockReturnValue(Promise.resolve({ data: [], error: null }))
+                return { ...matchBuilder, upsert: vi.fn().mockResolvedValue({ data: null, error: null }) }
+            }
         })
 
         await persistMatch(49312, 2741271, BLIZZARD_MATCH)
@@ -398,7 +427,6 @@ describe('persistMatch', () => {
     })
 
     it('leaves pulseSyncedAt empty when creating a new record', async () => {
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
         const pairsUpsert = vi.fn().mockReturnValue(makeSupabaseBuilder({ data: [{ id: 42 }], error: null }))
         hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
             if (table === 'h2h_pairs') return { upsert: pairsUpsert }
@@ -414,22 +442,58 @@ describe('persistMatch', () => {
     })
 
     it('does not write when matchId already exists in record', async () => {
-        hoisted.mockReadH2HJsonFile.mockResolvedValue({
-            player1CharacterId: 49312,
-            player2CharacterId: 2741271,
-            pulseSyncedAt: '2026-04-10T12:00:00.000Z',
-            nextCursor: null,
-            matches: [BLIZZARD_MATCH],
+        const matchesUpsert = vi.fn()
+        hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
+            if (table === 'h2h_pairs') {
+                const readBuilder: Record<string, unknown> = {
+                    maybeSingle: vi.fn().mockResolvedValue({
+                        data: {
+                            id: 42,
+                            player1_character_id: 49312,
+                            player2_character_id: 2741271,
+                            pulse_synced_at: '2026-04-10T12:00:00.000Z',
+                            next_cursor: null,
+                        },
+                        error: null,
+                    }),
+                }
+                readBuilder.select = vi.fn().mockReturnValue(readBuilder)
+                readBuilder.eq = vi.fn().mockReturnValue(readBuilder)
+                return { select: vi.fn().mockReturnValue(readBuilder) }
+            }
+            if (table === 'h2h_matches') {
+                const matchBuilder: Record<string, unknown> = {}
+                matchBuilder.select = vi.fn().mockReturnValue(matchBuilder)
+                matchBuilder.eq = vi.fn().mockReturnValue(
+                    Promise.resolve({
+                        data: [{
+                            match_id: BLIZZARD_MATCH.matchId,
+                            match_date: BLIZZARD_MATCH.date,
+                            map_name: BLIZZARD_MATCH.map,
+                            duration_seconds: BLIZZARD_MATCH.durationSeconds,
+                            region: BLIZZARD_MATCH.region,
+                            match_type: BLIZZARD_MATCH.type,
+                            winner_character_id: BLIZZARD_MATCH.winnerCharacterId,
+                            player1_rating_change: null,
+                            player2_rating_change: null,
+                            player1_rating: null,
+                            player2_rating: null,
+                            source: 'blizzard',
+                            added_by: null,
+                        }],
+                        error: null,
+                    }),
+                )
+                return { ...matchBuilder, upsert: matchesUpsert }
+            }
         })
 
         await persistMatch(49312, 2741271, BLIZZARD_MATCH)
 
-        expect(hoisted.mockSupabaseFrom).not.toHaveBeenCalledWith('h2h_matches')
+        expect(matchesUpsert).not.toHaveBeenCalled()
     })
 
     it('upserts to h2h_matches with correct pair_id and match_id', async () => {
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
-
         const pairsBuilder = makeSupabaseBuilder({ data: [{ id: 99 }], error: null })
         const matchesUpsert = vi.fn().mockResolvedValue({ data: null, error: null })
         hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
@@ -452,7 +516,6 @@ describe('persistMatch', () => {
     })
 
     it('logs error but does not throw when Supabase errors in persistMatch', async () => {
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
         const dbError = new Error('Network error')
         const errorBuilder = makeSupabaseBuilder({ data: null, error: dbError })
         hoisted.mockSupabaseFrom.mockReturnValue({ upsert: vi.fn().mockReturnValue(errorBuilder) })
@@ -536,48 +599,35 @@ describe('loadPairRecord', () => {
         expect(record!.matches[0].matchId).toBe('1001')
         expect(record!.matches[0].map).toBe('Ruby Rock LE')
         expect(record!.matches[0].winnerCharacterId).toBe(49312)
-        expect(hoisted.mockReadH2HJsonFile).not.toHaveBeenCalled()
     })
 
-    it('falls back to Drive when Supabase returns null (pair not yet backfilled)', async () => {
-        const driveRecord = {
-            player1CharacterId: 49312,
-            player2CharacterId: 2741271,
-            pulseSyncedAt: '2026-04-05T00:00:00Z',
-            nextCursor: null,
-            matches: [],
-        }
+    it('returns null when pair is not found in Supabase', async () => {
         setupSupabaseForLoad(null, null)
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(driveRecord)
 
         const record = await loadPairRecord(49312, 2741271)
 
-        expect(hoisted.mockReadH2HJsonFile).toHaveBeenCalledWith('49312-2741271.json')
-        expect(record).toEqual(driveRecord)
+        expect(record).toBeNull()
     })
 
-    it('falls back to Drive and logs error when Supabase query fails', async () => {
+    it('returns null and logs error when Supabase query fails', async () => {
         const dbError = new Error('Connection refused')
         setupSupabaseForLoad(null, null, dbError)
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
 
         const record = await loadPairRecord(49312, 2741271)
 
         expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
             expect.objectContaining({ feature: 'h2h', err: dbError }),
-            'Supabase read failed for h2h pair — falling back to Drive',
+            'Supabase read failed for h2h pair',
         )
-        expect(hoisted.mockReadH2HJsonFile).toHaveBeenCalledWith('49312-2741271.json')
         expect(record).toBeNull()
     })
 
     it('normalises pair key using min/max regardless of argument order', async () => {
         setupSupabaseForLoad(null, null)
-        hoisted.mockReadH2HJsonFile.mockResolvedValue(null)
 
-        await loadPairRecord(2741271, 49312)
+        const record = await loadPairRecord(2741271, 49312)
 
-        expect(hoisted.mockReadH2HJsonFile).toHaveBeenCalledWith('49312-2741271.json')
+        expect(record).toBeNull()
     })
 })
 

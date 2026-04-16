@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { CommunityDataService, communityDataService } from '../../../services/communityDataService'
 
-// Mock the CSV parser
-vi.mock('../../../utils/csvParser', () => ({
-    readCsv: vi.fn(),
+// Hoist mock factories above imports
+const hoisted = vi.hoisted(() => ({
+    mockSelect: vi.fn(),
+    mockFrom: vi.fn(),
 }))
 
-// Mock logger
+vi.mock('../../../db/supabaseClient', () => ({
+    default: {
+        from: hoisted.mockFrom,
+    },
+}))
+
 vi.mock('../../../logging/logger', () => ({
     default: {
         info: vi.fn(),
@@ -15,8 +20,7 @@ vi.mock('../../../logging/logger', () => ({
     },
 }))
 
-import { readCsv } from '../../../utils/csvParser'
-const mockReadCsv = vi.mocked(readCsv)
+import { CommunityDataService, communityDataService } from '../../../services/communityDataService'
 
 describe('CommunityDataService', () => {
     let service: CommunityDataService
@@ -27,21 +31,23 @@ describe('CommunityDataService', () => {
         ;(service as any).communityData = null
         ;(service as any).loadingPromise = null
         vi.clearAllMocks()
+        // Re-wire Supabase chain after clearAllMocks
+        hoisted.mockFrom.mockReturnValue({ select: hoisted.mockSelect })
     })
 
     afterEach(() => {
         vi.resetAllMocks()
     })
 
-    describe('CSV Data Loading', () => {
-        it('should load and process valid CSV data', async () => {
-            const mockCsvData = [
-                { id: '123', btag: 'Player#1234', name: 'Player One', challongeId: 'p1' },
-                { id: '456', btag: 'Player#5678', name: 'Player Two' },
-                { id: '789', btag: 'Player#9999' }, // No name or challongeId
+    describe('Supabase Data Loading', () => {
+        it('should load and process valid data from community_players', async () => {
+            const mockRows = [
+                { character_id: '123', btag: 'Player#1234', display_name: 'Player One', challonge_id: 'p1' },
+                { character_id: '456', btag: 'Player#5678', display_name: 'Player Two', challonge_id: null },
+                { character_id: '789', btag: 'Player#9999', display_name: null, challonge_id: null },
             ]
-            
-            mockReadCsv.mockResolvedValueOnce(mockCsvData)
+
+            hoisted.mockSelect.mockResolvedValueOnce({ data: mockRows, error: null })
 
             const communityData = await service.getCommunityData()
 
@@ -54,8 +60,8 @@ describe('CommunityDataService', () => {
             expect(communityData.displayNames.get('Player#9999')).toBeUndefined()
         })
 
-        it('should handle empty CSV data gracefully', async () => {
-            mockReadCsv.mockResolvedValueOnce([])
+        it('should handle empty table response gracefully', async () => {
+            hoisted.mockSelect.mockResolvedValueOnce({ data: [], error: null })
 
             const communityData = await service.getCommunityData()
 
@@ -64,16 +70,16 @@ describe('CommunityDataService', () => {
             expect(communityData.displayNames.size).toBe(0)
         })
 
-        it('should skip invalid CSV rows', async () => {
-            const mockCsvData = [
-                { id: '123', btag: 'Player#1234', name: 'Valid Player' },
-                { btag: 'NoId#1234' }, // Missing id
-                { id: '456' }, // Missing btag
-                null, // Invalid row
-                { id: '789', btag: 'Player#9999', name: 'Another Valid' },
+        it('should skip invalid rows', async () => {
+            const mockRows = [
+                { character_id: '123', btag: 'Player#1234', display_name: 'Valid Player', challonge_id: null },
+                { character_id: null, btag: 'NoId#1234', display_name: null, challonge_id: null },
+                { character_id: '456', btag: null, display_name: null, challonge_id: null },
+                null,
+                { character_id: '789', btag: 'Player#9999', display_name: 'Another Valid', challonge_id: null },
             ]
-            
-            mockReadCsv.mockResolvedValueOnce(mockCsvData)
+
+            hoisted.mockSelect.mockResolvedValueOnce({ data: mockRows, error: null })
 
             const communityData = await service.getCommunityData()
 
@@ -82,8 +88,8 @@ describe('CommunityDataService', () => {
             expect(communityData.playerIds.has('789')).toBe(true)
         })
 
-        it('should handle CSV loading errors gracefully', async () => {
-            mockReadCsv.mockRejectedValueOnce(new Error('CSV read failed'))
+        it('should handle Supabase query errors gracefully', async () => {
+            hoisted.mockSelect.mockResolvedValueOnce({ data: null, error: new Error('Supabase query failed') })
 
             const communityData = await service.getCommunityData()
 
@@ -94,29 +100,29 @@ describe('CommunityDataService', () => {
     })
 
     describe('Caching Behavior', () => {
-        it('should cache loaded data and avoid duplicate CSV reads', async () => {
-            const mockCsvData = [
-                { id: '123', btag: 'Player#1234', name: 'Player One' },
+        it('should cache loaded data and avoid duplicate Supabase queries', async () => {
+            const mockRows = [
+                { character_id: '123', btag: 'Player#1234', display_name: 'Player One', challonge_id: null },
             ]
-            
-            mockReadCsv.mockResolvedValueOnce(mockCsvData)
+
+            hoisted.mockSelect.mockResolvedValueOnce({ data: mockRows, error: null })
 
             // First call
             const data1 = await service.getCommunityData()
-            
+
             // Second call should use cache
             const data2 = await service.getCommunityData()
 
-            expect(mockReadCsv).toHaveBeenCalledTimes(1)
+            expect(hoisted.mockSelect).toHaveBeenCalledTimes(1)
             expect(data1).toBe(data2) // Same object reference
         })
 
         it('should handle concurrent loading requests', async () => {
-            const mockCsvData = [
-                { id: '123', btag: 'Player#1234', name: 'Player One' },
+            const mockRows = [
+                { character_id: '123', btag: 'Player#1234', display_name: 'Player One', challonge_id: null },
             ]
-            
-            mockReadCsv.mockResolvedValueOnce(mockCsvData)
+
+            hoisted.mockSelect.mockResolvedValueOnce({ data: mockRows, error: null })
 
             // Start multiple concurrent requests
             const promise1 = service.getCommunityData()
@@ -125,9 +131,9 @@ describe('CommunityDataService', () => {
 
             const [data1, data2, data3] = await Promise.all([promise1, promise2, promise3])
 
-            // Should only read CSV once
-            expect(mockReadCsv).toHaveBeenCalledTimes(1)
-            
+            // Should only query Supabase once
+            expect(hoisted.mockSelect).toHaveBeenCalledTimes(1)
+
             // All should get the same data
             expect(data1).toBe(data2)
             expect(data2).toBe(data3)
@@ -136,12 +142,12 @@ describe('CommunityDataService', () => {
 
     describe('Convenience Methods', () => {
         beforeEach(async () => {
-            const mockCsvData = [
-                { id: '123', btag: 'Player#1234', name: 'Player One', challongeId: 'p1' },
-                { id: '456', btag: 'Player#5678', name: 'Player Two' },
+            const mockRows = [
+                { character_id: '123', btag: 'Player#1234', display_name: 'Player One', challonge_id: 'p1' },
+                { character_id: '456', btag: 'Player#5678', display_name: 'Player Two', challonge_id: null },
             ]
-            
-            mockReadCsv.mockResolvedValueOnce(mockCsvData)
+
+            hoisted.mockSelect.mockResolvedValueOnce({ data: mockRows, error: null })
             await service.getCommunityData() // Load data
         })
 
@@ -187,18 +193,20 @@ describe('CommunityDataService', () => {
     describe('Reload Functionality', () => {
         it('should reload data when requested', async () => {
             // Initial load
-            mockReadCsv.mockResolvedValueOnce([
-                { id: '123', btag: 'Player#1234', name: 'Original' }
-            ])
+            hoisted.mockSelect.mockResolvedValueOnce({
+                data: [{ character_id: '123', btag: 'Player#1234', display_name: 'Original', challonge_id: null }],
+                error: null,
+            })
             await service.getCommunityData()
 
             // Reload with new data
-            mockReadCsv.mockResolvedValueOnce([
-                { id: '456', btag: 'Player#5678', name: 'Updated' }
-            ])
+            hoisted.mockSelect.mockResolvedValueOnce({
+                data: [{ character_id: '456', btag: 'Player#5678', display_name: 'Updated', challonge_id: null }],
+                error: null,
+            })
             const reloadedData = await service.reloadCommunityData()
 
-            expect(mockReadCsv).toHaveBeenCalledTimes(2)
+            expect(hoisted.mockSelect).toHaveBeenCalledTimes(2)
             expect(reloadedData.players).toHaveLength(1)
             expect(reloadedData.players[0].id).toBe('456')
         })

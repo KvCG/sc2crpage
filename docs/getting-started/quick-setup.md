@@ -36,22 +36,7 @@ npm run dev
 
 ## 📊 Data Setup
 
-**Optional but recommended for full functionality:**
-
-### Auto-Download (If Google Drive Configured)
-```bash
-# If you have GOOGLE_SERVICE_ACCOUNT_KEY set, 
-# the server automatically downloads ladderCR.csv on first run
-```
-
-### Manual Setup
-```bash
-# Request ladderCR.csv from maintainers (NeO or Kerverus)
-# Then place in: dist/data/ladderCR.csv (after npm run build)
-```
-
-### Development Without Data
-The app works with limited functionality - perfect for UI development and basic testing.
+**Data is loaded from Supabase automatically** — set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in your `.env` file. Contact **NeO** or **Kerverus** for credentials.
 
 ---
 

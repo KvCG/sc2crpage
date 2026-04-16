@@ -25,7 +25,7 @@ src/
                               pulseRoutes, replayAnalyzerRoutes, utilityRoutes
     services/   pulseService, analyticsService, snapshotService,
                 communityDataService, dataDerivations, challongeApi,
-                googleApi, driveFileStorage, replayAnalyzerApi
+                googleApi, replayAnalyzerApi
     middleware/ analyticsMiddleware.ts
     utils/      cache, cacheKeys, rankingFilters, requestIdentity, gitInfo…
     logging/    logger.ts (Pino)
@@ -55,9 +55,9 @@ mockData/       Fixture JSON for tests
 
 ---
 
-## Data (`ladderCR.csv`)
+## Data (Community Players)
 
-Server reads from `dist/data/ladderCR.csv`. Auto-downloads from Google Drive when `GOOGLE_SERVICE_ACCOUNT_KEY` is set; otherwise place manually after build.
+Community player data is loaded from Supabase at startup via `communityDataService.ts`. No CSV file or Google Drive download is required. Supabase credentials (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) must be set. `GOOGLE_SERVICE_ACCOUNT_KEY` is only needed for replay upload/download via `googleApi.ts`.
 
 See `docs/reference/environment-variables.md` for all env vars.
 

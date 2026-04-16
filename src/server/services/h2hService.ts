@@ -1,5 +1,4 @@
 import { get as httpGet, endpoints } from './pulseHttpClient'
-import { DriveFileStorage } from './driveFileStorage'
 import logger from '../logging/logger'
 import supabase from '../db/supabaseClient'
 import type { H2HMatch, H2HPairRecord } from '../../shared/types'
@@ -183,12 +182,8 @@ export async function resolveBlizzardProfile(characterId: number): Promise<Blizz
 }
 
 // ============================================================================
-// Drive persistence
+// Pair record
 // ============================================================================
-
-function pairKey(id1: number, id2: number): string {
-    return `${Math.min(id1, id2)}-${Math.max(id1, id2)}.json`
-}
 
 export async function loadPairRecord(id1: number, id2: number): Promise<H2HPairRecord | null> {
     const player1CharacterId = Math.min(id1, id2)
@@ -205,8 +200,8 @@ export async function loadPairRecord(id1: number, id2: number): Promise<H2HPairR
         if (pairError) throw pairError
 
         if (!pairRow) {
-            // Pair not yet backfilled — fall back to Drive, triggering a fresh Pulse sync
-            return DriveFileStorage.readH2HJsonFile<H2HPairRecord>(pairKey(id1, id2))
+            // Pair not yet in Supabase — return null so the route triggers a fresh sync
+            return null
         }
 
         const { data: matchRows, error: matchError } = await supabase
@@ -263,9 +258,9 @@ export async function loadPairRecord(id1: number, id2: number): Promise<H2HPairR
     } catch (err) {
         logger.error(
             { feature: 'h2h', player1CharacterId, player2CharacterId, err },
-            'Supabase read failed for h2h pair — falling back to Drive',
+            'Supabase read failed for h2h pair',
         )
-        return DriveFileStorage.readH2HJsonFile<H2HPairRecord>(pairKey(id1, id2))
+        return null
     }
 }
 

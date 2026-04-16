@@ -367,9 +367,12 @@ graph LR
     end
     
     subgraph "Google Drive"
-        LadderData[ladderCR.csv]
         ReplayFiles[Replay Storage]
         Analytics[Analytics JSON]
+    end
+    
+    subgraph "Supabase"
+        LadderData[Community Players]
     end
     
     SC2CR[SC2CR Server] --> Players

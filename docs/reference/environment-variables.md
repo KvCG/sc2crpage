@@ -97,7 +97,7 @@ ONLINE_THRESHOLD_HOURS=24
 
 #### `GOOGLE_SERVICE_ACCOUNT_KEY`
 - **Purpose**: Google Drive API service account credentials
-- **Required**: For data auto-download and replay storage
+- **Required**: For replay storage only — **replay-only**. Community player data is loaded from Supabase at startup; `ladderCR.csv` is no longer auto-downloaded from Drive. Omit this key in environments that do not handle replay uploads.
 - **Format**: JSON string (entire service account key file)
 - **Example**: `GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"...","private_key_id":"...","private_key":"...","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"...","auth_provider_x509_cert_url":"...","client_x509_cert_url":"..."}`
 - **Security**: Keep this secure and never commit to version control
