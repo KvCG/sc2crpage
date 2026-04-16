@@ -209,7 +209,7 @@ export async function loadPairRecord(id1: number, id2: number): Promise<H2HPairR
             .select(
                 'match_id, match_date, map_name, duration_seconds, region, match_type, ' +
                     'winner_character_id, player1_rating_change, player2_rating_change, ' +
-                    'player1_rating, player2_rating, source, added_by',
+                    'player1_rating, player2_rating, source, added_by, is_voided, match_label',
             )
             .eq('pair_id', pairRow.id)
 

@@ -633,6 +633,33 @@ describe('loadPairRecord', () => {
 
         expect(record).toBeNull()
     })
+
+    it('maps is_voided: false and match_label: null by default', async () => {
+        setupSupabaseForLoad(PAIR_ROW, MATCH_ROWS)
+
+        const record = await loadPairRecord(49312, 2741271)
+
+        expect(record!.matches[0].isVoided).toBe(false)
+        expect(record!.matches[0].matchLabel).toBeNull()
+    })
+
+    it('maps is_voided: true to isVoided: true', async () => {
+        const voidedMatchRows = [{ ...MATCH_ROWS[0], is_voided: true }]
+        setupSupabaseForLoad(PAIR_ROW, voidedMatchRows)
+
+        const record = await loadPairRecord(49312, 2741271)
+
+        expect(record!.matches[0].isVoided).toBe(true)
+    })
+
+    it('maps match_label: tournament to matchLabel: tournament', async () => {
+        const labelledMatchRows = [{ ...MATCH_ROWS[0], match_label: 'tournament' }]
+        setupSupabaseForLoad(PAIR_ROW, labelledMatchRows)
+
+        const record = await loadPairRecord(49312, 2741271)
+
+        expect(record!.matches[0].matchLabel).toBe('tournament')
+    })
 })
 
 describe('savePairRecord', () => {
