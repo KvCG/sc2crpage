@@ -1,4 +1,4 @@
-import { google } from 'googleapis'
+import { google, drive_v3 } from 'googleapis'
 import { Readable } from 'stream'
 import path from 'path'
 import fs from 'fs'
@@ -412,6 +412,43 @@ export class DriveFileStorage {
             logger.error({ error, fileName, feature: 'drive-storage' }, 'Failed to write H2H JSON file')
             throw error
         }
+    }
+
+    /**
+     * List all file names in the H2H Drive folder (handles pagination).
+     * Returns the raw file names, e.g. ["123-456.json", "789-101.json"].
+     */
+    static async listH2HFiles(): Promise<string[]> {
+        const auth = await this.authenticate()
+        const drive = google.drive({ version: 'v3', auth })
+        const folderId = await this.getH2HFolder()
+
+        const names: string[] = []
+        let pageToken: string | undefined = undefined
+        let hasMorePages = true
+
+        while (hasMorePages) {
+            const page: drive_v3.Schema$FileList = (await drive.files.list({
+                q: `'${folderId}' in parents and mimeType='application/json' and trashed=false`,
+                fields: 'nextPageToken, files(name)',
+                pageSize: 1000,
+                pageToken,
+            })).data
+
+            for (const file of page.files ?? []) {
+                if (file.name) names.push(file.name)
+            }
+
+            const nextToken: string | undefined = page.nextPageToken ?? undefined
+            if (nextToken) {
+                pageToken = nextToken
+            } else {
+                hasMorePages = false
+            }
+        }
+
+        logger.info({ count: names.length, feature: 'drive-storage' }, 'Listed H2H files')
+        return names
     }
 }
 

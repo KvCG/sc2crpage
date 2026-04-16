@@ -191,13 +191,85 @@ function pairKey(id1: number, id2: number): string {
 }
 
 export async function loadPairRecord(id1: number, id2: number): Promise<H2HPairRecord | null> {
-    return DriveFileStorage.readH2HJsonFile<H2HPairRecord>(pairKey(id1, id2))
+    const player1CharacterId = Math.min(id1, id2)
+    const player2CharacterId = Math.max(id1, id2)
+
+    try {
+        const { data: pairRow, error: pairError } = await supabase
+            .from('h2h_pairs')
+            .select('id, player1_character_id, player2_character_id, pulse_synced_at, next_cursor')
+            .eq('player1_character_id', player1CharacterId)
+            .eq('player2_character_id', player2CharacterId)
+            .maybeSingle()
+
+        if (pairError) throw pairError
+
+        if (!pairRow) {
+            // Pair not yet backfilled — fall back to Drive, triggering a fresh Pulse sync
+            return DriveFileStorage.readH2HJsonFile<H2HPairRecord>(pairKey(id1, id2))
+        }
+
+        const { data: matchRows, error: matchError } = await supabase
+            .from('h2h_matches')
+            .select(
+                'match_id, match_date, map_name, duration_seconds, region, match_type, ' +
+                    'winner_character_id, player1_rating_change, player2_rating_change, ' +
+                    'player1_rating, player2_rating, source, added_by',
+            )
+            .eq('pair_id', pairRow.id)
+
+        if (matchError) throw matchError
+
+        interface H2HMatchRow {
+            match_id: string
+            match_date: string
+            map_name: string
+            duration_seconds: number
+            region: string
+            match_type: string
+            winner_character_id: number
+            player1_rating_change: number | null
+            player2_rating_change: number | null
+            player1_rating: number | null
+            player2_rating: number | null
+            source: H2HMatch['source']
+            added_by: string | null
+        }
+
+        const matches: H2HMatch[] = ((matchRows ?? []) as unknown as H2HMatchRow[]).map((row) => ({
+                matchId: row.match_id,
+                date: row.match_date,
+                map: row.map_name,
+                durationSeconds: row.duration_seconds,
+                region: row.region,
+                type: row.match_type,
+                winnerCharacterId: row.winner_character_id,
+                player1RatingChange: row.player1_rating_change,
+                player2RatingChange: row.player2_rating_change,
+                player1RatingAtTime: row.player1_rating,
+                player2RatingAtTime: row.player2_rating,
+                source: row.source,
+                ...(row.added_by !== null && { addedBy: row.added_by }),
+            }),
+        )
+
+        return {
+            player1CharacterId: pairRow.player1_character_id,
+            player2CharacterId: pairRow.player2_character_id,
+            pulseSyncedAt: pairRow.pulse_synced_at ?? '',
+            nextCursor: pairRow.next_cursor,
+            matches,
+        }
+    } catch (err) {
+        logger.error(
+            { feature: 'h2h', player1CharacterId, player2CharacterId, err },
+            'Supabase read failed for h2h pair — falling back to Drive',
+        )
+        return DriveFileStorage.readH2HJsonFile<H2HPairRecord>(pairKey(id1, id2))
+    }
 }
 
 export async function savePairRecord(record: H2HPairRecord): Promise<void> {
-    const key = pairKey(record.player1CharacterId, record.player2CharacterId)
-    await DriveFileStorage.writeH2HJsonFile(key, record)
-
     try {
         const { error } = await supabase
             .from('h2h_pairs')
