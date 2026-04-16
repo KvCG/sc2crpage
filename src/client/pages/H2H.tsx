@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
     Autocomplete,
+    ActionIcon,
     Group,
     Title,
     Text,
@@ -13,9 +14,10 @@ import {
     Paper,
     Center,
 } from '@mantine/core'
-import { IconAlertCircle } from '@tabler/icons-react'
+import { IconAlertCircle, IconFlag } from '@tabler/icons-react'
 import { getCommunityPlayers, getH2H } from '../services/api'
 import type { H2HResponse, H2HMatch } from '../../shared/types'
+import { FlagMatchModal } from '../components/Match/FlagMatchModal'
 
 interface PlayerOption {
     value: string   // characterId as string
@@ -47,6 +49,7 @@ export const H2H = () => {
     const [error, setError] = useState<string | null>(null)
 
     const [activeTab, setActiveTab] = useState<string>(MATCH_TYPE_ALL)
+    const [flaggedMatchId, setFlaggedMatchId] = useState<number | string | null>(null)
 
     // Load community player roster on mount for picker options.
     // Uses the community CSV (all known players) rather than the ranked
@@ -174,6 +177,7 @@ export const H2H = () => {
                         <Table.Th>Map</Table.Th>
                         <Table.Th>Winner</Table.Th>
                         <Table.Th>Duration</Table.Th>
+                        <Table.Th />
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -183,6 +187,17 @@ export const H2H = () => {
                             <Table.Td>{match.map}</Table.Td>
                             <Table.Td>{resolveWinner(match)}</Table.Td>
                             <Table.Td>{match.durationSeconds > 0 ? formatDuration(match.durationSeconds) : '—'}</Table.Td>
+                            <Table.Td>
+                                <ActionIcon
+                                    variant="subtle"
+                                    color="gray"
+                                    size="sm"
+                                    aria-label="Flag match"
+                                    onClick={() => setFlaggedMatchId(match.matchId)}
+                                >
+                                    <IconFlag size={14} />
+                                </ActionIcon>
+                            </Table.Td>
                         </Table.Tr>
                     ))}
                 </Table.Tbody>
@@ -237,6 +252,11 @@ export const H2H = () => {
 
     return (
         <>
+            <FlagMatchModal
+                matchId={flaggedMatchId}
+                opened={flaggedMatchId !== null}
+                onClose={() => setFlaggedMatchId(null)}
+            />
             <Title order={2} mb="md">Head to Head</Title>
 
             <Group align="flex-end" mb="lg">

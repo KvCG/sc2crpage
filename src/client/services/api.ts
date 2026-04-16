@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios'
 import config from './config'
 import resolveRequestId from '../utils/requestIdentity'
+import type { MatchFlagType, MatchFlagStatus } from '../../shared/types'
 
 const api: AxiosInstance = axios.create({
     baseURL: config.API_URL,
@@ -120,4 +121,23 @@ export const getH2H = async (player1: number, player2: number) => {
 export const getCommunityPlayers = async () => {
     const response = await api.get('api/community-players')
     return response
+}
+
+export interface PostH2HFlagPayload {
+    matchId: string
+    player1CharacterId: number
+    player2CharacterId: number
+    flagType: MatchFlagType
+    reason?: string | null
+    submittedBy: string
+}
+
+export interface PostH2HFlagResponse {
+    flagId: number
+    status: MatchFlagStatus
+}
+
+export const postH2HFlag = async (payload: PostH2HFlagPayload): Promise<PostH2HFlagResponse> => {
+    const response = await api.post<PostH2HFlagResponse>('api/h2h/flags', payload)
+    return response.data
 }
