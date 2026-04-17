@@ -254,6 +254,8 @@ export const H2H = () => {
         <>
             <FlagMatchModal
                 matchId={flaggedMatchId}
+                player1CharacterId={h2hData?.player1.characterId ?? 0}
+                player2CharacterId={h2hData?.player2.characterId ?? 0}
                 opened={flaggedMatchId !== null}
                 onClose={() => setFlaggedMatchId(null)}
             />

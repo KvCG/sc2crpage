@@ -5,11 +5,13 @@ import { MantineProvider } from '@mantine/core'
 const hoisted = vi.hoisted(() => ({
     mockGetCommunityPlayers: vi.fn(),
     mockGetH2H: vi.fn(),
+    mockPostH2HFlag: vi.fn(),
 }))
 
 vi.mock('../services/api', () => ({
     getCommunityPlayers: hoisted.mockGetCommunityPlayers,
     getH2H: hoisted.mockGetH2H,
+    postH2HFlag: hoisted.mockPostH2HFlag,
 }))
 
 import { H2H } from '../pages/H2H'
