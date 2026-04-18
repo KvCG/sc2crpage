@@ -143,6 +143,18 @@ describe('POST /h2h/flags', () => {
             const body = res.jsonData as Record<string, unknown>
             expect(body.flagId).toBe(42)
             expect(body.status).toBe('pending')
+            // Verify submitFlag was called with the correct params — the service
+            // is responsible for writing the DB row with status = 'pending'
+            expect(hoisted.submitFlagMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    matchId: validBody.matchId,
+                    player1CharacterId: validBody.player1CharacterId,
+                    player2CharacterId: validBody.player2CharacterId,
+                    flagType: validBody.flagType,
+                    reason: validBody.reason,
+                    submittedBy: validBody.submittedBy,
+                }),
+            )
         })
 
         it('returns 201 for a showmatch flag without reason', async () => {
