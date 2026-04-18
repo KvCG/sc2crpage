@@ -12,6 +12,7 @@ import { PlayerActivity } from './pages/PlayerActivity.tsx'
 import { H2H } from './pages/H2H.tsx'
 import { AdminLogin } from './pages/AdminLogin.tsx'
 import { AdminDashboard } from './pages/AdminDashboard.tsx'
+import { FlagReview } from './pages/FlagReview.tsx'
 import { AdminRoute } from './routes/AdminRoute.tsx'
 import { AdminLayout } from './components/AdminLayout/AdminLayout.tsx'
 import { Container } from '@mantine/core'
@@ -35,7 +36,7 @@ const App: React.FC = () => {
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
                         <Route index element={<AdminDashboard />} />
-                        <Route path="h2h-flags" element={<AdminDashboard />} />
+                        <Route path="h2h-flags" element={<FlagReview />} />
                         <Route path="players" element={<AdminDashboard />} />
                     </Route>
                     {/*<Route path="/community" element={<Community />} />
