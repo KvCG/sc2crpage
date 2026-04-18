@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios'
 import config from './config'
 import resolveRequestId from '../utils/requestIdentity'
-import type { MatchFlagType, MatchFlagStatus } from '../../shared/types'
+import type { MatchFlagType, MatchFlagStatus, H2HFlagWithMatch } from '../../shared/types'
 
 const api: AxiosInstance = axios.create({
     baseURL: config.API_URL,
@@ -148,5 +148,31 @@ export interface AdminLoginResponse {
 
 export const postAdminLogin = async (password: string): Promise<AdminLoginResponse> => {
     const response = await api.post<AdminLoginResponse>('api/admin/login', { password })
+    return response.data
+}
+
+export interface GetAdminFlagsParams {
+    status?: 'pending' | 'approved' | 'rejected'
+}
+
+export const getAdminFlags = async (params: GetAdminFlagsParams = {}): Promise<H2HFlagWithMatch[]> => {
+    const token = sessionStorage.getItem('adminToken')
+    const response = await api.get<H2HFlagWithMatch[]>('api/h2h/flags', {
+        params,
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    return response.data
+}
+
+export interface PatchAdminFlagPayload {
+    action: 'approve' | 'reject'
+    adminNote?: string | null
+}
+
+export const patchAdminFlag = async (flagId: number, payload: PatchAdminFlagPayload): Promise<H2HFlagWithMatch> => {
+    const token = sessionStorage.getItem('adminToken')
+    const response = await api.patch<H2HFlagWithMatch>(`api/h2h/flags/${flagId}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
     return response.data
 }
