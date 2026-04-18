@@ -29,6 +29,8 @@ import {
     findMatchByExternalId,
     submitFlag,
     listFlags,
+    approveFlag,
+    rejectFlag,
     FlagServiceError,
 } from '../../../services/h2hFlagService'
 
@@ -52,6 +54,16 @@ function mockFromInsertSelect(result: { data: unknown; error: unknown }) {
     const chain = {
         insert: vi.fn().mockReturnThis(),
         select: vi.fn().mockResolvedValue(result),
+    }
+    hoisted.mockSupabaseFrom.mockReturnValueOnce(chain)
+    return chain
+}
+
+/** Mocks one supabase.from() call that ends with .update().eq() */
+function mockFromUpdate(result: { error: unknown }) {
+    const chain = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: null, ...result }),
     }
     hoisted.mockSupabaseFrom.mockReturnValueOnce(chain)
     return chain
@@ -378,6 +390,278 @@ describe('h2hFlagService', () => {
             await expect(listFlags()).rejects.toThrow('DB failure')
             expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
                 expect.objectContaining({ feature: 'flags' }),
+                expect.any(String),
+            )
+        })
+    })
+
+    // ------------------------------------------------------------------------
+    // approveFlag
+    // ------------------------------------------------------------------------
+
+    describe('approveFlag', () => {
+        const pendingVoidFlagRow = {
+            id: 10,
+            match_db_id: 99,
+            flag_type: 'void',
+            status: 'pending',
+        }
+        const pendingShowmatchFlagRow = {
+            id: 11,
+            match_db_id: 99,
+            flag_type: 'showmatch',
+            status: 'pending',
+        }
+        const pendingTournamentFlagRow = {
+            id: 12,
+            match_db_id: 99,
+            flag_type: 'tournament',
+            status: 'pending',
+        }
+        const matchWithPairRow = { id: 99, pair_id: 7 }
+
+        // -----------------------------------------------------------------------
+        // void path
+        // -----------------------------------------------------------------------
+
+        it('approves a void flag: voids the match, resets pair sync, and returns approved', async () => {
+            // 1. fetch flag
+            mockFromMaybeSingle({ data: pendingVoidFlagRow, error: null })
+            // 2. fetch match (pair_id)
+            mockFromMaybeSingle({ data: matchWithPairRow, error: null })
+            // 3. void h2h_matches
+            mockFromUpdate({ error: null })
+            // 4. reset h2h_pairs pulse_synced_at
+            const pairUpdateChain = mockFromUpdate({ error: null })
+            // 5. approve h2h_match_flags
+            mockFromUpdate({ error: null })
+
+            const result = await approveFlag(10)
+
+            expect(result).toEqual({ flagId: 10, status: 'approved' })
+            // The pair update must set pulse_synced_at to epoch
+            expect(pairUpdateChain.update).toHaveBeenCalledWith(
+                expect.objectContaining({ pulse_synced_at: '1970-01-01T00:00:00.000Z' }),
+            )
+        })
+
+        it('approves a void flag: sets is_voided = true on h2h_matches', async () => {
+            mockFromMaybeSingle({ data: pendingVoidFlagRow, error: null })
+            mockFromMaybeSingle({ data: matchWithPairRow, error: null })
+            const voidUpdateChain = mockFromUpdate({ error: null })
+            mockFromUpdate({ error: null })
+            mockFromUpdate({ error: null })
+
+            await approveFlag(10)
+
+            expect(voidUpdateChain.update).toHaveBeenCalledWith(
+                expect.objectContaining({ is_voided: true }),
+            )
+        })
+
+        it('approves a void flag: targets the correct pair_id when resetting pulse_synced_at', async () => {
+            mockFromMaybeSingle({ data: pendingVoidFlagRow, error: null })
+            mockFromMaybeSingle({ data: matchWithPairRow, error: null })
+            mockFromUpdate({ error: null })
+            const pairUpdateChain = mockFromUpdate({ error: null })
+            mockFromUpdate({ error: null })
+
+            await approveFlag(10)
+
+            expect(pairUpdateChain.eq).toHaveBeenCalledWith('id', 7)
+        })
+
+        // -----------------------------------------------------------------------
+        // label path
+        // -----------------------------------------------------------------------
+
+        it('approves a showmatch flag: sets match_label to showmatch', async () => {
+            mockFromMaybeSingle({ data: pendingShowmatchFlagRow, error: null })
+            const labelUpdateChain = mockFromUpdate({ error: null })
+            mockFromUpdate({ error: null })
+
+            const result = await approveFlag(11)
+
+            expect(result).toEqual({ flagId: 11, status: 'approved' })
+            expect(labelUpdateChain.update).toHaveBeenCalledWith(
+                expect.objectContaining({ match_label: 'showmatch' }),
+            )
+        })
+
+        it('approves a tournament flag: sets match_label to tournament', async () => {
+            mockFromMaybeSingle({ data: pendingTournamentFlagRow, error: null })
+            const labelUpdateChain = mockFromUpdate({ error: null })
+            mockFromUpdate({ error: null })
+
+            await approveFlag(12)
+
+            expect(labelUpdateChain.update).toHaveBeenCalledWith(
+                expect.objectContaining({ match_label: 'tournament' }),
+            )
+        })
+
+        it('approves a label flag: sets the flag row status to approved', async () => {
+            mockFromMaybeSingle({ data: pendingShowmatchFlagRow, error: null })
+            mockFromUpdate({ error: null })
+            const flagUpdateChain = mockFromUpdate({ error: null })
+
+            await approveFlag(11)
+
+            expect(flagUpdateChain.update).toHaveBeenCalledWith(
+                expect.objectContaining({ status: 'approved', reviewed_by: 'admin' }),
+            )
+        })
+
+        // -----------------------------------------------------------------------
+        // Error cases
+        // -----------------------------------------------------------------------
+
+        it('throws FLAG_NOT_FOUND when no flag row exists', async () => {
+            mockFromMaybeSingle({ data: null, error: null })
+
+            await expect(approveFlag(999)).rejects.toMatchObject({
+                name: 'FlagServiceError',
+                code: 'FLAG_NOT_FOUND',
+            })
+        })
+
+        it('throws FLAG_NOT_PENDING when flag status is already approved', async () => {
+            mockFromMaybeSingle({ data: { ...pendingVoidFlagRow, status: 'approved' }, error: null })
+
+            await expect(approveFlag(10)).rejects.toMatchObject({
+                name: 'FlagServiceError',
+                code: 'FLAG_NOT_PENDING',
+            })
+        })
+
+        it('throws FLAG_NOT_PENDING when flag status is already rejected', async () => {
+            mockFromMaybeSingle({ data: { ...pendingVoidFlagRow, status: 'rejected' }, error: null })
+
+            await expect(approveFlag(10)).rejects.toMatchObject({
+                name: 'FlagServiceError',
+                code: 'FLAG_NOT_PENDING',
+            })
+        })
+
+        it('rethrows and logs Supabase errors when fetching the flag', async () => {
+            const dbError = Object.assign(new Error('connection failed'), { code: 'PGRST301' })
+            mockFromMaybeSingle({ data: null, error: dbError })
+
+            await expect(approveFlag(10)).rejects.toThrow('connection failed')
+            expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+                expect.objectContaining({ feature: 'flags', flagId: 10 }),
+                expect.any(String),
+            )
+        })
+
+        it('rethrows and logs Supabase errors when voiding the match', async () => {
+            const dbError = Object.assign(new Error('void update failed'), { code: 'PGRST301' })
+            mockFromMaybeSingle({ data: pendingVoidFlagRow, error: null })
+            mockFromMaybeSingle({ data: matchWithPairRow, error: null })
+            mockFromUpdate({ error: dbError })
+
+            await expect(approveFlag(10)).rejects.toThrow('void update failed')
+            expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+                expect.objectContaining({ feature: 'flags', flagId: 10, matchDbId: 99 }),
+                expect.any(String),
+            )
+        })
+
+        it('rethrows and logs Supabase errors when resetting pair sync', async () => {
+            const dbError = Object.assign(new Error('pair update failed'), { code: 'PGRST301' })
+            mockFromMaybeSingle({ data: pendingVoidFlagRow, error: null })
+            mockFromMaybeSingle({ data: matchWithPairRow, error: null })
+            mockFromUpdate({ error: null })
+            mockFromUpdate({ error: dbError })
+
+            await expect(approveFlag(10)).rejects.toThrow('pair update failed')
+            expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+                expect.objectContaining({ feature: 'flags', flagId: 10 }),
+                expect.any(String),
+            )
+        })
+    })
+
+    // ------------------------------------------------------------------------
+    // rejectFlag
+    // ------------------------------------------------------------------------
+
+    describe('rejectFlag', () => {
+        const pendingFlagRow = { id: 20, status: 'pending' }
+
+        it('rejects a pending flag and stores the admin note', async () => {
+            mockFromMaybeSingle({ data: pendingFlagRow, error: null })
+            const rejectUpdateChain = mockFromUpdate({ error: null })
+
+            const result = await rejectFlag(20, 'Not a real match')
+
+            expect(result).toEqual({ flagId: 20, status: 'rejected' })
+            expect(rejectUpdateChain.update).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    status: 'rejected',
+                    admin_note: 'Not a real match',
+                    reviewed_by: 'admin',
+                }),
+            )
+        })
+
+        it('stores admin_note as null when none is provided', async () => {
+            mockFromMaybeSingle({ data: pendingFlagRow, error: null })
+            const rejectUpdateChain = mockFromUpdate({ error: null })
+
+            await rejectFlag(20, null)
+
+            expect(rejectUpdateChain.update).toHaveBeenCalledWith(
+                expect.objectContaining({ admin_note: null }),
+            )
+        })
+
+        it('throws FLAG_NOT_FOUND when no flag row exists', async () => {
+            mockFromMaybeSingle({ data: null, error: null })
+
+            await expect(rejectFlag(999, null)).rejects.toMatchObject({
+                name: 'FlagServiceError',
+                code: 'FLAG_NOT_FOUND',
+            })
+        })
+
+        it('throws FLAG_NOT_PENDING when flag is already approved', async () => {
+            mockFromMaybeSingle({ data: { ...pendingFlagRow, status: 'approved' }, error: null })
+
+            await expect(rejectFlag(20, null)).rejects.toMatchObject({
+                name: 'FlagServiceError',
+                code: 'FLAG_NOT_PENDING',
+            })
+        })
+
+        it('throws FLAG_NOT_PENDING when flag is already rejected', async () => {
+            mockFromMaybeSingle({ data: { ...pendingFlagRow, status: 'rejected' }, error: null })
+
+            await expect(rejectFlag(20, null)).rejects.toMatchObject({
+                name: 'FlagServiceError',
+                code: 'FLAG_NOT_PENDING',
+            })
+        })
+
+        it('rethrows and logs Supabase errors when fetching the flag', async () => {
+            const dbError = Object.assign(new Error('fetch failed'), { code: 'PGRST301' })
+            mockFromMaybeSingle({ data: null, error: dbError })
+
+            await expect(rejectFlag(20, null)).rejects.toThrow('fetch failed')
+            expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+                expect.objectContaining({ feature: 'flags', flagId: 20 }),
+                expect.any(String),
+            )
+        })
+
+        it('rethrows and logs Supabase errors when updating the flag', async () => {
+            const dbError = Object.assign(new Error('update failed'), { code: 'PGRST301' })
+            mockFromMaybeSingle({ data: pendingFlagRow, error: null })
+            mockFromUpdate({ error: dbError })
+
+            await expect(rejectFlag(20, 'note')).rejects.toThrow('update failed')
+            expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+                expect.objectContaining({ feature: 'flags', flagId: 20 }),
                 expect.any(String),
             )
         })

@@ -141,3 +141,12 @@ export const postH2HFlag = async (payload: PostH2HFlagPayload): Promise<PostH2HF
     const response = await api.post<PostH2HFlagResponse>('api/h2h/flags', payload)
     return response.data
 }
+
+export interface AdminLoginResponse {
+    token: string
+}
+
+export const postAdminLogin = async (password: string): Promise<AdminLoginResponse> => {
+    const response = await api.post<AdminLoginResponse>('api/admin/login', { password })
+    return response.data
+}

@@ -1,7 +1,13 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import { loadPairRecord, syncPair, H2HResolutionError } from '../services/h2hService'
-import { submitFlag, listFlags, FlagServiceError } from '../services/h2hFlagService'
+import {
+    submitFlag,
+    listFlags,
+    approveFlag,
+    rejectFlag,
+    FlagServiceError,
+} from '../services/h2hFlagService'
 import { communityDataService } from '../services/communityDataService'
 import { requireAdminAuth } from '../middleware/adminAuthMiddleware'
 import logger from '../logging/logger'
@@ -287,6 +293,79 @@ router.get('/h2h/flags', requireAdminAuth, async (req: Request, res: Response) =
     } catch (error) {
         logger.error({ feature: 'flags', error }, 'Error listing flags')
         return res.status(500).json({ error: 'Failed to list flags' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// PATCH /api/h2h/flags/:flagId — Admin: approve or reject a flag
+// ---------------------------------------------------------------------------
+
+const patchFlagBodySchema = z.object({
+    action: z.enum(['approve', 'reject'] as const, {
+        required_error: 'action is required',
+        invalid_type_error: 'action must be one of: approve, reject',
+    }),
+    adminNote: z
+        .string()
+        .max(500, 'adminNote must be 500 characters or fewer')
+        .nullable()
+        .optional()
+        .default(null),
+})
+
+/**
+ * PATCH /api/h2h/flags/:flagId
+ *
+ * Approves or rejects a community flag.
+ *
+ * Body:
+ * - action: 'approve' | 'reject' (required)
+ * - adminNote: optional note stored on the flag (max 500 chars)
+ *
+ * Protected: requires a valid admin JWT in the Authorization header.
+ */
+router.patch('/h2h/flags/:flagId', requireAdminAuth, async (req: Request, res: Response) => {
+    const flagId = parseInt(req.params.flagId, 10)
+    if (!Number.isInteger(flagId) || flagId <= 0) {
+        return res.status(400).json({ error: 'flagId must be a positive integer' })
+    }
+
+    const parsed = patchFlagBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+        const details = parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: issue.path.length > 0 ? req.body?.[issue.path[0] as string] : undefined,
+        }))
+        return res.status(400).json({ error: 'Invalid request body', details })
+    }
+
+    const { action, adminNote } = parsed.data
+
+    logger.info({ feature: 'flags', flagId, action }, 'Admin processing flag review')
+
+    try {
+        if (action === 'approve') {
+            const result = await approveFlag(flagId)
+            return res.json(result)
+        } else {
+            const result = await rejectFlag(flagId, adminNote ?? null)
+            return res.json(result)
+        }
+    } catch (error) {
+        if (error instanceof FlagServiceError) {
+            switch (error.code) {
+                case 'FLAG_NOT_FOUND':
+                    return res.status(404).json({ error: error.message })
+                case 'FLAG_NOT_PENDING':
+                    return res.status(409).json({ error: error.message })
+            }
+        }
+        logger.error(
+            { feature: 'flags', flagId, action, error },
+            'Error processing flag review',
+        )
+        return res.status(500).json({ error: 'Failed to process flag review' })
     }
 })
 

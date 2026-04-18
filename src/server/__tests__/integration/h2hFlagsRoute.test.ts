@@ -4,6 +4,8 @@ import { Request, Response, NextFunction } from 'express'
 const hoisted = vi.hoisted(() => ({
     submitFlagMock: vi.fn(),
     listFlagsMock: vi.fn(),
+    approveFlagMock: vi.fn(),
+    rejectFlagMock: vi.fn(),
     getCommunityDataMock: vi.fn(),
     getCommunityPlayerMock: vi.fn(),
     loadPairRecordMock: vi.fn(),
@@ -19,6 +21,8 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('../../services/h2hFlagService', () => ({
     submitFlag: hoisted.submitFlagMock,
     listFlags: hoisted.listFlagsMock,
+    approveFlag: hoisted.approveFlagMock,
+    rejectFlag: hoisted.rejectFlagMock,
     FlagServiceError: class FlagServiceError extends Error {
         readonly code: string
         constructor(code: string, message: string) {
@@ -56,6 +60,13 @@ vi.mock('../../services/communityDataService', () => ({
 vi.mock('../../logging/logger', () => ({
     default: hoisted.loggerMock,
 }))
+
+function createMockRequestWithParamsAndBody(
+    params: Record<string, string>,
+    body: Record<string, unknown> = {},
+): Request {
+    return { params, body } as unknown as Request
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -518,6 +529,193 @@ describe('GET /h2h/flags', () => {
 
         expect(res.statusCode).toBe(500)
         expect((res.jsonData as Record<string, unknown>).error).toBe('Failed to list flags')
+        expect(hoisted.loggerMock.error).toHaveBeenCalled()
+    })
+})
+
+// ---------------------------------------------------------------------------
+// PATCH /api/h2h/flags/:flagId
+// ---------------------------------------------------------------------------
+
+describe('PATCH /h2h/flags/:flagId', () => {
+    let fullStack: Array<(req: Request, res: Response, next: NextFunction) => void | Promise<void>>
+
+    beforeEach(async () => {
+        vi.resetModules()
+        hoisted.approveFlagMock.mockReset()
+        hoisted.rejectFlagMock.mockReset()
+        hoisted.loggerMock.info.mockReset()
+        hoisted.loggerMock.error.mockReset()
+        // Auth passes by default
+        hoisted.requireAdminAuthMock.mockImplementation(
+            (_req: Request, _res: Response, next: NextFunction) => next(),
+        )
+
+        const routes = await import('../../routes/h2hRoutes')
+        const router = routes.default
+        const layer = (router as any).stack?.find(
+            (l: any) => l.route?.path === '/h2h/flags/:flagId' && l.route?.methods?.patch,
+        )
+        fullStack = layer?.route?.stack?.map((s: any) => s.handle) ?? []
+    })
+
+    async function callRoute(
+        params: Record<string, string>,
+        body: Record<string, unknown> = {},
+    ) {
+        const req = createMockRequestWithParamsAndBody(params, body)
+        const res = createMockResponse()
+        for (const fn of fullStack) {
+            let nextCalled = false
+            await fn(req, res as unknown as Response, () => {
+                nextCalled = true
+            })
+            if (!nextCalled) break
+        }
+        return res
+    }
+
+    // -------------------------------------------------------------------------
+    // Auth guard
+    // -------------------------------------------------------------------------
+
+    it('returns 401 when requireAdminAuth rejects', async () => {
+        hoisted.requireAdminAuthMock.mockImplementation((_req: Request, res: Response) => {
+            res.status(401).json({ error: 'Unauthorized' })
+        })
+
+        const res = await callRoute({ flagId: '1' }, { action: 'approve' })
+
+        expect(res.statusCode).toBe(401)
+        expect((res.jsonData as Record<string, unknown>).error).toBe('Unauthorized')
+        expect(hoisted.approveFlagMock).not.toHaveBeenCalled()
+        expect(hoisted.rejectFlagMock).not.toHaveBeenCalled()
+    })
+
+    // -------------------------------------------------------------------------
+    // Happy paths
+    // -------------------------------------------------------------------------
+
+    it('returns 200 with flagId and status approved when action is approve', async () => {
+        hoisted.approveFlagMock.mockResolvedValue({ flagId: 5, status: 'approved' })
+
+        const res = await callRoute({ flagId: '5' }, { action: 'approve' })
+
+        expect(res.statusCode).toBe(200)
+        const body = res.jsonData as Record<string, unknown>
+        expect(body.flagId).toBe(5)
+        expect(body.status).toBe('approved')
+        expect(hoisted.approveFlagMock).toHaveBeenCalledWith(5)
+        expect(hoisted.rejectFlagMock).not.toHaveBeenCalled()
+    })
+
+    it('returns 200 with flagId and status rejected when action is reject', async () => {
+        hoisted.rejectFlagMock.mockResolvedValue({ flagId: 5, status: 'rejected' })
+
+        const res = await callRoute({ flagId: '5' }, { action: 'reject', adminNote: 'Duplicate' })
+
+        expect(res.statusCode).toBe(200)
+        const body = res.jsonData as Record<string, unknown>
+        expect(body.flagId).toBe(5)
+        expect(body.status).toBe('rejected')
+        expect(hoisted.rejectFlagMock).toHaveBeenCalledWith(5, 'Duplicate')
+        expect(hoisted.approveFlagMock).not.toHaveBeenCalled()
+    })
+
+    it('passes null adminNote to rejectFlag when omitted', async () => {
+        hoisted.rejectFlagMock.mockResolvedValue({ flagId: 3, status: 'rejected' })
+
+        await callRoute({ flagId: '3' }, { action: 'reject' })
+
+        expect(hoisted.rejectFlagMock).toHaveBeenCalledWith(3, null)
+    })
+
+    // -------------------------------------------------------------------------
+    // Validation errors — 400
+    // -------------------------------------------------------------------------
+
+    it('returns 400 when flagId is not a positive integer', async () => {
+        const res = await callRoute({ flagId: 'abc' }, { action: 'approve' })
+
+        expect(res.statusCode).toBe(400)
+        expect((res.jsonData as Record<string, unknown>).error).toBe(
+            'flagId must be a positive integer',
+        )
+        expect(hoisted.approveFlagMock).not.toHaveBeenCalled()
+    })
+
+    it('returns 400 when flagId is zero', async () => {
+        const res = await callRoute({ flagId: '0' }, { action: 'approve' })
+
+        expect(res.statusCode).toBe(400)
+    })
+
+    it('returns 400 when action is missing', async () => {
+        const res = await callRoute({ flagId: '1' }, {})
+
+        expect(res.statusCode).toBe(400)
+        const body = res.jsonData as Record<string, unknown>
+        expect(body.error).toBe('Invalid request body')
+        expect(Array.isArray(body.details)).toBe(true)
+    })
+
+    it('returns 400 when action is an invalid value', async () => {
+        const res = await callRoute({ flagId: '1' }, { action: 'delete' })
+
+        expect(res.statusCode).toBe(400)
+        const body = res.jsonData as Record<string, unknown>
+        expect(body.error).toBe('Invalid request body')
+    })
+
+    it('returns 400 when adminNote exceeds 500 characters', async () => {
+        const res = await callRoute(
+            { flagId: '1' },
+            { action: 'reject', adminNote: 'x'.repeat(501) },
+        )
+
+        expect(res.statusCode).toBe(400)
+        const details = (res.jsonData as Record<string, unknown>)
+            .details as Array<Record<string, unknown>>
+        expect(details.some((detail) => detail.field === 'adminNote')).toBe(true)
+    })
+
+    // -------------------------------------------------------------------------
+    // Service error mapping
+    // -------------------------------------------------------------------------
+
+    it('returns 404 when service throws FLAG_NOT_FOUND', async () => {
+        const { FlagServiceError } = await import('../../services/h2hFlagService')
+        hoisted.approveFlagMock.mockRejectedValue(
+            new FlagServiceError('FLAG_NOT_FOUND', 'Flag 99 not found'),
+        )
+
+        const res = await callRoute({ flagId: '99' }, { action: 'approve' })
+
+        expect(res.statusCode).toBe(404)
+        expect((res.jsonData as Record<string, unknown>).error).toBe('Flag 99 not found')
+    })
+
+    it('returns 409 when service throws FLAG_NOT_PENDING', async () => {
+        const { FlagServiceError } = await import('../../services/h2hFlagService')
+        hoisted.approveFlagMock.mockRejectedValue(
+            new FlagServiceError('FLAG_NOT_PENDING', 'Flag 5 is already approved'),
+        )
+
+        const res = await callRoute({ flagId: '5' }, { action: 'approve' })
+
+        expect(res.statusCode).toBe(409)
+        expect((res.jsonData as Record<string, unknown>).error).toBe('Flag 5 is already approved')
+    })
+
+    it('returns 500 for unexpected errors and logs them', async () => {
+        hoisted.approveFlagMock.mockRejectedValue(new Error('DB failure'))
+
+        const res = await callRoute({ flagId: '1' }, { action: 'approve' })
+
+        expect(res.statusCode).toBe(500)
+        expect((res.jsonData as Record<string, unknown>).error).toBe(
+            'Failed to process flag review',
+        )
         expect(hoisted.loggerMock.error).toHaveBeenCalled()
     })
 })

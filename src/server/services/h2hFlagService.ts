@@ -11,6 +11,8 @@ export type FlagServiceErrorCode =
     | 'MATCH_NOT_FOUND'
     | 'NOT_A_PARTICIPANT'
     | 'DUPLICATE_PENDING_FLAG'
+    | 'FLAG_NOT_FOUND'
+    | 'FLAG_NOT_PENDING'
 
 export class FlagServiceError extends Error {
     readonly code: FlagServiceErrorCode
@@ -210,6 +212,228 @@ function mapFlagRow(row: RawFlagRow): H2HFlagWithMatch {
         player2CharacterId: row.h2h_matches.h2h_pairs.player2_character_id,
     }
 }
+
+// ============================================================================
+// approveFlag
+// ============================================================================
+
+export interface ApproveFlagResult {
+    flagId: number
+    status: 'approved'
+}
+
+/**
+ * Approves a pending flag.
+ *
+ * - void flag: sets `h2h_matches.is_voided = true` and resets
+ *   `h2h_pairs.pulse_synced_at` to epoch so the next H2H query re-syncs
+ *   from Pulse.
+ * - label flag (showmatch / tournament): sets `h2h_matches.match_label`.
+ *
+ * Both paths then set the flag row to `status = 'approved'`.
+ *
+ * Throws FLAG_NOT_FOUND when no flag row exists for `flagId`.
+ * Throws FLAG_NOT_PENDING when the flag has already been reviewed.
+ */
+export async function approveFlag(flagId: number): Promise<ApproveFlagResult> {
+    // 1. Fetch the flag to validate it exists and is still pending
+    const { data: flagRow, error: flagFetchError } = await supabase
+        .from('h2h_match_flags')
+        .select('id, match_db_id, flag_type, status')
+        .eq('id', flagId)
+        .maybeSingle()
+
+    if (flagFetchError) {
+        logger.error(
+            { feature: 'flags', flagId, err: flagFetchError },
+            'Supabase error fetching flag for approval',
+        )
+        throw flagFetchError
+    }
+
+    if (!flagRow) {
+        throw new FlagServiceError('FLAG_NOT_FOUND', `Flag ${flagId} not found`)
+    }
+
+    if (flagRow.status !== 'pending') {
+        throw new FlagServiceError(
+            'FLAG_NOT_PENDING',
+            `Flag ${flagId} is already ${flagRow.status}`,
+        )
+    }
+
+    const matchDbId = flagRow.match_db_id as number
+    const flagType = flagRow.flag_type as MatchFlagType
+
+    if (flagType === 'void') {
+        // 2a. Fetch the match row to get its pair_id FK
+        const { data: matchRow, error: matchFetchError } = await supabase
+            .from('h2h_matches')
+            .select('id, pair_id')
+            .eq('id', matchDbId)
+            .maybeSingle()
+
+        if (matchFetchError) {
+            logger.error(
+                { feature: 'flags', flagId, matchDbId, err: matchFetchError },
+                'Supabase error fetching match for void approval',
+            )
+            throw matchFetchError
+        }
+
+        if (!matchRow) {
+            logger.error(
+                { feature: 'flags', flagId, matchDbId },
+                'Match not found when approving void flag — data integrity issue',
+            )
+            throw new Error(`Match ${matchDbId} not found when approving void flag ${flagId}`)
+        }
+
+        // 3a. Mark the match as voided
+        const { error: voidError } = await supabase
+            .from('h2h_matches')
+            .update({ is_voided: true })
+            .eq('id', matchDbId)
+
+        if (voidError) {
+            logger.error(
+                { feature: 'flags', flagId, matchDbId, err: voidError },
+                'Supabase error voiding match',
+            )
+            throw voidError
+        }
+
+        // 4a. Reset the pair's pulse_synced_at to epoch so the next request
+        //     triggers a full re-sync from Pulse and excludes the voided match
+        const EPOCH = '1970-01-01T00:00:00.000Z'
+        const { error: pairResetError } = await supabase
+            .from('h2h_pairs')
+            .update({ pulse_synced_at: EPOCH })
+            .eq('id', (matchRow as { id: number; pair_id: number }).pair_id)
+
+        if (pairResetError) {
+            logger.error(
+                {
+                    feature: 'flags',
+                    flagId,
+                    pairId: (matchRow as { id: number; pair_id: number }).pair_id,
+                    err: pairResetError,
+                },
+                'Supabase error resetting pair sync after void',
+            )
+            throw pairResetError
+        }
+    } else {
+        // 2b. Label path: set match_label to 'showmatch' or 'tournament'
+        const { error: labelError } = await supabase
+            .from('h2h_matches')
+            .update({ match_label: flagType })
+            .eq('id', matchDbId)
+
+        if (labelError) {
+            logger.error(
+                { feature: 'flags', flagId, matchDbId, flagType, err: labelError },
+                'Supabase error setting match label',
+            )
+            throw labelError
+        }
+    }
+
+    // Final step: mark the flag as approved
+    const { error: approveError } = await supabase
+        .from('h2h_match_flags')
+        .update({
+            status: 'approved',
+            reviewed_by: 'admin',
+            reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', flagId)
+
+    if (approveError) {
+        logger.error(
+            { feature: 'flags', flagId, err: approveError },
+            'Supabase error updating flag status to approved',
+        )
+        throw approveError
+    }
+
+    logger.info({ feature: 'flags', flagId, flagType }, 'Flag approved')
+
+    return { flagId, status: 'approved' }
+}
+
+// ============================================================================
+// rejectFlag
+// ============================================================================
+
+export interface RejectFlagResult {
+    flagId: number
+    status: 'rejected'
+}
+
+/**
+ * Rejects a pending flag, storing an optional admin note.
+ *
+ * Throws FLAG_NOT_FOUND when no flag row exists for `flagId`.
+ * Throws FLAG_NOT_PENDING when the flag has already been reviewed.
+ */
+export async function rejectFlag(
+    flagId: number,
+    adminNote: string | null,
+): Promise<RejectFlagResult> {
+    // 1. Fetch the flag to validate it exists and is still pending
+    const { data: flagRow, error: flagFetchError } = await supabase
+        .from('h2h_match_flags')
+        .select('id, status')
+        .eq('id', flagId)
+        .maybeSingle()
+
+    if (flagFetchError) {
+        logger.error(
+            { feature: 'flags', flagId, err: flagFetchError },
+            'Supabase error fetching flag for rejection',
+        )
+        throw flagFetchError
+    }
+
+    if (!flagRow) {
+        throw new FlagServiceError('FLAG_NOT_FOUND', `Flag ${flagId} not found`)
+    }
+
+    if (flagRow.status !== 'pending') {
+        throw new FlagServiceError(
+            'FLAG_NOT_PENDING',
+            `Flag ${flagId} is already ${flagRow.status}`,
+        )
+    }
+
+    // 2. Mark the flag as rejected and store the admin note
+    const { error: rejectError } = await supabase
+        .from('h2h_match_flags')
+        .update({
+            status: 'rejected',
+            admin_note: adminNote ?? null,
+            reviewed_by: 'admin',
+            reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', flagId)
+
+    if (rejectError) {
+        logger.error(
+            { feature: 'flags', flagId, err: rejectError },
+            'Supabase error rejecting flag',
+        )
+        throw rejectError
+    }
+
+    logger.info({ feature: 'flags', flagId }, 'Flag rejected')
+
+    return { flagId, status: 'rejected' }
+}
+
+// ============================================================================
+// listFlags
+// ============================================================================
 
 /**
  * Lists all flags joined with their match context.
