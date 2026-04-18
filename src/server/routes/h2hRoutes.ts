@@ -33,9 +33,15 @@ function buildSummary(
 ): H2HResponse['summary'] {
     let player1Wins = 0
     let player2Wins = 0
+    let voidedCount = 0
     let lastPlayed: string | null = null
 
     for (const match of matches) {
+        if (match.isVoided) {
+            voidedCount++
+            continue
+        }
+
         if (match.winnerCharacterId === callerPlayer1Id) player1Wins++
         else if (match.winnerCharacterId === callerPlayer2Id) player2Wins++
 
@@ -46,6 +52,7 @@ function buildSummary(
         player1Wins,
         player2Wins,
         totalGames: matches.length,
+        voidedCount,
         lastPlayed,
     }
 }

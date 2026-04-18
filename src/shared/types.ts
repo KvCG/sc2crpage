@@ -180,6 +180,7 @@ export interface H2HResponse {
         player1Wins: number
         player2Wins: number
         totalGames: number
+        voidedCount: number
         lastPlayed: string | null
     }
     matches: H2HMatch[]
