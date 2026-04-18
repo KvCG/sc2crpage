@@ -28,6 +28,7 @@ vi.mock('../../../services/communityDataService', () => ({
 import {
     findMatchByExternalId,
     submitFlag,
+    listFlags,
     FlagServiceError,
 } from '../../../services/h2hFlagService'
 
@@ -51,6 +52,24 @@ function mockFromInsertSelect(result: { data: unknown; error: unknown }) {
     const chain = {
         insert: vi.fn().mockReturnThis(),
         select: vi.fn().mockResolvedValue(result),
+    }
+    hoisted.mockSupabaseFrom.mockReturnValueOnce(chain)
+    return chain
+}
+
+/**
+ * Mocks one supabase.from() call for a filterable select query
+ * (used by listFlags: .select(...).order(...)[.eq(...)...] → awaited).
+ */
+function mockFromSelectQuery(result: { data: unknown; error: unknown }) {
+    const promise = Promise.resolve(result)
+    const chain = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: promise.then.bind(promise),
+        catch: promise.catch.bind(promise),
+        finally: promise.finally.bind(promise),
     }
     hoisted.mockSupabaseFrom.mockReturnValueOnce(chain)
     return chain
@@ -246,6 +265,121 @@ describe('h2hFlagService', () => {
             expect(error.name).toBe('FlagServiceError')
             expect(error.code).toBe('MATCH_NOT_FOUND')
             expect(error.message).toBe('not found')
+        })
+    })
+
+    // ------------------------------------------------------------------------
+    // listFlags
+    // ------------------------------------------------------------------------
+
+    describe('listFlags', () => {
+        const rawFlagRow = {
+            id: 1,
+            match_db_id: 99,
+            flag_type: 'void',
+            reason: 'practice match',
+            submitted_by: 'Alpha#1234',
+            status: 'pending',
+            admin_note: null,
+            reviewed_by: null,
+            created_at: '2026-04-18T10:00:00.000Z',
+            reviewed_at: null,
+            h2h_matches: {
+                match_id: 'pulse-12345',
+                match_date: '2026-04-17T20:00:00.000Z',
+                map_name: 'Equilibrium',
+                match_type: '1v1',
+                winner_character_id: 49312,
+                h2h_pairs: {
+                    player1_character_id: 49312,
+                    player2_character_id: 2741271,
+                },
+            },
+        }
+
+        it('returns all flags mapped to H2HFlagWithMatch when no filters applied', async () => {
+            mockFromSelectQuery({ data: [rawFlagRow], error: null })
+
+            const result = await listFlags()
+
+            expect(result).toHaveLength(1)
+            const flag = result[0]
+            expect(flag.id).toBe(1)
+            expect(flag.matchDbId).toBe(99)
+            expect(flag.flagType).toBe('void')
+            expect(flag.reason).toBe('practice match')
+            expect(flag.submittedBy).toBe('Alpha#1234')
+            expect(flag.status).toBe('pending')
+            expect(flag.adminNote).toBeNull()
+            expect(flag.reviewedBy).toBeNull()
+            expect(flag.createdAt).toBe('2026-04-18T10:00:00.000Z')
+            expect(flag.reviewedAt).toBeNull()
+        })
+
+        it('includes all required match context fields on every result row', async () => {
+            mockFromSelectQuery({ data: [rawFlagRow], error: null })
+
+            const [flag] = await listFlags()
+
+            expect(flag.match.matchId).toBe('pulse-12345')
+            expect(flag.match.date).toBe('2026-04-17T20:00:00.000Z')
+            expect(flag.match.map).toBe('Equilibrium')
+            expect(flag.match.winnerCharacterId).toBe(49312)
+            expect(flag.match.type).toBe('1v1')
+            expect(flag.player1CharacterId).toBe(49312)
+            expect(flag.player2CharacterId).toBe(2741271)
+        })
+
+        it('returns empty array when Supabase returns no rows', async () => {
+            mockFromSelectQuery({ data: [], error: null })
+
+            const result = await listFlags()
+
+            expect(result).toEqual([])
+        })
+
+        it('passes status filter as eq() call when provided', async () => {
+            const chain = mockFromSelectQuery({ data: [], error: null })
+
+            await listFlags({ status: 'approved' })
+
+            expect(chain.eq).toHaveBeenCalledWith('status', 'approved')
+        })
+
+        it('passes flagType filter as eq() call when provided', async () => {
+            const chain = mockFromSelectQuery({ data: [], error: null })
+
+            await listFlags({ flagType: 'showmatch' })
+
+            expect(chain.eq).toHaveBeenCalledWith('flag_type', 'showmatch')
+        })
+
+        it('applies both filters when both provided', async () => {
+            const chain = mockFromSelectQuery({ data: [], error: null })
+
+            await listFlags({ status: 'rejected', flagType: 'void' })
+
+            expect(chain.eq).toHaveBeenCalledWith('status', 'rejected')
+            expect(chain.eq).toHaveBeenCalledWith('flag_type', 'void')
+        })
+
+        it('does not call eq() when no filters are provided', async () => {
+            const chain = mockFromSelectQuery({ data: [], error: null })
+
+            await listFlags()
+
+            expect(chain.eq).not.toHaveBeenCalled()
+        })
+
+        it('throws and logs when Supabase returns an error', async () => {
+            const dbError = Object.assign(new Error('DB failure'), { code: 'PGRST301' })
+            mockFromSelectQuery({ data: null, error: dbError })
+
+            await expect(listFlags()).rejects.toThrow('DB failure')
+            expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+                expect.objectContaining({ feature: 'flags' }),
+                expect.any(String),
+            )
         })
     })
 })

@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import { loadPairRecord, syncPair, H2HResolutionError } from '../services/h2hService'
-import { submitFlag, FlagServiceError } from '../services/h2hFlagService'
+import { submitFlag, listFlags, FlagServiceError } from '../services/h2hFlagService'
 import { communityDataService } from '../services/communityDataService'
+import { requireAdminAuth } from '../middleware/adminAuthMiddleware'
 import logger from '../logging/logger'
 import type { H2HMatch, H2HPlayerMeta, H2HResponse, MatchFlagType } from '../../shared/types'
 
@@ -246,6 +247,46 @@ router.post('/h2h/flags', async (req: Request, res: Response) => {
             'Error processing flag submission',
         )
         return res.status(500).json({ error: 'Failed to submit flag' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// GET /api/h2h/flags — Admin: list flags with match context
+// ---------------------------------------------------------------------------
+
+const listFlagsQuerySchema = z.object({
+    status: z.enum(['pending', 'approved', 'rejected'] as const).optional(),
+    flagType: z.enum(['void', 'showmatch', 'tournament'] as const).optional(),
+})
+
+/**
+ * GET /api/h2h/flags
+ *
+ * Returns all flags joined with match context, optionally filtered by
+ * `status` and/or `flagType` query parameters.
+ *
+ * Protected: requires a valid admin JWT in the Authorization header.
+ */
+router.get('/h2h/flags', requireAdminAuth, async (req: Request, res: Response) => {
+    const parsed = listFlagsQuerySchema.safeParse(req.query)
+
+    if (!parsed.success) {
+        const details = parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: req.query[issue.path[0] as string],
+        }))
+        return res.status(400).json({ error: 'Invalid query parameters', details })
+    }
+
+    logger.info({ feature: 'flags', filters: parsed.data }, 'Admin listing flags')
+
+    try {
+        const flags = await listFlags(parsed.data)
+        return res.json(flags)
+    } catch (error) {
+        logger.error({ feature: 'flags', error }, 'Error listing flags')
+        return res.status(500).json({ error: 'Failed to list flags' })
     }
 })
 

@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { Request, Response } from 'express'
+import { Request, Response, NextFunction } from 'express'
 
 const hoisted = vi.hoisted(() => ({
     submitFlagMock: vi.fn(),
+    listFlagsMock: vi.fn(),
     getCommunityDataMock: vi.fn(),
     getCommunityPlayerMock: vi.fn(),
     loadPairRecordMock: vi.fn(),
     syncPairMock: vi.fn(),
+    requireAdminAuthMock: vi.fn(),
     loggerMock: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -16,6 +18,7 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('../../services/h2hFlagService', () => ({
     submitFlag: hoisted.submitFlagMock,
+    listFlags: hoisted.listFlagsMock,
     FlagServiceError: class FlagServiceError extends Error {
         readonly code: string
         constructor(code: string, message: string) {
@@ -24,6 +27,10 @@ vi.mock('../../services/h2hFlagService', () => ({
             this.code = code
         }
     },
+}))
+
+vi.mock('../../middleware/adminAuthMiddleware', () => ({
+    requireAdminAuth: hoisted.requireAdminAuthMock,
 }))
 
 vi.mock('../../services/h2hService', () => ({
@@ -74,6 +81,10 @@ function createMockResponse() {
 
 function createMockRequest(body: Record<string, unknown> = {}): Request {
     return { body } as unknown as Request
+}
+
+function createMockRequestWithQuery(query: Record<string, string> = {}): Request {
+    return { query } as unknown as Request
 }
 
 // ---------------------------------------------------------------------------
@@ -335,5 +346,178 @@ describe('POST /h2h/flags', () => {
             expect(res.statusCode).toBe(500)
             expect(hoisted.loggerMock.error).toHaveBeenCalled()
         })
+    })
+})
+
+// ---------------------------------------------------------------------------
+// GET /api/h2h/flags
+// ---------------------------------------------------------------------------
+
+describe('GET /h2h/flags', () => {
+    let fullStack: Array<(req: Request, res: Response, next: NextFunction) => void | Promise<void>>
+
+    const flagWithMatch = {
+        id: 1,
+        matchDbId: 99,
+        flagType: 'void',
+        reason: 'practice match',
+        submittedBy: 'Alpha#1234',
+        status: 'pending',
+        adminNote: null,
+        reviewedBy: null,
+        createdAt: '2026-04-18T10:00:00.000Z',
+        reviewedAt: null,
+        match: {
+            matchId: 'pulse-12345',
+            date: '2026-04-17T20:00:00.000Z',
+            map: 'Equilibrium',
+            winnerCharacterId: 49312,
+            type: '1v1',
+        },
+        player1CharacterId: 49312,
+        player2CharacterId: 2741271,
+    }
+
+    beforeEach(async () => {
+        vi.resetModules()
+        hoisted.listFlagsMock.mockReset()
+        hoisted.loggerMock.info.mockReset()
+        hoisted.loggerMock.error.mockReset()
+        // Auth passes by default
+        hoisted.requireAdminAuthMock.mockImplementation(
+            (_req: Request, _res: Response, next: NextFunction) => next(),
+        )
+
+        const routes = await import('../../routes/h2hRoutes')
+        const router = routes.default
+        const layer = (router as any).stack?.find(
+            (l: any) => l.route?.path === '/h2h/flags' && l.route?.methods?.get,
+        )
+        fullStack = layer?.route?.stack?.map((s: any) => s.handle) ?? []
+    })
+
+    async function callRoute(query: Record<string, string> = {}) {
+        const req = createMockRequestWithQuery(query)
+        const res = createMockResponse()
+        for (const fn of fullStack) {
+            let nextCalled = false
+            await fn(req, res as unknown as Response, () => {
+                nextCalled = true
+            })
+            if (!nextCalled) break
+        }
+        return res
+    }
+
+    // -------------------------------------------------------------------------
+    // Auth guard
+    // -------------------------------------------------------------------------
+
+    it('returns 401 when requireAdminAuth rejects (middleware is applied)', async () => {
+        hoisted.requireAdminAuthMock.mockImplementation((_req: Request, res: Response) => {
+            res.status(401).json({ error: 'Unauthorized' })
+        })
+
+        const res = await callRoute()
+
+        expect(res.statusCode).toBe(401)
+        expect((res.jsonData as Record<string, unknown>).error).toBe('Unauthorized')
+        expect(hoisted.listFlagsMock).not.toHaveBeenCalled()
+    })
+
+    // -------------------------------------------------------------------------
+    // Happy path
+    // -------------------------------------------------------------------------
+
+    it('returns 200 with H2HFlagWithMatch array when no filters provided', async () => {
+        hoisted.listFlagsMock.mockResolvedValue([flagWithMatch])
+
+        const res = await callRoute()
+
+        expect(res.statusCode).toBe(200)
+        const body = res.jsonData as typeof flagWithMatch[]
+        expect(body).toHaveLength(1)
+        const flag = body[0]
+        expect(flag.match.matchId).toBe('pulse-12345')
+        expect(flag.match.date).toBeDefined()
+        expect(flag.match.map).toBeDefined()
+        expect(flag.match.winnerCharacterId).toBeDefined()
+        expect(flag.match.type).toBeDefined()
+        expect(flag.player1CharacterId).toBe(49312)
+        expect(flag.player2CharacterId).toBe(2741271)
+    })
+
+    it('returns 200 with empty array when no flags exist', async () => {
+        hoisted.listFlagsMock.mockResolvedValue([])
+
+        const res = await callRoute()
+
+        expect(res.statusCode).toBe(200)
+        expect(res.jsonData).toEqual([])
+    })
+
+    it('passes status filter to listFlags', async () => {
+        hoisted.listFlagsMock.mockResolvedValue([])
+
+        await callRoute({ status: 'approved' })
+
+        expect(hoisted.listFlagsMock).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'approved' }),
+        )
+    })
+
+    it('passes flagType filter to listFlags', async () => {
+        hoisted.listFlagsMock.mockResolvedValue([])
+
+        await callRoute({ flagType: 'void' })
+
+        expect(hoisted.listFlagsMock).toHaveBeenCalledWith(
+            expect.objectContaining({ flagType: 'void' }),
+        )
+    })
+
+    it('passes both filters to listFlags when both provided', async () => {
+        hoisted.listFlagsMock.mockResolvedValue([])
+
+        await callRoute({ status: 'pending', flagType: 'showmatch' })
+
+        expect(hoisted.listFlagsMock).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'pending', flagType: 'showmatch' }),
+        )
+    })
+
+    // -------------------------------------------------------------------------
+    // Validation errors
+    // -------------------------------------------------------------------------
+
+    it('returns 400 when status is an invalid value', async () => {
+        const res = await callRoute({ status: 'invalid_status' })
+
+        expect(res.statusCode).toBe(400)
+        const body = res.jsonData as Record<string, unknown>
+        expect(body.error).toBe('Invalid query parameters')
+        expect(Array.isArray(body.details)).toBe(true)
+        expect(hoisted.listFlagsMock).not.toHaveBeenCalled()
+    })
+
+    it('returns 400 when flagType is an invalid value', async () => {
+        const res = await callRoute({ flagType: 'bad_type' })
+
+        expect(res.statusCode).toBe(400)
+        expect((res.jsonData as Record<string, unknown>).error).toBe('Invalid query parameters')
+    })
+
+    // -------------------------------------------------------------------------
+    // Error handling
+    // -------------------------------------------------------------------------
+
+    it('returns 500 when listFlags throws an unexpected error', async () => {
+        hoisted.listFlagsMock.mockRejectedValue(new Error('DB connection lost'))
+
+        const res = await callRoute()
+
+        expect(res.statusCode).toBe(500)
+        expect((res.jsonData as Record<string, unknown>).error).toBe('Failed to list flags')
+        expect(hoisted.loggerMock.error).toHaveBeenCalled()
     })
 })

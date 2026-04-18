@@ -1,7 +1,7 @@
 import supabase from '../db/supabaseClient'
 import { CommunityDataService } from './communityDataService'
 import logger from '../logging/logger'
-import type { MatchFlagType } from '../../shared/types'
+import type { H2HFlagWithMatch, MatchFlagStatus, MatchFlagType } from '../../shared/types'
 
 // ============================================================================
 // Typed errors
@@ -152,4 +152,102 @@ export async function submitFlag(params: SubmitFlagParams): Promise<SubmitFlagRe
     logger.info({ feature: 'flags', matchId, flagType, submittedBy, flagId }, 'Flag submitted')
 
     return { flagId, status: 'pending' }
+}
+
+// ============================================================================
+// listFlags
+// ============================================================================
+
+export interface ListFlagsParams {
+    status?: MatchFlagStatus
+    flagType?: MatchFlagType
+}
+
+interface RawFlagRow {
+    id: number
+    match_db_id: number
+    flag_type: MatchFlagType
+    reason: string | null
+    submitted_by: string
+    status: MatchFlagStatus
+    admin_note: string | null
+    reviewed_by: string | null
+    created_at: string
+    reviewed_at: string | null
+    h2h_matches: {
+        match_id: string
+        match_date: string
+        map_name: string
+        match_type: string
+        winner_character_id: number
+        h2h_pairs: {
+            player1_character_id: number
+            player2_character_id: number
+        }
+    }
+}
+
+function mapFlagRow(row: RawFlagRow): H2HFlagWithMatch {
+    return {
+        id: row.id,
+        matchDbId: row.match_db_id,
+        flagType: row.flag_type,
+        reason: row.reason,
+        submittedBy: row.submitted_by,
+        status: row.status,
+        adminNote: row.admin_note,
+        reviewedBy: row.reviewed_by,
+        createdAt: row.created_at,
+        reviewedAt: row.reviewed_at,
+        match: {
+            matchId: row.h2h_matches.match_id,
+            date: row.h2h_matches.match_date,
+            map: row.h2h_matches.map_name,
+            winnerCharacterId: row.h2h_matches.winner_character_id,
+            type: row.h2h_matches.match_type,
+        },
+        player1CharacterId: row.h2h_matches.h2h_pairs.player1_character_id,
+        player2CharacterId: row.h2h_matches.h2h_pairs.player2_character_id,
+    }
+}
+
+/**
+ * Lists all flags joined with their match context.
+ *
+ * Optionally filters by `status` and/or `flagType`.
+ * Results are ordered newest-first by `created_at`.
+ */
+export async function listFlags(params: ListFlagsParams = {}): Promise<H2HFlagWithMatch[]> {
+    const { status, flagType } = params
+
+    let query = supabase
+        .from('h2h_match_flags')
+        .select(
+            `id, match_db_id, flag_type, reason, submitted_by, status,
+             admin_note, reviewed_by, created_at, reviewed_at,
+             h2h_matches!match_db_id (
+                 match_id, match_date, map_name, match_type, winner_character_id,
+                 h2h_pairs!pair_id (
+                     player1_character_id, player2_character_id
+                 )
+             )`,
+        )
+        .order('created_at', { ascending: false })
+
+    if (status !== undefined) {
+        query = query.eq('status', status)
+    }
+
+    if (flagType !== undefined) {
+        query = query.eq('flag_type', flagType)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+        logger.error({ feature: 'flags', params, err: error }, 'Supabase error listing flags')
+        throw error
+    }
+
+    return ((data ?? []) as unknown as RawFlagRow[]).map(mapFlagRow)
 }
