@@ -184,6 +184,8 @@ export async function poll(): Promise<void> {
             player1RatingAtTime: null,
             player2RatingAtTime: null,
             source: 'blizzard',
+            isVoided: false,
+            matchLabel: null,
         }
 
         await persistMatch(p1.characterId, p2.characterId, match)

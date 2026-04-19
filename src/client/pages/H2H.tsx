@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
     Autocomplete,
+    ActionIcon,
     Group,
     Title,
     Text,
@@ -13,9 +14,10 @@ import {
     Paper,
     Center,
 } from '@mantine/core'
-import { IconAlertCircle } from '@tabler/icons-react'
+import { IconAlertCircle, IconFlag } from '@tabler/icons-react'
 import { getCommunityPlayers, getH2H } from '../services/api'
 import type { H2HResponse, H2HMatch } from '../../shared/types'
+import { FlagMatchModal } from '../components/Match/FlagMatchModal'
 
 interface PlayerOption {
     value: string   // characterId as string
@@ -34,6 +36,8 @@ const formatDate = (iso: string): string => iso.slice(0, 10)
 const MATCH_TYPE_ALL = 'ALL'
 const MATCH_TYPE_LADDER = '_1V1'
 const MATCH_TYPE_CUSTOM = 'CUSTOM'
+const MATCH_TYPE_SHOWMATCH = 'showmatch'
+const MATCH_TYPE_TOURNAMENT = 'tournament'
 
 export const H2H = () => {
     const [players, setPlayers] = useState<PlayerOption[]>([])
@@ -47,6 +51,7 @@ export const H2H = () => {
     const [error, setError] = useState<string | null>(null)
 
     const [activeTab, setActiveTab] = useState<string>(MATCH_TYPE_ALL)
+    const [flaggedMatchId, setFlaggedMatchId] = useState<number | string | null>(null)
 
     // Load community player roster on mount for picker options.
     // Uses the community CSV (all known players) rather than the ranked
@@ -72,6 +77,7 @@ export const H2H = () => {
         setLoading(true)
         setError(null)
         setH2hData(null)
+        setActiveTab(MATCH_TYPE_ALL)
         try {
             const res = await getH2H(p1, p2)
             setH2hData(res.data as H2HResponse)
@@ -109,8 +115,12 @@ export const H2H = () => {
     }
 
     const filteredMatches = (matches: H2HMatch[]): H2HMatch[] => {
-        if (activeTab === MATCH_TYPE_ALL) return matches
-        return matches.filter(m => m.type === activeTab)
+        let result: H2HMatch[]
+        if (activeTab === MATCH_TYPE_ALL) result = matches
+        else if (activeTab === MATCH_TYPE_SHOWMATCH) result = matches.filter(m => m.matchLabel === 'showmatch')
+        else if (activeTab === MATCH_TYPE_TOURNAMENT) result = matches.filter(m => m.matchLabel === 'tournament')
+        else result = matches.filter(m => m.type === activeTab)
+        return [...result].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     }
 
     const resolveWinner = (match: H2HMatch): string => {
@@ -153,6 +163,11 @@ export const H2H = () => {
                     {summary.totalGames} game{summary.totalGames !== 1 ? 's' : ''} total
                     {summary.lastPlayed ? ` · Last played ${formatDate(summary.lastPlayed)}` : ''}
                 </Text>
+                {summary.voidedCount > 0 && (
+                    <Text ta="center" size="sm" c="dimmed" mt={4}>
+                        {summary.voidedCount} match{summary.voidedCount !== 1 ? 'es' : ''} not counted (voided)
+                    </Text>
+                )}
             </Paper>
         )
     }
@@ -174,15 +189,50 @@ export const H2H = () => {
                         <Table.Th>Map</Table.Th>
                         <Table.Th>Winner</Table.Th>
                         <Table.Th>Duration</Table.Th>
+                        <Table.Th>Type</Table.Th>
+                        <Table.Th />
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                     {matches.map(match => (
-                        <Table.Tr key={match.matchId}>
+                        <Table.Tr key={match.matchId} style={match.isVoided ? { opacity: 0.5 } : undefined}>
                             <Table.Td>{formatDate(match.date)}</Table.Td>
                             <Table.Td>{match.map}</Table.Td>
-                            <Table.Td>{resolveWinner(match)}</Table.Td>
+                            <Table.Td>
+                                {match.isVoided ? (
+                                    <Group gap="xs" wrap="nowrap" align="center" justify="center">
+                                        <Text span td="line-through" inherit>{resolveWinner(match)}</Text>
+                                        <Badge color="orange" size="xs" variant="light">Voided</Badge>
+                                    </Group>
+                                ) : resolveWinner(match)}
+                            </Table.Td>
                             <Table.Td>{match.durationSeconds > 0 ? formatDuration(match.durationSeconds) : '—'}</Table.Td>
+                            <Table.Td>
+                                {match.matchLabel === 'showmatch' && (
+                                    <Badge color="violet" size="xs" variant="light">Showmatch</Badge>
+                                )}
+                                {match.matchLabel === 'tournament' && (
+                                    <Badge color="yellow" size="xs" variant="light">Tournament</Badge>
+                                )}
+                            </Table.Td>
+                            <Table.Td>
+                                <Group gap={4} wrap="nowrap" align="center">
+                                    {match.hasPendingFlag && (
+                                        <span role="img" aria-label="Pending flag">
+                                            <IconFlag size={14} style={{ opacity: 0.35 }} />
+                                        </span>
+                                    )}
+                                    <ActionIcon
+                                        variant="subtle"
+                                        color="gray"
+                                        size="sm"
+                                        aria-label="Flag match"
+                                        onClick={() => setFlaggedMatchId(match.matchId)}
+                                    >
+                                        <IconFlag size={14} />
+                                    </ActionIcon>
+                                </Group>
+                            </Table.Td>
                         </Table.Tr>
                     ))}
                 </Table.Tbody>
@@ -222,6 +272,12 @@ export const H2H = () => {
                         <Tabs.Tab value={MATCH_TYPE_ALL}>All</Tabs.Tab>
                         <Tabs.Tab value={MATCH_TYPE_LADDER}>Ladder</Tabs.Tab>
                         <Tabs.Tab value={MATCH_TYPE_CUSTOM}>Custom</Tabs.Tab>
+                        {h2hData.matches.some(m => m.matchLabel === 'showmatch') && (
+                            <Tabs.Tab value={MATCH_TYPE_SHOWMATCH}>Showmatch</Tabs.Tab>
+                        )}
+                        {h2hData.matches.some(m => m.matchLabel === 'tournament') && (
+                            <Tabs.Tab value={MATCH_TYPE_TOURNAMENT}>Tournament</Tabs.Tab>
+                        )}
                     </Tabs.List>
                 </Tabs>
 
@@ -237,9 +293,16 @@ export const H2H = () => {
 
     return (
         <>
-            <Title order={2} mb="md">Head to Head</Title>
+            <FlagMatchModal
+                matchId={flaggedMatchId}
+                player1CharacterId={h2hData?.player1.characterId ?? 0}
+                player2CharacterId={h2hData?.player2.characterId ?? 0}
+                opened={flaggedMatchId !== null}
+                onClose={() => setFlaggedMatchId(null)}
+            />
+            <Title order={2} mb="md" ta="center">Head to Head</Title>
 
-            <Group align="flex-end" mb="lg">
+            <Group align="flex-end" mb="lg" justify="center">
                 <Autocomplete
                     label="Player 1"
                     placeholder="Search player…"

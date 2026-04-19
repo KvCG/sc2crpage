@@ -1,9 +1,17 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import { loadPairRecord, syncPair, H2HResolutionError } from '../services/h2hService'
+import {
+    submitFlag,
+    listFlags,
+    approveFlag,
+    rejectFlag,
+    FlagServiceError,
+} from '../services/h2hFlagService'
 import { communityDataService } from '../services/communityDataService'
+import { requireAdminAuth } from '../middleware/adminAuthMiddleware'
 import logger from '../logging/logger'
-import type { H2HMatch, H2HPlayerMeta, H2HResponse } from '../../shared/types'
+import type { H2HMatch, H2HPlayerMeta, H2HResponse, MatchFlagType } from '../../shared/types'
 
 const router = Router()
 
@@ -25,9 +33,15 @@ function buildSummary(
 ): H2HResponse['summary'] {
     let player1Wins = 0
     let player2Wins = 0
+    let voidedCount = 0
     let lastPlayed: string | null = null
 
     for (const match of matches) {
+        if (match.isVoided) {
+            voidedCount++
+            continue
+        }
+
         if (match.winnerCharacterId === callerPlayer1Id) player1Wins++
         else if (match.winnerCharacterId === callerPlayer2Id) player2Wins++
 
@@ -38,6 +52,7 @@ function buildSummary(
         player1Wins,
         player2Wins,
         totalGames: matches.length,
+        voidedCount,
         lastPlayed,
     }
 }
@@ -100,11 +115,21 @@ router.get('/h2h', async (req: Request, res: Response) => {
             ...(meta2.name ? { name: meta2.name } : {}),
         }
 
+        // Build a set of external match IDs that have at least one pending flag,
+        // so each match row can show a ghost indicator without an extra request.
+        const pendingFlags = await listFlags({ status: 'pending' })
+        const pendingMatchIds = new Set(pendingFlags.map(flag => String(flag.match.matchId)))
+
+        const decoratedMatches = record.matches.map(match => ({
+            ...match,
+            hasPendingFlag: pendingMatchIds.has(String(match.matchId)),
+        }))
+
         const response: H2HResponse = {
             player1: player1Meta,
             player2: player2Meta,
             summary: buildSummary(record.matches, player1, player2),
-            matches: record.matches,
+            matches: decoratedMatches,
         }
 
         res.json(response)
@@ -133,6 +158,231 @@ router.get('/community-players', async (_req: Request, res: Response) => {
     } catch (error) {
         logger.error({ feature: 'h2h', error }, 'Failed to load community players')
         res.status(500).json({ error: 'Failed to load community players' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/h2h/flags — Submit a community flag for a match
+// ---------------------------------------------------------------------------
+
+const flagBodySchema = z
+    .object({
+        matchId: z.string({ required_error: 'matchId is required' }).min(1, 'matchId is required'),
+        player1CharacterId: z
+            .number({ required_error: 'player1CharacterId is required' })
+            .int()
+            .positive(),
+        player2CharacterId: z
+            .number({ required_error: 'player2CharacterId is required' })
+            .int()
+            .positive(),
+        flagType: z.enum(['void', 'showmatch', 'tournament'] as const, {
+            required_error: 'flagType is required',
+            invalid_type_error: 'flagType must be one of: void, showmatch, tournament',
+        }),
+        reason: z
+            .string()
+            .max(500, 'reason must be 500 characters or fewer')
+            .nullable()
+            .optional()
+            .default(null),
+        submittedBy: z
+            .string({ required_error: 'submittedBy is required' })
+            .min(1, 'submittedBy is required'),
+    })
+    .superRefine((data, ctx) => {
+        if (data.flagType === 'void' && (!data.reason || data.reason.trim().length === 0)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'reason is required when flagType is "void"',
+                path: ['reason'],
+            })
+        }
+    })
+
+/**
+ * POST /api/h2h/flags
+ *
+ * Submits a community flag for an h2h match.
+ *
+ * Body:
+ * - matchId: external match ID string (required)
+ * - player1CharacterId: numeric character ID (required)
+ * - player2CharacterId: numeric character ID (required)
+ * - flagType: 'void' | 'showmatch' | 'tournament' (required)
+ * - reason: explanation string, max 500 chars (required when flagType is 'void')
+ * - submittedBy: battle tag of the flagging player (required)
+ */
+router.post('/h2h/flags', async (req: Request, res: Response) => {
+    const parsed = flagBodySchema.safeParse(req.body)
+
+    if (!parsed.success) {
+        const details = parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: issue.path.length > 0 ? req.body?.[issue.path[0] as string] : undefined,
+        }))
+        return res.status(400).json({ error: 'Invalid request body', details })
+    }
+
+    const { matchId, player1CharacterId, player2CharacterId, flagType, reason, submittedBy } =
+        parsed.data
+    const normalizedSubmitter = submittedBy.trim()
+
+    // Verify the submitter is a known community member before calling the service
+    const communityData = await communityDataService.getCommunityData()
+    const isKnownBtag = communityData.players.some((player) => player.btag === normalizedSubmitter)
+    if (!isKnownBtag) {
+        return res
+            .status(400)
+            .json({ error: `Submitter '${normalizedSubmitter}' is not a known community member` })
+    }
+
+    logger.info(
+        { feature: 'flags', matchId, flagType, submittedBy: normalizedSubmitter },
+        'Processing flag submission',
+    )
+
+    try {
+        const result = await submitFlag({
+            matchId,
+            player1CharacterId,
+            player2CharacterId,
+            flagType: flagType as MatchFlagType,
+            reason: reason ?? null,
+            submittedBy: normalizedSubmitter,
+        })
+
+        return res.status(201).json(result)
+    } catch (error) {
+        if (error instanceof FlagServiceError) {
+            switch (error.code) {
+                case 'MATCH_NOT_FOUND':
+                    return res.status(404).json({ error: error.message })
+                case 'NOT_A_PARTICIPANT':
+                    return res.status(403).json({ error: error.message })
+                case 'DUPLICATE_PENDING_FLAG':
+                    return res.status(409).json({ error: error.message })
+            }
+        }
+        logger.error(
+            { feature: 'flags', matchId, flagType, submittedBy: normalizedSubmitter, error },
+            'Error processing flag submission',
+        )
+        return res.status(500).json({ error: 'Failed to submit flag' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// GET /api/h2h/flags — Admin: list flags with match context
+// ---------------------------------------------------------------------------
+
+const listFlagsQuerySchema = z.object({
+    status: z.enum(['pending', 'approved', 'rejected'] as const).optional(),
+    flagType: z.enum(['void', 'showmatch', 'tournament'] as const).optional(),
+})
+
+/**
+ * GET /api/h2h/flags
+ *
+ * Returns all flags joined with match context, optionally filtered by
+ * `status` and/or `flagType` query parameters.
+ *
+ * Protected: requires a valid admin JWT in the Authorization header.
+ */
+router.get('/h2h/flags', requireAdminAuth, async (req: Request, res: Response) => {
+    const parsed = listFlagsQuerySchema.safeParse(req.query)
+
+    if (!parsed.success) {
+        const details = parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: req.query[issue.path[0] as string],
+        }))
+        return res.status(400).json({ error: 'Invalid query parameters', details })
+    }
+
+    logger.info({ feature: 'flags', filters: parsed.data }, 'Admin listing flags')
+
+    try {
+        const flags = await listFlags(parsed.data)
+        return res.json(flags)
+    } catch (error) {
+        logger.error({ feature: 'flags', error }, 'Error listing flags')
+        return res.status(500).json({ error: 'Failed to list flags' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// PATCH /api/h2h/flags/:flagId — Admin: approve or reject a flag
+// ---------------------------------------------------------------------------
+
+const patchFlagBodySchema = z.object({
+    action: z.enum(['approve', 'reject'] as const, {
+        required_error: 'action is required',
+        invalid_type_error: 'action must be one of: approve, reject',
+    }),
+    adminNote: z
+        .string()
+        .max(500, 'adminNote must be 500 characters or fewer')
+        .nullable()
+        .optional()
+        .default(null),
+})
+
+/**
+ * PATCH /api/h2h/flags/:flagId
+ *
+ * Approves or rejects a community flag.
+ *
+ * Body:
+ * - action: 'approve' | 'reject' (required)
+ * - adminNote: optional note stored on the flag (max 500 chars)
+ *
+ * Protected: requires a valid admin JWT in the Authorization header.
+ */
+router.patch('/h2h/flags/:flagId', requireAdminAuth, async (req: Request, res: Response) => {
+    const flagId = parseInt(req.params.flagId, 10)
+    if (!Number.isInteger(flagId) || flagId <= 0) {
+        return res.status(400).json({ error: 'flagId must be a positive integer' })
+    }
+
+    const parsed = patchFlagBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+        const details = parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: issue.path.length > 0 ? req.body?.[issue.path[0] as string] : undefined,
+        }))
+        return res.status(400).json({ error: 'Invalid request body', details })
+    }
+
+    const { action, adminNote } = parsed.data
+
+    logger.info({ feature: 'flags', flagId, action }, 'Admin processing flag review')
+
+    try {
+        if (action === 'approve') {
+            const result = await approveFlag(flagId)
+            return res.json(result)
+        } else {
+            const result = await rejectFlag(flagId, adminNote ?? null)
+            return res.json(result)
+        }
+    } catch (error) {
+        if (error instanceof FlagServiceError) {
+            switch (error.code) {
+                case 'FLAG_NOT_FOUND':
+                    return res.status(404).json({ error: error.message })
+                case 'FLAG_NOT_PENDING':
+                    return res.status(409).json({ error: error.message })
+            }
+        }
+        logger.error(
+            { feature: 'flags', flagId, action, error },
+            'Error processing flag review',
+        )
+        return res.status(500).json({ error: 'Failed to process flag review' })
     }
 })
 

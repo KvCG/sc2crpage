@@ -5,6 +5,7 @@ const hoisted = vi.hoisted(() => ({
     loadPairRecordMock: vi.fn(),
     syncPairMock: vi.fn(),
     getCommunityPlayerMock: vi.fn(),
+    listFlagsMock: vi.fn(),
     loggerMock: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -33,6 +34,21 @@ vi.mock('../../services/communityDataService', () => ({
 
 vi.mock('../../logging/logger', () => ({
     default: hoisted.loggerMock,
+}))
+
+vi.mock('../../services/h2hFlagService', () => ({
+    listFlags: hoisted.listFlagsMock,
+    submitFlag: vi.fn(),
+    approveFlag: vi.fn(),
+    rejectFlag: vi.fn(),
+    FlagServiceError: class FlagServiceError extends Error {
+        readonly code: string
+        constructor(code: string, message: string) {
+            super(message)
+            this.name = 'FlagServiceError'
+            this.code = code
+        }
+    },
 }))
 
 function createMockResponse() {
@@ -82,6 +98,8 @@ const pairRecord = {
             player1RatingAtTime: 3500,
             player2RatingAtTime: 3400,
             source: 'pulse' as const,
+            isVoided: false,
+            matchLabel: null,
         },
         {
             matchId: 2,
@@ -96,6 +114,8 @@ const pairRecord = {
             player1RatingAtTime: 3520,
             player2RatingAtTime: 3380,
             source: 'pulse' as const,
+            isVoided: false,
+            matchLabel: null,
         },
         {
             matchId: 3,
@@ -110,6 +130,31 @@ const pairRecord = {
             player1RatingAtTime: 3498,
             player2RatingAtTime: 3402,
             source: 'pulse' as const,
+            isVoided: false,
+            matchLabel: null,
+        },
+    ],
+}
+
+const pairRecordWithVoided = {
+    ...pairRecord,
+    matches: [
+        ...pairRecord.matches,
+        {
+            matchId: 4,
+            date: '2026-04-10T09:00:00.000Z',
+            map: 'Goldenaura',
+            durationSeconds: 200,
+            region: 'US',
+            type: '1v1',
+            winnerCharacterId: player1Id,
+            player1RatingChange: null,
+            player2RatingChange: null,
+            player1RatingAtTime: null,
+            player2RatingAtTime: null,
+            source: 'manual' as const,
+            isVoided: true,
+            matchLabel: null,
         },
     ],
 }
@@ -122,6 +167,8 @@ describe('h2hRoutes', () => {
         hoisted.loadPairRecordMock.mockReset()
         hoisted.syncPairMock.mockReset()
         hoisted.getCommunityPlayerMock.mockReset()
+        hoisted.listFlagsMock.mockReset()
+        hoisted.listFlagsMock.mockResolvedValue([])
         hoisted.loggerMock.info.mockReset()
         hoisted.loggerMock.error.mockReset()
 
@@ -263,6 +310,78 @@ describe('h2hRoutes', () => {
             expect(hoisted.syncPairMock).toHaveBeenCalledWith(player1Id, player2Id)
             const summary = (res.jsonData as Record<string, unknown>).summary as Record<string, unknown>
             expect(summary.player1Wins).toBe(2)
+        })
+    })
+
+    describe('GET /h2h — void match exclusion', () => {
+        it('does not count a voided match in player1Wins', async () => {
+            hoisted.getCommunityPlayerMock.mockImplementation((id: number) => {
+                if (Number(id) === player1Id) return Promise.resolve(communityPlayer1)
+                if (Number(id) === player2Id) return Promise.resolve(communityPlayer2)
+                return Promise.resolve(null)
+            })
+            hoisted.loadPairRecordMock.mockResolvedValue(pairRecordWithVoided)
+
+            const res = await callRoute({
+                player1: String(player1Id),
+                player2: String(player2Id),
+            })
+
+            expect(res.statusCode).toBe(200)
+            const summary = (res.jsonData as Record<string, unknown>).summary as Record<string, unknown>
+            expect(summary.player1Wins).toBe(2)
+            expect(summary.player2Wins).toBe(1)
+        })
+
+        it('returns voidedCount equal to the number of voided matches', async () => {
+            hoisted.getCommunityPlayerMock.mockImplementation((id: number) => {
+                if (Number(id) === player1Id) return Promise.resolve(communityPlayer1)
+                if (Number(id) === player2Id) return Promise.resolve(communityPlayer2)
+                return Promise.resolve(null)
+            })
+            hoisted.loadPairRecordMock.mockResolvedValue(pairRecordWithVoided)
+
+            const res = await callRoute({
+                player1: String(player1Id),
+                player2: String(player2Id),
+            })
+
+            const summary = (res.jsonData as Record<string, unknown>).summary as Record<string, unknown>
+            expect(summary.voidedCount).toBe(1)
+        })
+
+        it('returns voidedCount of 0 when no matches are voided', async () => {
+            hoisted.getCommunityPlayerMock.mockImplementation((id: number) => {
+                if (Number(id) === player1Id) return Promise.resolve(communityPlayer1)
+                if (Number(id) === player2Id) return Promise.resolve(communityPlayer2)
+                return Promise.resolve(null)
+            })
+            hoisted.loadPairRecordMock.mockResolvedValue(pairRecord)
+
+            const res = await callRoute({
+                player1: String(player1Id),
+                player2: String(player2Id),
+            })
+
+            const summary = (res.jsonData as Record<string, unknown>).summary as Record<string, unknown>
+            expect(summary.voidedCount).toBe(0)
+        })
+
+        it('totalGames includes voided matches', async () => {
+            hoisted.getCommunityPlayerMock.mockImplementation((id: number) => {
+                if (Number(id) === player1Id) return Promise.resolve(communityPlayer1)
+                if (Number(id) === player2Id) return Promise.resolve(communityPlayer2)
+                return Promise.resolve(null)
+            })
+            hoisted.loadPairRecordMock.mockResolvedValue(pairRecordWithVoided)
+
+            const res = await callRoute({
+                player1: String(player1Id),
+                player2: String(player2Id),
+            })
+
+            const summary = (res.jsonData as Record<string, unknown>).summary as Record<string, unknown>
+            expect(summary.totalGames).toBe(4)
         })
     })
 })

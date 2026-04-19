@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios'
 import config from './config'
 import resolveRequestId from '../utils/requestIdentity'
+import type { MatchFlagType, MatchFlagStatus, H2HFlagWithMatch } from '../../shared/types'
 
 const api: AxiosInstance = axios.create({
     baseURL: config.API_URL,
@@ -120,4 +121,58 @@ export const getH2H = async (player1: number, player2: number) => {
 export const getCommunityPlayers = async () => {
     const response = await api.get('api/community-players')
     return response
+}
+
+export interface PostH2HFlagPayload {
+    matchId: string
+    player1CharacterId: number
+    player2CharacterId: number
+    flagType: MatchFlagType
+    reason?: string | null
+    submittedBy: string
+}
+
+export interface PostH2HFlagResponse {
+    flagId: number
+    status: MatchFlagStatus
+}
+
+export const postH2HFlag = async (payload: PostH2HFlagPayload): Promise<PostH2HFlagResponse> => {
+    const response = await api.post<PostH2HFlagResponse>('api/h2h/flags', payload)
+    return response.data
+}
+
+export interface AdminLoginResponse {
+    token: string
+}
+
+export const postAdminLogin = async (password: string): Promise<AdminLoginResponse> => {
+    const response = await api.post<AdminLoginResponse>('api/admin/login', { password })
+    return response.data
+}
+
+export interface GetAdminFlagsParams {
+    status?: 'pending' | 'approved' | 'rejected'
+}
+
+export const getAdminFlags = async (params: GetAdminFlagsParams = {}): Promise<H2HFlagWithMatch[]> => {
+    const token = sessionStorage.getItem('adminToken')
+    const response = await api.get<H2HFlagWithMatch[]>('api/h2h/flags', {
+        params,
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    return response.data
+}
+
+export interface PatchAdminFlagPayload {
+    action: 'approve' | 'reject'
+    adminNote?: string | null
+}
+
+export const patchAdminFlag = async (flagId: number, payload: PatchAdminFlagPayload): Promise<H2HFlagWithMatch> => {
+    const token = sessionStorage.getItem('adminToken')
+    const response = await api.patch<H2HFlagWithMatch>(`api/h2h/flags/${flagId}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    return response.data
 }
