@@ -94,8 +94,8 @@ The client automatically detects its environment based on hostname:
 - **Attribution**: Required header for non-commercial use
 
 ### Secondary Data Sources
-- **CSV Data**: `ladderCR.csv` in `dist/data/` for offline capabilities
-- **Google Drive**: Backup storage, replay management, analytics persistence
+- **Supabase**: Community player roster (loaded at startup)
+- **Google Drive**: Replay storage and management
 - **Challonge API**: Tournament bracket data
 - **Replay Analyzer**: External service for replay processing
 

@@ -23,7 +23,7 @@
 - [ ] **Hot reload works**: Edit a file and see changes instantly in browser
 
 ### Data Configuration ✓
-- [ ] **Data file present**: `dist/data/ladderCR.csv` exists OR auto-download configured
+- [ ] **Supabase configured**: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set in `.env`
 - [ ] **Rankings load**: Can navigate to rankings page without errors
 - [ ] **API responses**: Network tab shows successful API calls (200 status)
 

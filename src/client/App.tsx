@@ -9,6 +9,12 @@ import { ReplayInformation } from './pages/ReplayInformation.tsx'
 import { Tournament } from './pages/Tournament.tsx'
 import { CommunityStats } from './pages/CommunityStats.tsx'
 import { PlayerActivity } from './pages/PlayerActivity.tsx'
+import { H2H } from './pages/H2H.tsx'
+import { AdminLogin } from './pages/AdminLogin.tsx'
+import { AdminDashboard } from './pages/AdminDashboard.tsx'
+import { FlagReview } from './pages/FlagReview.tsx'
+import { AdminRoute } from './routes/AdminRoute.tsx'
+import { AdminLayout } from './components/AdminLayout/AdminLayout.tsx'
 import { Container } from '@mantine/core'
 
 // Define functional component using TypeScript
@@ -26,6 +32,13 @@ const App: React.FC = () => {
                     <Route path="/replayInformation" element={<ReplayInformation />} />
                     <Route path="/community-stats" element={<CommunityStats />} />
                     <Route path="/player-activity" element={<PlayerActivity />} />
+                    <Route path="/h2h" element={<H2H />} />
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                        <Route index element={<AdminDashboard />} />
+                        <Route path="h2h-flags" element={<FlagReview />} />
+                        <Route path="players" element={<AdminDashboard />} />
+                    </Route>
                     {/*<Route path="/community" element={<Community />} />
                     <Route path='/contact' element={<Contact/>} /> */}
                 </Routes>

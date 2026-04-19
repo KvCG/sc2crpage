@@ -29,6 +29,9 @@ vi.mock('../../routes/apiRoutes', () => ({
     default: (_req: any, _res: any, next: any) => next(),
 }))
 
+// Mock h2hScheduler to prevent a long-running setTimeout from blocking the test worker
+vi.mock('../../services/h2hScheduler', () => ({ startH2HScheduler: vi.fn() }))
+
 vi.mock('../../services/snapshotService', () => ({
     retrieveInitialRankingData: vi.fn().mockResolvedValue({
         data: [],

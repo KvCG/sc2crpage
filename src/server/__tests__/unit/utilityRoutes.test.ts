@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 
-// Mock refreshDataCache to avoid filesystem side effects
-vi.mock('../../utils/csvParser', () => ({
-    refreshDataCache: vi.fn().mockResolvedValue(undefined),
+// Mock communityDataService to avoid real Supabase calls
+vi.mock('../../services/communityDataService', () => ({
+    communityDataService: {
+        reloadCommunityData: vi.fn().mockResolvedValue(undefined),
+    },
 }))
 
 // Capture router handlers by mocking express.Router
@@ -46,7 +48,7 @@ const runHandler = async (path: string, req: any = {}) => {
 }
 
 describe('utilityRoutes', () => {
-    it('refreshCache calls refreshDataCache and returns Done!', async () => {
+    it('refreshCache calls reloadCommunityData and returns Done!', async () => {
         const res = await runHandler('/refreshCache')
         expect(res.statusCode).toBe(200)
         expect(res.body).toBe('Done!')

@@ -23,6 +23,7 @@
 - **Features**
   - [Community Analytics](features/community-analytics.md)
   - [Ranking System](features/ranking-system.md)
+  - [Head to Head & Match Flags](features/h2h-flags.md)
 
 - **Development Process**
   - [Contributing](development-process/contributing.md)

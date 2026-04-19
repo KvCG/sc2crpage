@@ -119,32 +119,20 @@ curl http://localhost:3000/api/health
 
 ---
 
-## 📊 Data File Issues
+## 📊 Data Issues
 
-### Missing ladderCR.csv
+### Rankings Don't Load
 
 **Issue**: Server starts but rankings don't load
 
-**Solution 1**: Check data file location
+**Solution**: Verify Supabase environment variables are set
 ```bash
-# After running npm run build, check:
-ls -la dist/data/ladderCR.csv
-# File should exist and have content
+# Check .env file has both:
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-**Solution 2**: Request data file
-```bash
-# Contact maintainers (NeO or Kerverus) for:
-# - ladderCR.csv file
-# - Proper placement instructions
-```
-
-**Solution 3**: Configure Google Drive auto-download
-```bash
-# Add to .env file:
-GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
-# Server will auto-download data on startup
-```
+Contact **NeO** or **Kerverus** for Supabase credentials if needed.
 
 ### Google Drive Configuration
 

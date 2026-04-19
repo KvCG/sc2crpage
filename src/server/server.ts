@@ -1,4 +1,5 @@
 // src/server/server.ts
+import 'dotenv/config'
 import express, { Request, Response, NextFunction } from 'express'
 import apiRoutes from './routes/apiRoutes'
 import path from 'path'
@@ -6,13 +7,14 @@ import cors from 'cors'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
 import chokidar from 'chokidar'
-import 'dotenv/config'
 import { getBackendBuildInfo } from './utils/buildInfo'
 import { isLocalAppEnv } from '../shared/runtimeEnv'
 import { httpLogger, httpMetricsMiddleware } from './logging/httpLogger'
 import createDebugHandler from './services/debugService'
 import logger from './logging/logger'
 import { retrieveInitialRankingData } from './services/snapshotService'
+import { start as startBlizzardPoller } from './services/blizzardPollerService'
+import { startH2HScheduler } from './services/h2hScheduler'
 const app = express()
 const port = process.env.PORT || 3000
 const wsPort = 4000 // Port for WebSocket server
@@ -107,5 +109,11 @@ app.listen(port, () => {
             logger.warn({ err }, 'snapshot load failed on startup')
         }
     })()
+
+    // Start Blizzard custom-match poller (gated by BLIZZARD_POLLING_ENABLED)
+    startBlizzardPoller()
+
+    // Start daily H2H background sync (03:00 UTC-6)
+    startH2HScheduler()
 
 })
