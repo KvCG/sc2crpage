@@ -156,6 +156,11 @@ export const H2H = () => {
                     {summary.totalGames} game{summary.totalGames !== 1 ? 's' : ''} total
                     {summary.lastPlayed ? ` · Last played ${formatDate(summary.lastPlayed)}` : ''}
                 </Text>
+                {summary.voidedCount > 0 && (
+                    <Text ta="center" size="sm" c="dimmed" mt={4}>
+                        {summary.voidedCount} match{summary.voidedCount !== 1 ? 'es' : ''} not counted (voided)
+                    </Text>
+                )}
             </Paper>
         )
     }

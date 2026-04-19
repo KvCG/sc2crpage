@@ -32,6 +32,7 @@ const h2hResponse = {
             player1Wins: 2,
             player2Wins: 1,
             totalGames: 3,
+            voidedCount: 0,
             lastPlayed: '2026-04-10T18:00:00',
         },
         matches: [
@@ -172,6 +173,39 @@ describe('H2H page', () => {
         fireEvent.click(customTab)
 
         expect(screen.getByText('No custom matches recorded')).toBeTruthy()
+    })
+
+    it('shows voided note when voidedCount > 0', async () => {
+        hoisted.mockGetH2H.mockResolvedValueOnce({
+            data: {
+                ...h2hResponse.data,
+                summary: { ...h2hResponse.data.summary, voidedCount: 2 },
+            },
+        })
+
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() =>
+            expect(screen.getByText('2 matches not counted (voided)')).toBeTruthy()
+        )
+    })
+
+    it('does not show voided note when voidedCount is 0', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        expect(screen.queryByText(/not counted \(voided\)/i)).toBeNull()
     })
 
     it('shows — for custom matches with zero duration', async () => {
