@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Modal, Radio, Textarea, TextInput, Button, Stack, Text } from '@mantine/core'
-import { postH2HFlag } from '../../services/api'
+import { useState, useEffect } from 'react'
+import { Modal, Radio, Textarea, Autocomplete, Button, Stack, Text } from '@mantine/core'
+import { postH2HFlag, getCommunityPlayers } from '../../services/api'
 import type { MatchFlagType } from '../../../shared/types'
 
 interface FlagMatchModalProps {
@@ -24,6 +24,32 @@ export const FlagMatchModal = ({
     const [submitting, setSubmitting] = useState(false)
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [playerOptions, setPlayerOptions] = useState<{ value: string; label: string }[]>([])
+
+    useEffect(() => {
+        getCommunityPlayers()
+            .then((res) => {
+                const players = res.data as Array<{ id: string; btag: string; name?: string | null }>
+                const seen = new Set<string>()
+                setPlayerOptions(
+                    players
+                        .filter((p) => {
+                            if (seen.has(p.btag)) return false
+                            seen.add(p.btag)
+                            return true
+                        })
+                        .map((p) => ({
+                            value: p.btag,
+                            label: p.name?.trim()
+                                ? `${p.name.trim()} (${p.btag})`
+                                : p.btag,
+                        }))
+                )
+            })
+            .catch(() => {
+                // Non-fatal: falls back to free-text entry
+            })
+    }, [])
 
     const handleClose = () => {
         setFlagType('void')
@@ -89,12 +115,19 @@ export const FlagMatchModal = ({
                         />
                     )}
 
-                    <TextInput
+                    <Autocomplete
                         label="Your BTag"
-                        placeholder="PlayerName#1234"
+                        placeholder="Search your name or BTag…"
                         required
+                        data={playerOptions}
                         value={btag}
-                        onChange={(e) => setBtag(e.currentTarget.value)}
+                        onChange={setBtag}
+                        filter={({ options, search }) => {
+                            const q = search.toLowerCase()
+                            return (options as { value: string; label: string }[]).filter(
+                                (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)
+                            )
+                        }}
                     />
 
                     {error && (

@@ -115,10 +115,12 @@ export const H2H = () => {
     }
 
     const filteredMatches = (matches: H2HMatch[]): H2HMatch[] => {
-        if (activeTab === MATCH_TYPE_ALL) return matches
-        if (activeTab === MATCH_TYPE_SHOWMATCH) return matches.filter(m => m.matchLabel === 'showmatch')
-        if (activeTab === MATCH_TYPE_TOURNAMENT) return matches.filter(m => m.matchLabel === 'tournament')
-        return matches.filter(m => m.type === activeTab)
+        let result: H2HMatch[]
+        if (activeTab === MATCH_TYPE_ALL) result = matches
+        else if (activeTab === MATCH_TYPE_SHOWMATCH) result = matches.filter(m => m.matchLabel === 'showmatch')
+        else if (activeTab === MATCH_TYPE_TOURNAMENT) result = matches.filter(m => m.matchLabel === 'tournament')
+        else result = matches.filter(m => m.type === activeTab)
+        return [...result].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     }
 
     const resolveWinner = (match: H2HMatch): string => {
@@ -298,9 +300,9 @@ export const H2H = () => {
                 opened={flaggedMatchId !== null}
                 onClose={() => setFlaggedMatchId(null)}
             />
-            <Title order={2} mb="md">Head to Head</Title>
+            <Title order={2} mb="md" ta="center">Head to Head</Title>
 
-            <Group align="flex-end" mb="lg">
+            <Group align="flex-end" mb="lg" justify="center">
                 <Autocomplete
                     label="Player 1"
                     placeholder="Search player…"
