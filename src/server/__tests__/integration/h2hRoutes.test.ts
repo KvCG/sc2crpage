@@ -5,6 +5,7 @@ const hoisted = vi.hoisted(() => ({
     loadPairRecordMock: vi.fn(),
     syncPairMock: vi.fn(),
     getCommunityPlayerMock: vi.fn(),
+    listFlagsMock: vi.fn(),
     loggerMock: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -33,6 +34,21 @@ vi.mock('../../services/communityDataService', () => ({
 
 vi.mock('../../logging/logger', () => ({
     default: hoisted.loggerMock,
+}))
+
+vi.mock('../../services/h2hFlagService', () => ({
+    listFlags: hoisted.listFlagsMock,
+    submitFlag: vi.fn(),
+    approveFlag: vi.fn(),
+    rejectFlag: vi.fn(),
+    FlagServiceError: class FlagServiceError extends Error {
+        readonly code: string
+        constructor(code: string, message: string) {
+            super(message)
+            this.name = 'FlagServiceError'
+            this.code = code
+        }
+    },
 }))
 
 function createMockResponse() {
@@ -151,6 +167,8 @@ describe('h2hRoutes', () => {
         hoisted.loadPairRecordMock.mockReset()
         hoisted.syncPairMock.mockReset()
         hoisted.getCommunityPlayerMock.mockReset()
+        hoisted.listFlagsMock.mockReset()
+        hoisted.listFlagsMock.mockResolvedValue([])
         hoisted.loggerMock.info.mockReset()
         hoisted.loggerMock.error.mockReset()
 
