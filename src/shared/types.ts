@@ -133,6 +133,31 @@ export interface H2HMatch {
     player2RatingAtTime: number | null
     source: 'pulse' | 'manual' | 'blizzard'
     addedBy?: string
+    isVoided: boolean
+    matchLabel: 'showmatch' | 'tournament' | null
+    hasPendingFlag?: boolean
+}
+
+export type MatchFlagType = 'void' | 'showmatch' | 'tournament'
+export type MatchFlagStatus = 'pending' | 'approved' | 'rejected'
+
+export interface H2HMatchFlag {
+    id: number
+    matchDbId: number
+    flagType: MatchFlagType
+    reason: string | null
+    submittedBy: string
+    status: MatchFlagStatus
+    adminNote: string | null
+    reviewedBy: string | null
+    createdAt: string
+    reviewedAt: string | null
+}
+
+export interface H2HFlagWithMatch extends H2HMatchFlag {
+    match: Pick<H2HMatch, 'matchId' | 'date' | 'map' | 'winnerCharacterId' | 'type'>
+    player1CharacterId: number
+    player2CharacterId: number
 }
 
 export interface H2HPairRecord {
@@ -156,6 +181,7 @@ export interface H2HResponse {
         player1Wins: number
         player2Wins: number
         totalGames: number
+        voidedCount: number
         lastPlayed: string | null
     }
     matches: H2HMatch[]

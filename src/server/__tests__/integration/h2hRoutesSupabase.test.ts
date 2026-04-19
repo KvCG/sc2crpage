@@ -38,6 +38,21 @@ vi.mock('../../services/pulseHttpClient', () => ({
     },
 }))
 
+vi.mock('../../services/h2hFlagService', () => ({
+    listFlags: vi.fn().mockResolvedValue([]),
+    submitFlag: vi.fn(),
+    approveFlag: vi.fn(),
+    rejectFlag: vi.fn(),
+    FlagServiceError: class FlagServiceError extends Error {
+        readonly code: string
+        constructor(code: string, message: string) {
+            super(message)
+            this.name = 'FlagServiceError'
+            this.code = code
+        }
+    },
+}))
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

@@ -5,11 +5,13 @@ import { MantineProvider } from '@mantine/core'
 const hoisted = vi.hoisted(() => ({
     mockGetCommunityPlayers: vi.fn(),
     mockGetH2H: vi.fn(),
+    mockPostH2HFlag: vi.fn(),
 }))
 
 vi.mock('../services/api', () => ({
     getCommunityPlayers: hoisted.mockGetCommunityPlayers,
     getH2H: hoisted.mockGetH2H,
+    postH2HFlag: hoisted.mockPostH2HFlag,
 }))
 
 import { H2H } from '../pages/H2H'
@@ -30,6 +32,7 @@ const h2hResponse = {
             player1Wins: 2,
             player2Wins: 1,
             totalGames: 3,
+            voidedCount: 0,
             lastPlayed: '2026-04-10T18:00:00',
         },
         matches: [
@@ -172,6 +175,219 @@ describe('H2H page', () => {
         expect(screen.getByText('No custom matches recorded')).toBeTruthy()
     })
 
+    it('shows voided note when voidedCount > 0', async () => {
+        hoisted.mockGetH2H.mockResolvedValueOnce({
+            data: {
+                ...h2hResponse.data,
+                summary: { ...h2hResponse.data.summary, voidedCount: 2 },
+            },
+        })
+
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() =>
+            expect(screen.getByText('2 matches not counted (voided)')).toBeTruthy()
+        )
+    })
+
+    it('does not show voided note when voidedCount is 0', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        expect(screen.queryByText(/not counted \(voided\)/i)).toBeNull()
+    })
+
+    it('renders Voided badge for voided matches and not for non-voided matches', async () => {
+        hoisted.mockGetH2H.mockResolvedValueOnce({
+            data: {
+                ...h2hResponse.data,
+                matches: [
+                    {
+                        ...h2hResponse.data.matches[0],
+                        matchId: 10,
+                        isVoided: true,
+                    },
+                    {
+                        ...h2hResponse.data.matches[1],
+                        matchId: 11,
+                        isVoided: false,
+                    },
+                ],
+            },
+        })
+
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        // Voided badge appears exactly once (only for the voided row)
+        expect(screen.getAllByText('Voided')).toHaveLength(1)
+    })
+
+    it('renders Showmatch badge for matches with matchLabel showmatch', async () => {
+        hoisted.mockGetH2H.mockResolvedValueOnce({
+            data: {
+                ...h2hResponse.data,
+                matches: [
+                    { ...h2hResponse.data.matches[0], matchId: 20, matchLabel: 'showmatch' },
+                    { ...h2hResponse.data.matches[1], matchId: 21, matchLabel: null },
+                ],
+            },
+        })
+
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        // 'Showmatch' appears in both the tab and the row badge
+        expect(screen.getAllByText('Showmatch').length).toBeGreaterThanOrEqual(1)
+        expect(screen.queryByText('Tournament')).toBeNull()
+    })
+
+    it('renders Tournament badge for matches with matchLabel tournament', async () => {
+        hoisted.mockGetH2H.mockResolvedValueOnce({
+            data: {
+                ...h2hResponse.data,
+                matches: [
+                    { ...h2hResponse.data.matches[0], matchId: 30, matchLabel: 'tournament' },
+                    { ...h2hResponse.data.matches[1], matchId: 31, matchLabel: null },
+                ],
+            },
+        })
+
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        // 'Tournament' appears in both the tab and the row badge
+        expect(screen.getAllByText('Tournament').length).toBeGreaterThanOrEqual(1)
+        expect(screen.queryByText('Showmatch')).toBeNull()
+    })
+
+    it('renders no label badge for matches with matchLabel null', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        expect(screen.queryByText('Showmatch')).toBeNull()
+        expect(screen.queryByText('Tournament')).toBeNull()
+    })
+
+    it('Showmatch tab appears and filters when dataset has ≥1 showmatch', async () => {
+        hoisted.mockGetH2H.mockResolvedValueOnce({
+            data: {
+                ...h2hResponse.data,
+                matches: [
+                    { ...h2hResponse.data.matches[0], matchId: 50, matchLabel: 'showmatch', map: 'Showmatch Map' },
+                    { ...h2hResponse.data.matches[1], matchId: 51, matchLabel: null, map: 'Normal Map' },
+                ],
+            },
+        })
+
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Showmatch Map')).toBeTruthy())
+
+        // Showmatch tab is present, Tournament tab is not
+        expect(screen.getByRole('tab', { name: 'Showmatch' })).toBeTruthy()
+        expect(screen.queryByRole('tab', { name: 'Tournament' })).toBeNull()
+
+        // Clicking Showmatch tab shows only showmatch row
+        fireEvent.click(screen.getByRole('tab', { name: 'Showmatch' }))
+        expect(screen.getByText('Showmatch Map')).toBeTruthy()
+        expect(screen.queryByText('Normal Map')).toBeNull()
+
+        // Clicking All restores both rows
+        fireEvent.click(screen.getByRole('tab', { name: 'All' }))
+        expect(screen.getByText('Showmatch Map')).toBeTruthy()
+        expect(screen.getByText('Normal Map')).toBeTruthy()
+    })
+
+    it('Tournament tab appears and filters when dataset has ≥1 tournament', async () => {
+        hoisted.mockGetH2H.mockResolvedValueOnce({
+            data: {
+                ...h2hResponse.data,
+                matches: [
+                    { ...h2hResponse.data.matches[0], matchId: 60, matchLabel: 'tournament', map: 'Tournament Map' },
+                    { ...h2hResponse.data.matches[1], matchId: 61, matchLabel: null, map: 'Ladder Map' },
+                ],
+            },
+        })
+
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Tournament Map')).toBeTruthy())
+
+        // Tournament tab is present, Showmatch tab is not
+        expect(screen.getByRole('tab', { name: 'Tournament' })).toBeTruthy()
+        expect(screen.queryByRole('tab', { name: 'Showmatch' })).toBeNull()
+
+        // Clicking Tournament tab shows only tournament row
+        fireEvent.click(screen.getByRole('tab', { name: 'Tournament' }))
+        expect(screen.getByText('Tournament Map')).toBeTruthy()
+        expect(screen.queryByText('Ladder Map')).toBeNull()
+
+        // Clicking All restores both rows
+        fireEvent.click(screen.getByRole('tab', { name: 'All' }))
+        expect(screen.getByText('Tournament Map')).toBeTruthy()
+        expect(screen.getByText('Ladder Map')).toBeTruthy()
+    })
+
+    it('neither Showmatch nor Tournament tab appears when no labeled matches exist', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        expect(screen.queryByRole('tab', { name: 'Showmatch' })).toBeNull()
+        expect(screen.queryByRole('tab', { name: 'Tournament' })).toBeNull()
+    })
+
     it('shows — for custom matches with zero duration', async () => {
         hoisted.mockGetH2H.mockResolvedValueOnce({
             data: {
@@ -206,5 +422,30 @@ describe('H2H page', () => {
 
         expect(screen.getByText('—')).toBeTruthy()
     })
+
+    it('shows ghost flag icon only on rows with hasPendingFlag true', async () => {
+        hoisted.mockGetH2H.mockResolvedValueOnce({
+            data: {
+                ...h2hResponse.data,
+                matches: [
+                    { ...h2hResponse.data.matches[0], matchId: 40, hasPendingFlag: true },
+                    { ...h2hResponse.data.matches[1], matchId: 41, hasPendingFlag: false },
+                ],
+            },
+        })
+
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        // Exactly one ghost icon — for the pending-flagged row only
+        expect(screen.getAllByRole('img', { name: 'Pending flag' })).toHaveLength(1)
+    })
 })
+
 
