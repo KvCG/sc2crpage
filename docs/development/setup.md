@@ -59,17 +59,8 @@ LOG_LEVEL=info
 LOG_HTTP_SUCCESS=false
 ```
 
-### 4. Get Ladder Data File
-The server requires `ladderCR.csv` to operate. You have three options:
-
-#### Option A: Request from Maintainers (Recommended)
-Contact NeO or Kerverus for the latest ladder data file.
-
-#### Option B: Auto-download (If Google Drive configured)
-If you have `GOOGLE_SERVICE_ACCOUNT_KEY` configured, the server will automatically download the file on first run.
-
-#### Option C: Manual Placement
-Place the CSV file at `dist/data/ladderCR.csv` after running the build command.
+### 4. Configure Supabase
+Community player data is loaded from Supabase at startup. Ensure `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in your `.env` file (see `docs/reference/environment-variables.md`). No CSV file or Google Drive configuration is needed for rankings to work.
 
 ### 5. Start Development Server
 ```bash
@@ -174,7 +165,7 @@ PORT=3001
 
 #### Missing Ladder Data
 ```
-Error: ENOENT: no such file or directory, open 'dist/data/ladderCR.csv'
+Error: Missing required environment variable: SUPABASE_URL
 ```
 **Solution**: Follow step 4 above to obtain the ladder data file.
 
