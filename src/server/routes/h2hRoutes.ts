@@ -115,11 +115,21 @@ router.get('/h2h', async (req: Request, res: Response) => {
             ...(meta2.name ? { name: meta2.name } : {}),
         }
 
+        // Build a set of external match IDs that have at least one pending flag,
+        // so each match row can show a ghost indicator without an extra request.
+        const pendingFlags = await listFlags({ status: 'pending' })
+        const pendingMatchIds = new Set(pendingFlags.map(flag => String(flag.match.matchId)))
+
+        const decoratedMatches = record.matches.map(match => ({
+            ...match,
+            hasPendingFlag: pendingMatchIds.has(String(match.matchId)),
+        }))
+
         const response: H2HResponse = {
             player1: player1Meta,
             player2: player2Meta,
             summary: buildSummary(record.matches, player1, player2),
-            matches: record.matches,
+            matches: decoratedMatches,
         }
 
         res.json(response)

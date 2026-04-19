@@ -36,6 +36,8 @@ const formatDate = (iso: string): string => iso.slice(0, 10)
 const MATCH_TYPE_ALL = 'ALL'
 const MATCH_TYPE_LADDER = '_1V1'
 const MATCH_TYPE_CUSTOM = 'CUSTOM'
+const MATCH_TYPE_SHOWMATCH = 'showmatch'
+const MATCH_TYPE_TOURNAMENT = 'tournament'
 
 export const H2H = () => {
     const [players, setPlayers] = useState<PlayerOption[]>([])
@@ -75,6 +77,7 @@ export const H2H = () => {
         setLoading(true)
         setError(null)
         setH2hData(null)
+        setActiveTab(MATCH_TYPE_ALL)
         try {
             const res = await getH2H(p1, p2)
             setH2hData(res.data as H2HResponse)
@@ -113,6 +116,8 @@ export const H2H = () => {
 
     const filteredMatches = (matches: H2HMatch[]): H2HMatch[] => {
         if (activeTab === MATCH_TYPE_ALL) return matches
+        if (activeTab === MATCH_TYPE_SHOWMATCH) return matches.filter(m => m.matchLabel === 'showmatch')
+        if (activeTab === MATCH_TYPE_TOURNAMENT) return matches.filter(m => m.matchLabel === 'tournament')
         return matches.filter(m => m.type === activeTab)
     }
 
@@ -182,26 +187,49 @@ export const H2H = () => {
                         <Table.Th>Map</Table.Th>
                         <Table.Th>Winner</Table.Th>
                         <Table.Th>Duration</Table.Th>
+                        <Table.Th>Type</Table.Th>
                         <Table.Th />
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                     {matches.map(match => (
-                        <Table.Tr key={match.matchId}>
+                        <Table.Tr key={match.matchId} style={match.isVoided ? { opacity: 0.5 } : undefined}>
                             <Table.Td>{formatDate(match.date)}</Table.Td>
                             <Table.Td>{match.map}</Table.Td>
-                            <Table.Td>{resolveWinner(match)}</Table.Td>
+                            <Table.Td>
+                                {match.isVoided ? (
+                                    <Group gap="xs" wrap="nowrap" align="center" justify="center">
+                                        <Text span td="line-through" inherit>{resolveWinner(match)}</Text>
+                                        <Badge color="orange" size="xs" variant="light">Voided</Badge>
+                                    </Group>
+                                ) : resolveWinner(match)}
+                            </Table.Td>
                             <Table.Td>{match.durationSeconds > 0 ? formatDuration(match.durationSeconds) : '—'}</Table.Td>
                             <Table.Td>
-                                <ActionIcon
-                                    variant="subtle"
-                                    color="gray"
-                                    size="sm"
-                                    aria-label="Flag match"
-                                    onClick={() => setFlaggedMatchId(match.matchId)}
-                                >
-                                    <IconFlag size={14} />
-                                </ActionIcon>
+                                {match.matchLabel === 'showmatch' && (
+                                    <Badge color="violet" size="xs" variant="light">Showmatch</Badge>
+                                )}
+                                {match.matchLabel === 'tournament' && (
+                                    <Badge color="yellow" size="xs" variant="light">Tournament</Badge>
+                                )}
+                            </Table.Td>
+                            <Table.Td>
+                                <Group gap={4} wrap="nowrap" align="center">
+                                    {match.hasPendingFlag && (
+                                        <span role="img" aria-label="Pending flag">
+                                            <IconFlag size={14} style={{ opacity: 0.35 }} />
+                                        </span>
+                                    )}
+                                    <ActionIcon
+                                        variant="subtle"
+                                        color="gray"
+                                        size="sm"
+                                        aria-label="Flag match"
+                                        onClick={() => setFlaggedMatchId(match.matchId)}
+                                    >
+                                        <IconFlag size={14} />
+                                    </ActionIcon>
+                                </Group>
                             </Table.Td>
                         </Table.Tr>
                     ))}
@@ -242,6 +270,12 @@ export const H2H = () => {
                         <Tabs.Tab value={MATCH_TYPE_ALL}>All</Tabs.Tab>
                         <Tabs.Tab value={MATCH_TYPE_LADDER}>Ladder</Tabs.Tab>
                         <Tabs.Tab value={MATCH_TYPE_CUSTOM}>Custom</Tabs.Tab>
+                        {h2hData.matches.some(m => m.matchLabel === 'showmatch') && (
+                            <Tabs.Tab value={MATCH_TYPE_SHOWMATCH}>Showmatch</Tabs.Tab>
+                        )}
+                        {h2hData.matches.some(m => m.matchLabel === 'tournament') && (
+                            <Tabs.Tab value={MATCH_TYPE_TOURNAMENT}>Tournament</Tabs.Tab>
+                        )}
                     </Tabs.List>
                 </Tabs>
 

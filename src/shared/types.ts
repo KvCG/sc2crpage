@@ -135,6 +135,7 @@ export interface H2HMatch {
     addedBy?: string
     isVoided: boolean
     matchLabel: 'showmatch' | 'tournament' | null
+    hasPendingFlag?: boolean
 }
 
 export type MatchFlagType = 'void' | 'showmatch' | 'tournament'
