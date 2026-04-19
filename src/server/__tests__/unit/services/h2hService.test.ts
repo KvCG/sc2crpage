@@ -233,11 +233,11 @@ describe('syncPair', () => {
         // All 5 matches from all 3 pages merged
         expect(record.matches).toHaveLength(5)
         const matchIds = record.matches.map((m) => m.matchId)
-        expect(matchIds).toContain(1001)
-        expect(matchIds).toContain(1002)
-        expect(matchIds).toContain(1003)
-        expect(matchIds).toContain(1004)
-        expect(matchIds).toContain(1005)
+        expect(matchIds).toContain('1001')
+        expect(matchIds).toContain('1002')
+        expect(matchIds).toContain('1003')
+        expect(matchIds).toContain('1004')
+        expect(matchIds).toContain('1005')
         // No duplicates
         expect(new Set(matchIds).size).toBe(5)
         // nextCursor is from first page (for future incremental syncs)
@@ -282,7 +282,7 @@ describe('syncPair', () => {
                 matchBuilder.eq = vi.fn().mockReturnValue(
                     Promise.resolve({
                         data: [{
-                            match_id: 1001, // number so Set dedup works with Pulse entry.match.id
+                            match_id: '1001', // string — matches Supabase TEXT column
                             match_date: '2026-04-01T00:00:00Z',
                             map_name: 'Ruby Rock LE',
                             duration_seconds: 600,
@@ -316,9 +316,9 @@ describe('syncPair', () => {
         // match 1001 already in Supabase; 1002 and 1003 are new → total 3
         expect(record.matches).toHaveLength(3)
         const ids = record.matches.map((m) => m.matchId)
-        expect(ids).toContain(1001)
-        expect(ids).toContain(1002)
-        expect(ids).toContain(1003)
+        expect(ids).toContain('1001')
+        expect(ids).toContain('1002')
+        expect(ids).toContain('1003')
         // Ensure no duplicates
         expect(new Set(ids).size).toBe(3)
     })
