@@ -27,6 +27,7 @@ const topPairsResponse = {
             player1Wins: 6,
             player2Wins: 4,
             lastMatchDate: '2026-04-10T18:00:00',
+            heatScore: 80,
         },
         {
             player1: { characterId: 202, btag: 'Wither#5678', name: 'Wither' },
@@ -35,6 +36,7 @@ const topPairsResponse = {
             player1Wins: 3,
             player2Wins: 2,
             lastMatchDate: '2026-04-08T20:00:00',
+            heatScore: 50,
         },
     ],
 }
@@ -447,21 +449,20 @@ describe('H2H page', () => {
         expect(screen.getByText('—')).toBeTruthy()
     })
 
-    it('shows H2HTopPairs activity table on mount before any player is selected', async () => {
+    it('shows H2HTopPairs rivalry cards on mount before any player is selected', async () => {
         wrap(<H2H />)
-        // "Last Played" is the column header unique to the H2HTopPairs table
-        await waitFor(() => expect(screen.getByText('Last Played')).toBeTruthy())
+        // rivalry cards are unique to the H2HTopPairs section
+        await waitFor(() => expect(screen.getAllByTestId('h2h-rivalry-card').length).toBeGreaterThan(0))
         // Match results table not yet rendered
         expect(screen.queryByText('Equilibrium')).toBeNull()
     })
 
-    it('clicking a top-pairs row pre-fills pickers and fetches H2H', async () => {
+    it('clicking a top-pairs card pre-fills pickers and fetches H2H', async () => {
         wrap(<H2H />)
-        await waitFor(() => expect(screen.getAllByText('Pistola').length).toBeGreaterThan(0))
+        await waitFor(() => expect(screen.getAllByTestId('h2h-rivalry-card').length).toBeGreaterThan(0))
 
-        // Click the first row (Pistola vs Wither) in the activity table
-        const pistolaCells = screen.getAllByText('Pistola')
-        fireEvent.click(pistolaCells[0].closest('tr')!)
+        // Click the first card (Pistola vs Wither)
+        fireEvent.click(screen.getAllByTestId('h2h-rivalry-card')[0])
 
         await waitFor(() =>
             expect(hoisted.mockGetH2H).toHaveBeenCalledWith(101, 202)
@@ -474,7 +475,7 @@ describe('H2H page', () => {
         expect(p2Input.value).toBe('Wither')
     })
 
-    it('hides activity table after a search is initiated', async () => {
+    it('hides activity cards after a search is initiated', async () => {
         wrap(<H2H />)
         await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
 
@@ -484,11 +485,11 @@ describe('H2H page', () => {
         await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
         await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
 
-        // Activity table columns no longer visible
-        expect(screen.queryByText('Last Played')).toBeNull()
+        // Activity rivalry cards no longer visible
+        expect(screen.queryAllByTestId('h2h-rivalry-card')).toHaveLength(0)
     })
 
-    it('restores activity table when both pickers are cleared', async () => {
+    it('restores activity cards when both pickers are cleared', async () => {
         wrap(<H2H />)
         await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
 
@@ -501,8 +502,8 @@ describe('H2H page', () => {
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: '' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: '' } })
 
-        // Activity table columns visible again
-        await waitFor(() => expect(screen.getByText('Last Played')).toBeTruthy())
+        // Activity rivalry cards visible again
+        await waitFor(() => expect(screen.getAllByTestId('h2h-rivalry-card').length).toBeGreaterThan(0))
     })
 
     it('shows ghost flag icon only on rows with hasPendingFlag true', async () => {

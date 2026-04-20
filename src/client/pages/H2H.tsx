@@ -324,7 +324,6 @@ export const H2H = () => {
                 opened={flaggedMatchId !== null}
                 onClose={() => setFlaggedMatchId(null)}
             />
-            <Title order={2} mb="md" ta="center">Head to Head</Title>
 
             <Group align="flex-end" mb="lg" justify="center">
                 <Autocomplete
