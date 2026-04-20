@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import {
     Autocomplete,
     ActionIcon,
+    Button,
     Group,
     Title,
     Text,
@@ -15,9 +16,10 @@ import {
     Center,
 } from '@mantine/core'
 import { IconAlertCircle, IconFlag } from '@tabler/icons-react'
-import { getCommunityPlayers, getH2H } from '../services/api'
-import type { H2HResponse, H2HMatch } from '../../shared/types'
+import { getCommunityPlayers, getH2H, getTopH2HPairs } from '../services/api'
+import type { H2HResponse, H2HMatch, TopPairEntry } from '../../shared/types'
 import { FlagMatchModal } from '../components/Match/FlagMatchModal'
+import { H2HTopPairs } from '../components/h2h/H2HTopPairs'
 
 interface PlayerOption {
     value: string   // characterId as string
@@ -41,10 +43,14 @@ const MATCH_TYPE_TOURNAMENT = 'tournament'
 
 export const H2H = () => {
     const [players, setPlayers] = useState<PlayerOption[]>([])
+    const [showPicker, setShowPicker] = useState(false)
     const [player1Input, setPlayer1Input] = useState('')
     const [player2Input, setPlayer2Input] = useState('')
     const [player1Id, setPlayer1Id] = useState<number | null>(null)
     const [player2Id, setPlayer2Id] = useState<number | null>(null)
+
+    const [topPairs, setTopPairs] = useState<TopPairEntry[]>([])
+    const [topPairsLoading, setTopPairsLoading] = useState(true)
 
     const [h2hData, setH2hData] = useState<H2HResponse | null>(null)
     const [loading, setLoading] = useState(false)
@@ -52,6 +58,14 @@ export const H2H = () => {
 
     const [activeTab, setActiveTab] = useState<string>(MATCH_TYPE_ALL)
     const [flaggedMatchId, setFlaggedMatchId] = useState<number | string | null>(null)
+
+    // Fetch top active rivalries on mount for the landing state.
+    useEffect(() => {
+        getTopH2HPairs()
+            .then(res => setTopPairs(res.data as TopPairEntry[]))
+            .catch(() => { /* non-fatal */ })
+            .finally(() => setTopPairsLoading(false))
+    }, [])
 
     // Load community player roster on mount for picker options.
     // Uses the community CSV (all known players) rather than the ranked
@@ -98,6 +112,19 @@ export const H2H = () => {
             fetchH2H(player1Id, player2Id)
         }
     }, [player1Id, player2Id, fetchH2H])
+
+    const searchInitiated = player1Id !== null && player2Id !== null
+
+    const handleSelectPair = useCallback((p1Id: number, p2Id: number) => {
+        const p1 = players.find(p => p.id === p1Id)
+        const p2 = players.find(p => p.id === p2Id)
+        if (!p1 || !p2) return
+        setShowPicker(true)
+        setPlayer1Input(p1.label)
+        setPlayer1Id(p1.id)
+        setPlayer2Input(p2.label)
+        setPlayer2Id(p2.id)
+    }, [players])
 
     const resolvePlayerOption = (label: string): PlayerOption | undefined =>
         players.find(p => p.label === label)
@@ -300,30 +327,60 @@ export const H2H = () => {
                 opened={flaggedMatchId !== null}
                 onClose={() => setFlaggedMatchId(null)}
             />
-            <Title order={2} mb="md" ta="center">Head to Head</Title>
 
-            <Group align="flex-end" mb="lg" justify="center">
-                <Autocomplete
-                    label="Player 1"
-                    placeholder="Search player…"
-                    data={players.map(p => ({ value: p.value, label: p.label }))}
-                    value={player1Input}
-                    onChange={handlePlayer1Change}
-                    miw={220}
-                    aria-label="Select Player 1"
-                />
-                <Autocomplete
-                    label="Player 2"
-                    placeholder="Search player…"
-                    data={players.map(p => ({ value: p.value, label: p.label }))}
-                    value={player2Input}
-                    onChange={handlePlayer2Change}
-                    miw={220}
-                    aria-label="Select Player 2"
-                />
-            </Group>
+            {(showPicker || searchInitiated) && (
+                <Group align="flex-end" mb="lg" justify="center">
+                    <Autocomplete
+                        label="Player 1"
+                        placeholder="Search player…"
+                        data={players.map(p => ({ value: p.value, label: p.label }))}
+                        value={player1Input}
+                        onChange={handlePlayer1Change}
+                        miw={220}
+                        aria-label="Select Player 1"
+                    />
+                    <Autocomplete
+                        label="Player 2"
+                        placeholder="Search player…"
+                        data={players.map(p => ({ value: p.value, label: p.label }))}
+                        value={player2Input}
+                        onChange={handlePlayer2Change}
+                        miw={220}
+                        aria-label="Select Player 2"
+                    />
+                    {showPicker && !searchInitiated && (
+                        <Button variant="subtle" color="gray" onClick={() => setShowPicker(false)} aria-label="Close compare">
+                            Cancel
+                        </Button>
+                    )}
+                </Group>
+            )}
 
-            {renderContent()}
+            {!searchInitiated ? (
+                <Stack gap="xs" mb="xl">
+                    <Group justify="space-between" align="center" wrap="nowrap">
+                        <div style={{ flex: 1 }} />
+                        <Stack gap={2} align="center" style={{ flex: 2 }}>
+                            <Title order={3} ta="center">Top Rivalries</Title>
+                            <Text size="sm" c="dimmed" ta="center">The most contested matchups in the CR scene</Text>
+                        </Stack>
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                            {!showPicker && (
+                                <Button variant="light" onClick={() => setShowPicker(true)}>
+                                    Compare Players
+                                </Button>
+                            )}
+                        </div>
+                    </Group>
+                    <H2HTopPairs
+                        pairs={topPairs}
+                        onSelectPair={handleSelectPair}
+                        isLoading={topPairsLoading}
+                    />
+                </Stack>
+            ) : (
+                renderContent()
+            )}
         </>
     )
 }

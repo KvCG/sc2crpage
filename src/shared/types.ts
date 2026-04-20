@@ -186,3 +186,13 @@ export interface H2HResponse {
     }
     matches: H2HMatch[]
 }
+
+export interface TopPairEntry {
+    player1: { characterId: number; btag: string; name?: string }
+    player2: { characterId: number; btag: string; name?: string }
+    matchCount: number
+    player1Wins: number
+    player2Wins: number
+    lastMatchDate: string
+    heatScore: number
+}

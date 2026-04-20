@@ -6,6 +6,7 @@ const hoisted = vi.hoisted(() => ({
     syncPairMock: vi.fn(),
     getCommunityPlayerMock: vi.fn(),
     listFlagsMock: vi.fn(),
+    getTopPairsMock: vi.fn(),
     loggerMock: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -16,6 +17,7 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('../../services/h2hService', () => ({
     loadPairRecord: hoisted.loadPairRecordMock,
     syncPair: hoisted.syncPairMock,
+    getTopPairs: hoisted.getTopPairsMock,
     H2HResolutionError: class H2HResolutionError extends Error {
         readonly characterId: number
         constructor(characterId: number) {
@@ -57,6 +59,7 @@ function createMockResponse() {
         statusCode: 200,
         status: vi.fn(),
         json: vi.fn(),
+        set: vi.fn(),
     }
     res.status.mockImplementation((code: number) => {
         res.statusCode = code
@@ -66,7 +69,7 @@ function createMockResponse() {
         res.jsonData = data
         return res
     })
-    return res as unknown as Response & { jsonData: unknown; statusCode: number }
+    return res as unknown as Response & { jsonData: unknown; statusCode: number; set: ReturnType<typeof vi.fn> }
 }
 
 function createMockRequest(query: Record<string, string> = {}): Request {
@@ -169,6 +172,7 @@ describe('h2hRoutes', () => {
         hoisted.getCommunityPlayerMock.mockReset()
         hoisted.listFlagsMock.mockReset()
         hoisted.listFlagsMock.mockResolvedValue([])
+        hoisted.getTopPairsMock.mockReset()
         hoisted.loggerMock.info.mockReset()
         hoisted.loggerMock.error.mockReset()
 
@@ -382,6 +386,92 @@ describe('h2hRoutes', () => {
 
             const summary = (res.jsonData as Record<string, unknown>).summary as Record<string, unknown>
             expect(summary.totalGames).toBe(4)
+        })
+    })
+
+    describe('GET /h2h/top-pairs', () => {
+        let topPairsHandler: (req: Request, res: Response) => Promise<void>
+
+        beforeEach(async () => {
+            const routes = await import('../../routes/h2hRoutes')
+            const router = routes.default
+            const layer = router.stack?.find((l: any) => l.route?.path === '/h2h/top-pairs')
+            topPairsHandler = layer?.route?.stack?.[0]?.handle
+        })
+
+        async function callTopPairsRoute(query: Record<string, string> = {}) {
+            const req = createMockRequest(query)
+            const res = createMockResponse()
+            await topPairsHandler(req, res as unknown as Response)
+            return res
+        }
+
+        const samplePairs = [
+            {
+                player1: { characterId: 49312, btag: 'Alpha#1234', name: 'Alpha' },
+                player2: { characterId: 2741271, btag: 'Beta#5678', name: 'Beta' },
+                matchCount: 5,
+                player1Wins: 3,
+                player2Wins: 2,
+                lastMatchDate: '2026-04-10T00:00:00Z',
+            },
+        ]
+
+        it('returns 200 with TopPairEntry[] on valid request', async () => {
+            hoisted.getTopPairsMock.mockResolvedValue(samplePairs)
+
+            const res = await callTopPairsRoute()
+
+            expect(res.statusCode).toBe(200)
+            expect(res.jsonData).toEqual(samplePairs)
+        })
+
+        it('defaults limit to 20 when not provided', async () => {
+            hoisted.getTopPairsMock.mockResolvedValue([])
+
+            await callTopPairsRoute()
+
+            expect(hoisted.getTopPairsMock).toHaveBeenCalledWith(20)
+        })
+
+        it('passes explicit limit to getTopPairs', async () => {
+            hoisted.getTopPairsMock.mockResolvedValue([])
+
+            await callTopPairsRoute({ limit: '5' })
+
+            expect(hoisted.getTopPairsMock).toHaveBeenCalledWith(5)
+        })
+
+        it('returns 400 when limit is not numeric', async () => {
+            const res = await callTopPairsRoute({ limit: 'abc' })
+
+            expect(res.statusCode).toBe(400)
+            const body = res.jsonData as Record<string, unknown>
+            expect(body.error).toBe('Invalid query parameters')
+        })
+
+        it('returns 400 when limit exceeds 50', async () => {
+            const res = await callTopPairsRoute({ limit: '51' })
+
+            expect(res.statusCode).toBe(400)
+            const body = res.jsonData as Record<string, unknown>
+            expect(body.error).toBe('Invalid query parameters')
+        })
+
+        it('returns 400 when limit is 0', async () => {
+            const res = await callTopPairsRoute({ limit: '0' })
+
+            expect(res.statusCode).toBe(400)
+            const body = res.jsonData as Record<string, unknown>
+            expect(body.error).toBe('Invalid query parameters')
+        })
+
+        it('sets Cache-Control: public, max-age=3600 on success', async () => {
+            hoisted.getTopPairsMock.mockResolvedValue(samplePairs)
+
+            const res = await callTopPairsRoute()
+
+            expect(res.set).toHaveBeenCalledWith('Cache-Control', 'public, max-age=3600')
         })
     })
 })

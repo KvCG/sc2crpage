@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
-import { loadPairRecord, syncPair, H2HResolutionError } from '../services/h2hService'
+import { loadPairRecord, syncPair, H2HResolutionError, getTopPairs } from '../services/h2hService'
 import {
     submitFlag,
     listFlags,
@@ -158,6 +158,52 @@ router.get('/community-players', async (_req: Request, res: Response) => {
     } catch (error) {
         logger.error({ feature: 'h2h', error }, 'Failed to load community players')
         res.status(500).json({ error: 'Failed to load community players' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// GET /api/h2h/top-pairs — Top active pairs by match count
+// ---------------------------------------------------------------------------
+
+const topPairsQuerySchema = z.object({
+    limit: z
+        .string()
+        .optional()
+        .transform((val) => (val === undefined ? 20 : Number(val)))
+        .pipe(z.number().int().min(1).max(50)),
+})
+
+/**
+ * GET /api/h2h/top-pairs
+ *
+ * Returns the top head-to-head pairs ranked by non-voided match count.
+ *
+ * Query Parameters:
+ * - limit: max pairs to return (1–50, default 20)
+ */
+router.get('/h2h/top-pairs', async (req: Request, res: Response) => {
+    const parsed = topPairsQuerySchema.safeParse(req.query)
+
+    if (!parsed.success) {
+        const details = parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: req.query[issue.path[0] as string],
+        }))
+        return res.status(400).json({ error: 'Invalid query parameters', details })
+    }
+
+    const { limit } = parsed.data
+
+    logger.info({ feature: 'h2h', limit }, 'Processing top-pairs request')
+
+    try {
+        const pairs = await getTopPairs(limit)
+        res.set('Cache-Control', 'public, max-age=3600')
+        return res.json(pairs)
+    } catch (error) {
+        logger.error({ feature: 'h2h', limit, error }, 'Error processing top-pairs request')
+        return res.status(500).json({ error: 'Failed to retrieve top pairs' })
     }
 })
 

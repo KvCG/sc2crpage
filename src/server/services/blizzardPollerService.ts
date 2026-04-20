@@ -8,7 +8,7 @@ import logger from '../logging/logger'
 // Constants
 // ============================================================================
 
-const POLL_INTERVAL_MS = 5 * 60 * 1000
+const pollIntervalMs = Number(process.env.POLL_INTERVAL_MIN ?? 20) * 60 * 1000
 
 // ============================================================================
 // State
@@ -39,13 +39,13 @@ export function start(): void {
     if (pollTimer) return // already running
 
     logger.info(
-        { feature: 'blizzard-poller', intervalMs: POLL_INTERVAL_MS },
+        { feature: 'blizzard-poller', intervalMs: pollIntervalMs },
         'Blizzard poller started'
     )
 
     // Run an immediate cycle, then schedule subsequent ones
     void poll()
-    pollTimer = setInterval(() => void poll(), POLL_INTERVAL_MS)
+    pollTimer = setInterval(() => void poll(), pollIntervalMs)
 }
 
 /**
