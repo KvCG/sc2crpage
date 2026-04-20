@@ -5,16 +5,39 @@ import { MantineProvider } from '@mantine/core'
 const hoisted = vi.hoisted(() => ({
     mockGetCommunityPlayers: vi.fn(),
     mockGetH2H: vi.fn(),
+    mockGetTopH2HPairs: vi.fn(),
     mockPostH2HFlag: vi.fn(),
 }))
 
 vi.mock('../services/api', () => ({
     getCommunityPlayers: hoisted.mockGetCommunityPlayers,
     getH2H: hoisted.mockGetH2H,
+    getTopH2HPairs: hoisted.mockGetTopH2HPairs,
     postH2HFlag: hoisted.mockPostH2HFlag,
 }))
 
 import { H2H } from '../pages/H2H'
+
+const topPairsResponse = {
+    data: [
+        {
+            player1: { characterId: 101, btag: 'Pistola#1234', name: 'Pistola' },
+            player2: { characterId: 202, btag: 'Wither#5678', name: 'Wither' },
+            matchCount: 10,
+            player1Wins: 6,
+            player2Wins: 4,
+            lastMatchDate: '2026-04-10T18:00:00',
+        },
+        {
+            player1: { characterId: 202, btag: 'Wither#5678', name: 'Wither' },
+            player2: { characterId: 303, btag: 'OtherPlayer#0000' },
+            matchCount: 5,
+            player1Wins: 3,
+            player2Wins: 2,
+            lastMatchDate: '2026-04-08T20:00:00',
+        },
+    ],
+}
 
 const communityPlayersResponse = {
     data: [
@@ -88,6 +111,7 @@ describe('H2H page', () => {
     beforeEach(() => {
         hoisted.mockGetCommunityPlayers.mockResolvedValue(communityPlayersResponse)
         hoisted.mockGetH2H.mockResolvedValue(h2hResponse)
+        hoisted.mockGetTopH2HPairs.mockResolvedValue(topPairsResponse)
     })
 
     it('renders two player pickers on mount', async () => {
@@ -421,6 +445,64 @@ describe('H2H page', () => {
         await waitFor(() => expect(screen.getByText('Ruby Rock LE')).toBeTruthy())
 
         expect(screen.getByText('—')).toBeTruthy()
+    })
+
+    it('shows H2HTopPairs activity table on mount before any player is selected', async () => {
+        wrap(<H2H />)
+        // "Last Played" is the column header unique to the H2HTopPairs table
+        await waitFor(() => expect(screen.getByText('Last Played')).toBeTruthy())
+        // Match results table not yet rendered
+        expect(screen.queryByText('Equilibrium')).toBeNull()
+    })
+
+    it('clicking a top-pairs row pre-fills pickers and fetches H2H', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(screen.getAllByText('Pistola').length).toBeGreaterThan(0))
+
+        // Click the first row (Pistola vs Wither) in the activity table
+        const pistolaCells = screen.getAllByText('Pistola')
+        fireEvent.click(pistolaCells[0].closest('tr')!)
+
+        await waitFor(() =>
+            expect(hoisted.mockGetH2H).toHaveBeenCalledWith(101, 202)
+        )
+
+        // Both pickers are filled
+        const p1Input = screen.getByLabelText('Select Player 1') as HTMLInputElement
+        const p2Input = screen.getByLabelText('Select Player 2') as HTMLInputElement
+        expect(p1Input.value).toBe('Pistola')
+        expect(p2Input.value).toBe('Wither')
+    })
+
+    it('hides activity table after a search is initiated', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        // Activity table columns no longer visible
+        expect(screen.queryByText('Last Played')).toBeNull()
+    })
+
+    it('restores activity table when both pickers are cleared', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+
+        // Clear both pickers
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: '' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: '' } })
+
+        // Activity table columns visible again
+        await waitFor(() => expect(screen.getByText('Last Played')).toBeTruthy())
     })
 
     it('shows ghost flag icon only on rows with hasPendingFlag true', async () => {
