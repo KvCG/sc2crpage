@@ -126,8 +126,8 @@ export const H2HTopPairs = ({ pairs, onSelectPair, isLoading }: H2HTopPairsProps
                                             onClick={() => onSelectPair(pair.player1.characterId, pair.player2.characterId)}
                                         >
                                             <Table.Td>#{rank}</Table.Td>
-                                            <Table.Td>
-                                                <Group gap={6} wrap="nowrap" align="center">
+                                            <Table.Td style={{ textAlign: 'center' }}>
+                                                <Group gap={6} wrap="nowrap" align="center" justify="center">
                                                     <Group gap={3} wrap="nowrap" align="center">
                                                         {p1Leading && <IconCrown size={12} color="var(--mantine-color-teal-5)" />}
                                                         <Text size="sm" fw={p1Leading ? 600 : undefined} c={p1Leading ? 'teal' : undefined}>
