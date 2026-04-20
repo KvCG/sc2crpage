@@ -1,7 +1,7 @@
 import { get as httpGet, endpoints } from './pulseHttpClient'
 import logger from '../logging/logger'
 import supabase from '../db/supabaseClient'
-import type { H2HMatch, H2HPairRecord } from '../../shared/types'
+import type { H2HMatch, H2HPairRecord, TopPairEntry } from '../../shared/types'
 import { type BlizzardProfile, regionToId } from './blizzardMatchClient'
 
 // ============================================================================
@@ -477,4 +477,116 @@ export async function syncPair(charId1: number, charId2: number): Promise<H2HPai
         'Pair synced'
     )
     return stored
+}
+
+// ============================================================================
+// Top pairs
+// ============================================================================
+
+interface PairRow {
+    id: number
+    player1_character_id: number
+    player2_character_id: number
+    h2h_matches: Array<{
+        winner_character_id: number
+        match_date: string
+        is_voided: boolean
+    }>
+}
+
+interface CommunityPlayerRow {
+    character_id: string | number
+    btag: string
+    display_name: string | null
+}
+
+/**
+ * Returns the top `limit` head-to-head pairs ranked by non-voided match count.
+ * Matches and win split are derived from a single embedded Supabase query.
+ * Player display names are resolved in a second query against community_players.
+ */
+export async function getTopPairs(limit: number): Promise<TopPairEntry[]> {
+    try {
+        const { data: pairs, error: pairsError } = await supabase
+            .from('h2h_pairs')
+            .select(
+                'id, player1_character_id, player2_character_id, ' +
+                    'h2h_matches(winner_character_id, match_date, is_voided)',
+            )
+
+        if (pairsError) throw pairsError
+        if (!pairs || pairs.length === 0) return []
+
+        const aggregated = (pairs as unknown as PairRow[])
+            .map((pair) => {
+                const active = pair.h2h_matches.filter((m) => !m.is_voided)
+                const matchCount = active.length
+                const player1Wins = active.filter(
+                    (m) => m.winner_character_id === pair.player1_character_id,
+                ).length
+                const player2Wins = active.filter(
+                    (m) => m.winner_character_id === pair.player2_character_id,
+                ).length
+                const lastMatchDate = active.reduce(
+                    (latest, m) => (m.match_date > latest ? m.match_date : latest),
+                    '',
+                )
+                return {
+                    player1CharacterId: pair.player1_character_id,
+                    player2CharacterId: pair.player2_character_id,
+                    matchCount,
+                    player1Wins,
+                    player2Wins,
+                    lastMatchDate,
+                }
+            })
+            .filter((p) => p.matchCount > 0)
+            .sort(
+                (a, b) =>
+                    b.matchCount - a.matchCount ||
+                    b.lastMatchDate.localeCompare(a.lastMatchDate),
+            )
+            .slice(0, limit)
+
+        if (aggregated.length === 0) return []
+
+        const charIds = [
+            ...new Set(aggregated.flatMap((p) => [p.player1CharacterId, p.player2CharacterId])),
+        ]
+
+        const { data: players, error: playersError } = await supabase
+            .from('community_players')
+            .select('character_id, btag, display_name')
+            .in('character_id', charIds)
+
+        if (playersError) throw playersError
+
+        const playerMap = new Map(
+            (players ?? []).map((p) => [
+                Number((p as unknown as CommunityPlayerRow).character_id),
+                p as unknown as CommunityPlayerRow,
+            ]),
+        )
+
+        const buildPlayerMeta = (
+            characterId: number,
+        ): { characterId: number; btag: string; name?: string } => {
+            const p = playerMap.get(characterId)
+            if (!p) return { characterId, btag: '' }
+            const name = p.display_name ?? p.btag.split('#')[0]
+            return { characterId, btag: p.btag, name }
+        }
+
+        return aggregated.map((pair) => ({
+            player1: buildPlayerMeta(pair.player1CharacterId),
+            player2: buildPlayerMeta(pair.player2CharacterId),
+            matchCount: pair.matchCount,
+            player1Wins: pair.player1Wins,
+            player2Wins: pair.player2Wins,
+            lastMatchDate: pair.lastMatchDate,
+        }))
+    } catch (err) {
+        logger.error({ feature: 'h2h', err }, 'getTopPairs failed')
+        return []
+    }
 }
