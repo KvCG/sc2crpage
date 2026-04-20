@@ -753,24 +753,36 @@ describe('getTopPairs', () => {
     })
 
     it('returns pairs sorted by heatScore descending', async () => {
+        // Intent changed from old matchCount DESC: recency and competitiveness now factor into ranking.
+        // A pair with fewer but more recent matches outranks a pair with more matches played months ago.
         const pairRows = [
             {
                 id: 1,
                 player1_character_id: 49312,
                 player2_character_id: 2741271,
-                h2h_matches: [
-                    { winner_character_id: 49312,  match_date: '2026-04-01T00:00:00Z', is_voided: false },
-                    { winner_character_id: 2741271, match_date: '2026-04-02T00:00:00Z', is_voided: false },
-                ],
+                // 30 matches ~8 months ago, stomp series (30-0)
+                h2h_matches: Array.from({ length: 30 }, () => ({
+                    winner_character_id: 49312,
+                    match_date: '2025-08-19T12:00:00Z',
+                    is_voided: false,
+                })),
             },
             {
                 id: 2,
                 player1_character_id: 1111,
                 player2_character_id: 2222,
+                // 10 matches played yesterday, perfectly even (5-5)
                 h2h_matches: [
-                    { winner_character_id: 1111, match_date: '2026-04-03T00:00:00Z', is_voided: false },
-                    { winner_character_id: 1111, match_date: '2026-04-04T00:00:00Z', is_voided: false },
-                    { winner_character_id: 2222, match_date: '2026-04-05T00:00:00Z', is_voided: false },
+                    ...Array.from({ length: 5 }, () => ({
+                        winner_character_id: 1111,
+                        match_date: '2026-04-18T12:00:00Z',
+                        is_voided: false,
+                    })),
+                    ...Array.from({ length: 5 }, () => ({
+                        winner_character_id: 2222,
+                        match_date: '2026-04-18T12:00:00Z',
+                        is_voided: false,
+                    })),
                 ],
             },
         ]
@@ -779,8 +791,10 @@ describe('getTopPairs', () => {
         const result = await getTopPairs(10)
 
         expect(result).toHaveLength(2)
-        expect(result[0].matchCount).toBe(3)
-        expect(result[1].matchCount).toBe(2)
+        // The 10 recent matches (pair id:2) must outrank the 30 old matches (pair id:1)
+        expect(result[0].player1.characterId).toBe(1111)
+        expect(result[0].heatScore).toBeGreaterThan(result[1].heatScore)
+        expect(result[1].player1.characterId).toBe(49312)
     })
 
     it('derives win split from winner_character_id without a separate query', async () => {
@@ -1011,6 +1025,51 @@ describe('getTopPairs', () => {
             expect(result[0].player1.characterId).toBe(1111)
             expect(result[0].heatScore).toBeGreaterThan(result[1].heatScore)
             expect(result[1].player1.characterId).toBe(49312)
+        })
+
+        it('50/50 pair outranks 100/0 stomp with equal matchCount and same lastMatchDate', async () => {
+            const sameDate = '2026-04-18T12:00:00Z'
+            const pairRows = [
+                {
+                    id: 1,
+                    player1_character_id: 49312,
+                    player2_character_id: 2741271,
+                    // 4-0 stomp: competitiveness = 1 - |4-0|/4 = 0.0
+                    h2h_matches: Array.from({ length: 4 }, () => ({
+                        winner_character_id: 49312,
+                        match_date: sameDate,
+                        is_voided: false,
+                    })),
+                },
+                {
+                    id: 2,
+                    player1_character_id: 1111,
+                    player2_character_id: 2222,
+                    // 2-2 split: competitiveness = 1 - |2-2|/4 = 1.0
+                    h2h_matches: [
+                        ...Array.from({ length: 2 }, () => ({
+                            winner_character_id: 1111,
+                            match_date: sameDate,
+                            is_voided: false,
+                        })),
+                        ...Array.from({ length: 2 }, () => ({
+                            winner_character_id: 2222,
+                            match_date: sameDate,
+                            is_voided: false,
+                        })),
+                    ],
+                },
+            ]
+            setupTopPairs(pairRows, PLAYERS)
+
+            const result = await getTopPairs(10)
+
+            // Equal matchCount and identical lastMatchDate → recencyFactor is the same for both.
+            // heatScore = matchCount × recencyFactor × (0.5 + 0.5 × competitiveness)
+            // 50/50: 4 × r × 1.0   vs   stomp: 4 × r × 0.5   → 50/50 must win
+            expect(result[0].player1.characterId).toBe(1111)  // 50/50 pair
+            expect(result[0].heatScore).toBeGreaterThan(result[1].heatScore)
+            expect(result[1].player1.characterId).toBe(49312) // stomp pair
         })
     })
 

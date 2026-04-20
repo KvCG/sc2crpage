@@ -14,7 +14,7 @@ Vitest with separate configs per side:
 
 Test files live under `src/*/__tests__/` (unit and integration) and mirror the source structure.
 
-Use to run tests from the root: 
+Use to run tests from the root using package.json scripts and npm (example `npm run test`): 
 - "test": "vitest run -c vitest.client.config.ts && vitest run -c vitest.server.config.ts",
 - "test:client": "vitest run -c vitest.client.config.ts",
 - "test:server": "vitest run -c vitest.server.config.ts",
