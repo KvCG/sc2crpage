@@ -1,7 +1,7 @@
 import { get as httpGet, endpoints } from './pulseHttpClient'
 import logger from '../logging/logger'
 import supabase from '../db/supabaseClient'
-import type { H2HMatch, H2HPairRecord } from '../../shared/types'
+import type { H2HMatch, H2HPairRecord, TopPairEntry } from '../../shared/types'
 import { type BlizzardProfile, regionToId } from './blizzardMatchClient'
 
 // ============================================================================
@@ -477,4 +477,138 @@ export async function syncPair(charId1: number, charId2: number): Promise<H2HPai
         'Pair synced'
     )
     return stored
+}
+
+// ============================================================================
+// Top pairs
+// ============================================================================
+
+interface PairRow {
+    id: number
+    player1_character_id: number
+    player2_character_id: number
+    h2h_matches: Array<{
+        winner_character_id: number
+        match_date: string
+        is_voided: boolean
+    }>
+}
+
+interface CommunityPlayerRow {
+    character_id: string | number
+    btag: string
+    display_name: string | null
+}
+
+/**
+ * Returns the top `limit` head-to-head pairs ranked by non-voided match count.
+ * Matches and win split are derived from a single embedded Supabase query.
+ * Player display names are resolved in a second query against community_players.
+ */
+export async function getTopPairs(limit: number): Promise<TopPairEntry[]> {
+    try {
+        // First find only the pair IDs that actually have non-voided matches.
+        // h2h_pairs can have thousands of pre-seeded rows; querying all of them
+        // silently hits PostgREST's page limit and hides most rivalries.
+        const { data: matchRows, error: matchRowsError } = await supabase
+            .from('h2h_matches')
+            .select('pair_id')
+            .eq('is_voided', false)
+
+        if (matchRowsError) throw matchRowsError
+        if (!matchRows || matchRows.length === 0) return []
+
+        const activePairIds = [...new Set(matchRows.map((r) => (r as { pair_id: number }).pair_id))]
+
+        const { data: pairs, error: pairsError } = await supabase
+            .from('h2h_pairs')
+            .select(
+                'id, player1_character_id, player2_character_id, ' +
+                    'h2h_matches(winner_character_id, match_date, is_voided)',
+            )
+            .in('id', activePairIds)
+
+        if (pairsError) throw pairsError
+        if (!pairs || pairs.length === 0) return []
+
+        const today = Date.now()
+        const aggregated = (pairs as unknown as PairRow[])
+            .map((pair) => {
+                const active = pair.h2h_matches.filter((m) => !m.is_voided)
+                const matchCount = active.length
+                const player1Wins = active.filter(
+                    (m) => m.winner_character_id === pair.player1_character_id,
+                ).length
+                const player2Wins = active.filter(
+                    (m) => m.winner_character_id === pair.player2_character_id,
+                ).length
+                const lastMatchDate = active.reduce(
+                    (latest, m) => (m.match_date > latest ? m.match_date : latest),
+                    '',
+                )
+                const daysSinceLast = lastMatchDate
+                    ? (today - new Date(lastMatchDate).getTime()) / 86400000
+                    : Infinity
+                const recencyFactor = Math.exp(-daysSinceLast / 180)
+                const competitiveness =
+                    matchCount > 0
+                        ? 1 - Math.abs(player1Wins - player2Wins) / matchCount
+                        : 0
+                const heatScore = matchCount * recencyFactor * (0.5 + 0.5 * competitiveness)
+                return {
+                    player1CharacterId: pair.player1_character_id,
+                    player2CharacterId: pair.player2_character_id,
+                    matchCount,
+                    player1Wins,
+                    player2Wins,
+                    lastMatchDate,
+                    heatScore,
+                }
+            })
+            .filter((p) => p.matchCount > 0)
+            .sort((a, b) => b.heatScore - a.heatScore)
+            .slice(0, limit)
+
+        if (aggregated.length === 0) return []
+
+        const charIds = [
+            ...new Set(aggregated.flatMap((p) => [p.player1CharacterId, p.player2CharacterId])),
+        ]
+
+        const { data: players, error: playersError } = await supabase
+            .from('community_players')
+            .select('character_id, btag, display_name')
+            .in('character_id', charIds)
+
+        if (playersError) throw playersError
+
+        const playerMap = new Map(
+            (players ?? []).map((p) => [
+                Number((p as unknown as CommunityPlayerRow).character_id),
+                p as unknown as CommunityPlayerRow,
+            ]),
+        )
+
+        const buildPlayerMeta = (
+            characterId: number,
+        ): { characterId: number; btag: string; name?: string } => {
+            const p = playerMap.get(characterId)
+            if (!p) return { characterId, btag: '' }
+            const name = p.display_name ?? p.btag.split('#')[0]
+            return { characterId, btag: p.btag, name }
+        }
+
+        return aggregated.map((pair) => ({
+            player1: buildPlayerMeta(pair.player1CharacterId),
+            player2: buildPlayerMeta(pair.player2CharacterId),
+            matchCount: pair.matchCount,
+            player1Wins: pair.player1Wins,
+            player2Wins: pair.player2Wins,
+            lastMatchDate: pair.lastMatchDate,
+            heatScore: pair.heatScore,
+        }))
+    } catch (err) {
+        logger.error({ feature: 'h2h', err }, 'getTopPairs failed')
+        return []
+    }
 }

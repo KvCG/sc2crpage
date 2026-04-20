@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios'
 import config from './config'
 import resolveRequestId from '../utils/requestIdentity'
-import type { MatchFlagType, MatchFlagStatus, H2HFlagWithMatch } from '../../shared/types'
+import type { MatchFlagType, MatchFlagStatus, H2HFlagWithMatch, TopPairEntry } from '../../shared/types'
 
 const api: AxiosInstance = axios.create({
     baseURL: config.API_URL,
@@ -115,6 +115,11 @@ export const getPlayerActivityAnalysis = async (params?: {
 
 export const getH2H = async (player1: number, player2: number) => {
     const response = await api.get(`api/h2h`, { params: { player1, player2 } })
+    return response
+}
+
+export const getTopH2HPairs = async (limit = 50) => {
+    const response = await api.get<TopPairEntry[]>(`api/h2h/top-pairs`, { params: { limit } })
     return response
 }
 
