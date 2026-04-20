@@ -12,7 +12,12 @@ Vitest with separate configs per side:
 - `vitest.client.config.ts` — jsdom environment
 - `vitest.server.config.ts` — Node environment
 
-Test files live under `src/server/__tests__/` (unit and integration) and mirror the source structure.
+Test files live under `src/*/__tests__/` (unit and integration) and mirror the source structure.
+
+Use to run tests from the root: 
+- "test": "vitest run -c vitest.client.config.ts && vitest run -c vitest.server.config.ts",
+- "test:client": "vitest run -c vitest.client.config.ts",
+- "test:server": "vitest run -c vitest.server.config.ts",
 
 ## Test Organization
 
@@ -62,6 +67,11 @@ Test at the route-handler level with mocked service dependencies. Do not call li
 - Unexpected HTTP status codes from external services
 - Feature flag enabled vs disabled states
 - Boundary values (min/max games, MMR range, empty player lists)
+
+## Invariants
+ - Do not add tests just to increase coverage — every test must validate a specific behavior or edge case
+ - Test valuable business logic and critical invariants, not trivial getters/setters or third-party library code
+ - No redundant tests that cover the same logic path — aim for comprehensive but efficient coverage
 
 ## Snapshot Testing
 
