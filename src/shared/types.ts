@@ -194,4 +194,5 @@ export interface TopPairEntry {
     player1Wins: number
     player2Wins: number
     lastMatchDate: string
+    heatScore: number
 }
