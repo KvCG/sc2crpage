@@ -108,6 +108,12 @@ const h2hResponse = {
 }
 
 const wrap = (ui: React.ReactElement) => render(<MantineProvider>{ui}</MantineProvider>)
+const openPicker = () => fireEvent.click(screen.getByRole('button', { name: 'Compare Players' }))
+const renderWithPicker = async () => {
+    wrap(<H2H />)
+    await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+    openPicker()
+}
 
 describe('H2H page', () => {
     beforeEach(() => {
@@ -116,16 +122,55 @@ describe('H2H page', () => {
         hoisted.mockGetTopH2HPairs.mockResolvedValue(topPairsResponse)
     })
 
-    it('renders two player pickers on mount', async () => {
+    it('renders Compare Players button and hides pickers on mount', async () => {
         wrap(<H2H />)
         await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        expect(screen.getByRole('button', { name: 'Compare Players' })).toBeTruthy()
+        expect(screen.queryByLabelText('Select Player 1')).toBeNull()
+        expect(screen.queryByLabelText('Select Player 2')).toBeNull()
+    })
+
+    it('shows pickers and Cancel button after clicking Compare Players', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        fireEvent.click(screen.getByRole('button', { name: 'Compare Players' }))
         expect(screen.getByLabelText('Select Player 1')).toBeTruthy()
         expect(screen.getByLabelText('Select Player 2')).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Close compare' })).toBeTruthy()
+        expect(screen.queryByRole('button', { name: 'Compare Players' })).toBeNull()
+    })
+
+    it('Cancel button hides pickers and restores Compare Players button', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        fireEvent.click(screen.getByRole('button', { name: 'Compare Players' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Close compare' }))
+        expect(screen.queryByLabelText('Select Player 1')).toBeNull()
+        expect(screen.getByRole('button', { name: 'Compare Players' })).toBeTruthy()
+    })
+
+    it('renders Top Rivalries heading and subtext on landing state', async () => {
+        wrap(<H2H />)
+        await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
+        expect(screen.getByText('Top Rivalries')).toBeTruthy()
+        expect(screen.getByText('The most contested matchups in the CR scene')).toBeTruthy()
+    })
+
+    it('hides Top Rivalries heading once a search is initiated', async () => {
+        await renderWithPicker()
+
+        fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        expect(screen.queryByText('Top Rivalries')).toBeNull()
+        expect(screen.queryByText('The most contested matchups in the CR scene')).toBeNull()
     })
 
     it('calls getH2H when both players are selected and renders match rows', async () => {
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         const p1Input = screen.getByLabelText('Select Player 1')
         const p2Input = screen.getByLabelText('Select Player 2')
@@ -157,8 +202,7 @@ describe('H2H page', () => {
     })
 
     it('shows data note below the table after fetching', async () => {
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -174,8 +218,7 @@ describe('H2H page', () => {
             response: { data: { error: 'Players not found' } },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -186,8 +229,7 @@ describe('H2H page', () => {
     })
 
     it('Custom tab shows empty state when no custom matches exist', async () => {
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -209,8 +251,7 @@ describe('H2H page', () => {
             },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -222,8 +263,7 @@ describe('H2H page', () => {
     })
 
     it('does not show voided note when voidedCount is 0', async () => {
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -253,8 +293,7 @@ describe('H2H page', () => {
             },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -277,8 +316,7 @@ describe('H2H page', () => {
             },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -302,8 +340,7 @@ describe('H2H page', () => {
             },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -317,8 +354,7 @@ describe('H2H page', () => {
     })
 
     it('renders no label badge for matches with matchLabel null', async () => {
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -341,8 +377,7 @@ describe('H2H page', () => {
             },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -376,8 +411,7 @@ describe('H2H page', () => {
             },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -401,8 +435,7 @@ describe('H2H page', () => {
     })
 
     it('neither Showmatch nor Tournament tab appears when no labeled matches exist', async () => {
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -437,8 +470,7 @@ describe('H2H page', () => {
             },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
@@ -476,7 +508,7 @@ describe('H2H page', () => {
     })
 
     it('hides activity cards after a search is initiated', async () => {
-        wrap(<H2H />)
+        await renderWithPicker()
         await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
@@ -490,7 +522,7 @@ describe('H2H page', () => {
     })
 
     it('restores activity cards when both pickers are cleared', async () => {
-        wrap(<H2H />)
+        await renderWithPicker()
         await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
@@ -517,8 +549,7 @@ describe('H2H page', () => {
             },
         })
 
-        wrap(<H2H />)
-        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        await renderWithPicker()
 
         fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
         fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })

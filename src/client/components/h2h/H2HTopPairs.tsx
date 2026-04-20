@@ -108,7 +108,7 @@ export const H2HTopPairs = ({ pairs, onSelectPair, isLoading }: H2HTopPairsProps
                                     <Table.Th>Rank</Table.Th>
                                     <Table.Th>Players</Table.Th>
                                     <Table.Th>Matches</Table.Th>
-                                    <Table.Th>Recency</Table.Th>
+                                    <Table.Th>Played in the last 30d</Table.Th>
                                     <Table.Th>Last Played</Table.Th>
                                 </Table.Tr>
                             </Table.Thead>

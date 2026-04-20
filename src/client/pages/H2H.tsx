@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import {
     Autocomplete,
     ActionIcon,
+    Button,
     Group,
     Title,
     Text,
@@ -42,6 +43,7 @@ const MATCH_TYPE_TOURNAMENT = 'tournament'
 
 export const H2H = () => {
     const [players, setPlayers] = useState<PlayerOption[]>([])
+    const [showPicker, setShowPicker] = useState(false)
     const [player1Input, setPlayer1Input] = useState('')
     const [player2Input, setPlayer2Input] = useState('')
     const [player1Id, setPlayer1Id] = useState<number | null>(null)
@@ -117,6 +119,7 @@ export const H2H = () => {
         const p1 = players.find(p => p.id === p1Id)
         const p2 = players.find(p => p.id === p2Id)
         if (!p1 || !p2) return
+        setShowPicker(true)
         setPlayer1Input(p1.label)
         setPlayer1Id(p1.id)
         setPlayer2Input(p2.label)
@@ -325,33 +328,56 @@ export const H2H = () => {
                 onClose={() => setFlaggedMatchId(null)}
             />
 
-            <Group align="flex-end" mb="lg" justify="center">
-                <Autocomplete
-                    label="Player 1"
-                    placeholder="Search player…"
-                    data={players.map(p => ({ value: p.value, label: p.label }))}
-                    value={player1Input}
-                    onChange={handlePlayer1Change}
-                    miw={220}
-                    aria-label="Select Player 1"
-                />
-                <Autocomplete
-                    label="Player 2"
-                    placeholder="Search player…"
-                    data={players.map(p => ({ value: p.value, label: p.label }))}
-                    value={player2Input}
-                    onChange={handlePlayer2Change}
-                    miw={220}
-                    aria-label="Select Player 2"
-                />
-            </Group>
+            {(showPicker || searchInitiated) && (
+                <Group align="flex-end" mb="lg" justify="center">
+                    <Autocomplete
+                        label="Player 1"
+                        placeholder="Search player…"
+                        data={players.map(p => ({ value: p.value, label: p.label }))}
+                        value={player1Input}
+                        onChange={handlePlayer1Change}
+                        miw={220}
+                        aria-label="Select Player 1"
+                    />
+                    <Autocomplete
+                        label="Player 2"
+                        placeholder="Search player…"
+                        data={players.map(p => ({ value: p.value, label: p.label }))}
+                        value={player2Input}
+                        onChange={handlePlayer2Change}
+                        miw={220}
+                        aria-label="Select Player 2"
+                    />
+                    {showPicker && !searchInitiated && (
+                        <Button variant="subtle" color="gray" onClick={() => setShowPicker(false)} aria-label="Close compare">
+                            Cancel
+                        </Button>
+                    )}
+                </Group>
+            )}
 
             {!searchInitiated ? (
-                <H2HTopPairs
-                    pairs={topPairs}
-                    onSelectPair={handleSelectPair}
-                    isLoading={topPairsLoading}
-                />
+                <Stack gap="xs" mb="xl">
+                    <Group justify="space-between" align="center" wrap="nowrap">
+                        <div style={{ flex: 1 }} />
+                        <Stack gap={2} align="center" style={{ flex: 2 }}>
+                            <Title order={3} ta="center">Top Rivalries</Title>
+                            <Text size="sm" c="dimmed" ta="center">The most contested matchups in the CR scene</Text>
+                        </Stack>
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                            {!showPicker && (
+                                <Button variant="light" onClick={() => setShowPicker(true)}>
+                                    Compare Players
+                                </Button>
+                            )}
+                        </div>
+                    </Group>
+                    <H2HTopPairs
+                        pairs={topPairs}
+                        onSelectPair={handleSelectPair}
+                        isLoading={topPairsLoading}
+                    />
+                </Stack>
             ) : (
                 renderContent()
             )}
