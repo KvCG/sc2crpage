@@ -115,6 +115,16 @@ export const H2H = () => {
 
     const searchInitiated = player1Id !== null && player2Id !== null
 
+    const handleCancel = useCallback(() => {
+        setShowPicker(false)
+        setPlayer1Input('')
+        setPlayer2Input('')
+        setPlayer1Id(null)
+        setPlayer2Id(null)
+        setH2hData(null)
+        setError(null)
+    }, [])
+
     const handleSelectPair = useCallback((p1Id: number, p2Id: number) => {
         const p1 = players.find(p => p.id === p1Id)
         const p2 = players.find(p => p.id === p2Id)
@@ -348,8 +358,8 @@ export const H2H = () => {
                         miw={220}
                         aria-label="Select Player 2"
                     />
-                    {showPicker && !searchInitiated && (
-                        <Button variant="subtle" color="gray" onClick={() => setShowPicker(false)} aria-label="Close compare">
+                    {(showPicker || searchInitiated) && (
+                        <Button variant="subtle" color="gray" onClick={handleCancel} aria-label="Close compare">
                             Cancel
                         </Button>
                     )}

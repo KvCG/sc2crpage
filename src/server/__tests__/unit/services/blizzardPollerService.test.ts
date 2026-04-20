@@ -9,7 +9,7 @@ const hoisted = vi.hoisted(() => ({
     mockResolveBlizzardProfile: vi.fn(),
     mockFetchPlayerMatches: vi.fn(),
     mockPersistMatch: vi.fn(),
-    mockLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    mockLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
 vi.mock('../../../services/communityDataService', () => ({
@@ -107,6 +107,23 @@ describe('blizzardPollerService.poll', () => {
         expect(new Date(match.date).getTime() / 1000).toBe(SHARED_TIMESTAMP)
     })
 
+    it('scenario: Tie+Tie custom match — valid pair, persistMatch called with winnerCharacterId -1', async () => {
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Tie', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Tie', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).toHaveBeenCalledTimes(1)
+        const [, , match] = hoisted.mockPersistMatch.mock.calls[0]
+        expect(match.winnerCharacterId).toBe(-1)
+        expect(match.source).toBe('blizzard')
+    })
+
     it('scenario: multiple H2H matches in same cycle — all are persisted', async () => {
         const SHARED_TIMESTAMP_2 = 1712970000
 
@@ -176,6 +193,64 @@ describe('blizzardPollerService.poll', () => {
 
         expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
     })
+
+    it('scenario: 3 community players in same CUSTOM bucket — not a 1v1, persistMatch not called', async () => {
+        const THIRD_ID = 8459434 // e.g. Dark
+        const THIRD_PROFILE = { profileId: 999, realmId: 1, regionId: 1, region: 'US' }
+
+        // Extend community data to include a third player
+        hoisted.mockGetCommunityData.mockResolvedValue({
+            players: [
+                { id: String(PISTOLA_ID), btag: 'Pistola#1234' },
+                { id: String(WITHER_ID), btag: 'Wither#5678' },
+                { id: String(THIRD_ID), btag: 'Dark#1749' },
+            ],
+            playerIds: new Set([String(PISTOLA_ID), String(WITHER_ID), String(THIRD_ID)]),
+        })
+        hoisted.mockResolveBlizzardProfile
+            .mockResolvedValueOnce(US_PROFILE)    // Pistola
+            .mockResolvedValueOnce(US_PROFILE2)   // Wither
+            .mockResolvedValueOnce(THIRD_PROFILE) // Dark
+
+        // All three share the same timestamp+map+type — 2v2 custom
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        ['Win', 'Win', 'teammates in a 2v2'],
+        ['Win', 'Observer', 'solo BO practice — observer false correlation'],
+        ['Win', 'Left', 'someone disconnected before result'],
+        ['Win', 'Disagree', 'desync / result disputed'],
+        ['Observer', 'Observer', 'both players were spectating'],
+    ])(
+        'scenario: %s + %s decisions (%s) — not a valid 1v1, persistMatch not called',
+        async (d1, d2) => {
+            hoisted.mockFetchPlayerMatches
+                .mockResolvedValueOnce([
+                    { map: SHARED_MAP, type: SHARED_TYPE, decision: d1, speed: 'Faster', date: SHARED_TIMESTAMP },
+                ])
+                .mockResolvedValueOnce([
+                    { map: SHARED_MAP, type: SHARED_TYPE, decision: d2, speed: 'Faster', date: SHARED_TIMESTAMP },
+                ])
+
+            await poll()
+
+            expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+        }
+    )
 
     it('logs poll cycle start and completion', async () => {
         hoisted.mockFetchPlayerMatches.mockResolvedValue([])

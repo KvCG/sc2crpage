@@ -1,5 +1,5 @@
 import { SimpleGrid, Card, Badge, Text, Progress, Skeleton, Center, Table, Stack, Group } from '@mantine/core'
-import { IconCrown, IconFlame, IconActivity } from '@tabler/icons-react'
+import { IconCrown, IconFlame, IconActivity, IconChevronRight } from '@tabler/icons-react'
 import type { TopPairEntry } from '../../../shared/types'
 
 interface H2HTopPairsProps {
@@ -110,6 +110,7 @@ export const H2HTopPairs = ({ pairs, onSelectPair, isLoading }: H2HTopPairsProps
                                     <Table.Th>Matches</Table.Th>
                                     <Table.Th>Played in the last 30d</Table.Th>
                                     <Table.Th>Last Played</Table.Th>
+                                    <Table.Th />
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
@@ -145,6 +146,7 @@ export const H2HTopPairs = ({ pairs, onSelectPair, isLoading }: H2HTopPairsProps
                                             <Table.Td>{pair.matchCount}</Table.Td>
                                             <Table.Td>{active ? <IconActivity size={14} color="var(--mantine-color-teal-5)" aria-label="active" /> : '—'}</Table.Td>
                                             <Table.Td>{pair.lastMatchDate ? formatDate(pair.lastMatchDate) : '—'}</Table.Td>
+                                            <Table.Td><IconChevronRight size={14} color="var(--mantine-color-dimmed)" /></Table.Td>
                                         </Table.Tr>
                                     )
                                 })}

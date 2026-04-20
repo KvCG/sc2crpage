@@ -155,6 +155,37 @@ export async function poll(): Promise<void> {
         )
         if (communityBucket.length < 2) continue
 
+        // Guard 1 — team game: 3+ community players in the same CUSTOM bucket means
+        // a 2v2/3v3/etc. lobby. The Blizzard API returns type="Custom" for ALL
+        // custom lobby formats, so bucket size is the clearest signal.
+        if (communityBucket.length > 2) {
+            logger.debug(
+                { feature: 'blizzard-poller', key, players: communityBucket.map((b) => b.characterId) },
+                'Skipping CUSTOM bucket — 3+ community players indicates a team game'
+            )
+            continue
+        }
+
+        // Guard 3 — valid decision pair
+        // A real 1v1 has exactly one WIN + one LOSS. Any other combination
+        // (Win+Observer, Win+Win, Win+Left, Win+Disagree, Tie+Tie, etc.) means at
+        // least one player was not a real opponent (observer, teammate, desync, etc.).
+        // This supersedes guard 2 (same-decision check) and is the correct general form.
+        // NOTE: Two community players on opposing sides of a 2v2 with Win+Loss decisions
+        // remain indistinguishable from a 1v1 — this edge case is accepted and documented.
+        const decisions = communityBucket.map((b) => b.decision.toUpperCase()).sort()
+        const isValidPair =
+            (decisions[0] === 'LOSS' && decisions[1] === 'WIN') ||
+            (decisions[0] === 'TIE' && decisions[1] === 'TIE')
+
+        if (!isValidPair) {
+            logger.debug(
+                { feature: 'blizzard-poller', key, decisions, players: communityBucket.map((b) => b.characterId) },
+                'Skipping CUSTOM bucket — decisions do not form a valid 1v1 pair'
+            )
+            continue
+        }
+
         // Take first two correlated community players
         const p1 = communityBucket[0]
         const p2 = communityBucket[1]
