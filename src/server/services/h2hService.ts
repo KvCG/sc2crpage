@@ -507,16 +507,31 @@ interface CommunityPlayerRow {
  */
 export async function getTopPairs(limit: number): Promise<TopPairEntry[]> {
     try {
+        // First find only the pair IDs that actually have non-voided matches.
+        // h2h_pairs can have thousands of pre-seeded rows; querying all of them
+        // silently hits PostgREST's page limit and hides most rivalries.
+        const { data: matchRows, error: matchRowsError } = await supabase
+            .from('h2h_matches')
+            .select('pair_id')
+            .eq('is_voided', false)
+
+        if (matchRowsError) throw matchRowsError
+        if (!matchRows || matchRows.length === 0) return []
+
+        const activePairIds = [...new Set(matchRows.map((r) => (r as { pair_id: number }).pair_id))]
+
         const { data: pairs, error: pairsError } = await supabase
             .from('h2h_pairs')
             .select(
                 'id, player1_character_id, player2_character_id, ' +
                     'h2h_matches(winner_character_id, match_date, is_voided)',
             )
+            .in('id', activePairIds)
 
         if (pairsError) throw pairsError
         if (!pairs || pairs.length === 0) return []
 
+        const today = Date.now()
         const aggregated = (pairs as unknown as PairRow[])
             .map((pair) => {
                 const active = pair.h2h_matches.filter((m) => !m.is_voided)
@@ -531,6 +546,15 @@ export async function getTopPairs(limit: number): Promise<TopPairEntry[]> {
                     (latest, m) => (m.match_date > latest ? m.match_date : latest),
                     '',
                 )
+                const daysSinceLast = lastMatchDate
+                    ? (today - new Date(lastMatchDate).getTime()) / 86400000
+                    : Infinity
+                const recencyFactor = Math.exp(-daysSinceLast / 180)
+                const competitiveness =
+                    matchCount > 0
+                        ? 1 - Math.abs(player1Wins - player2Wins) / matchCount
+                        : 0
+                const heatScore = matchCount * recencyFactor * (0.5 + 0.5 * competitiveness)
                 return {
                     player1CharacterId: pair.player1_character_id,
                     player2CharacterId: pair.player2_character_id,
@@ -538,14 +562,11 @@ export async function getTopPairs(limit: number): Promise<TopPairEntry[]> {
                     player1Wins,
                     player2Wins,
                     lastMatchDate,
+                    heatScore,
                 }
             })
             .filter((p) => p.matchCount > 0)
-            .sort(
-                (a, b) =>
-                    b.matchCount - a.matchCount ||
-                    b.lastMatchDate.localeCompare(a.lastMatchDate),
-            )
+            .sort((a, b) => b.heatScore - a.heatScore)
             .slice(0, limit)
 
         if (aggregated.length === 0) return []
@@ -584,6 +605,7 @@ export async function getTopPairs(limit: number): Promise<TopPairEntry[]> {
             player1Wins: pair.player1Wins,
             player2Wins: pair.player2Wins,
             lastMatchDate: pair.lastMatchDate,
+            heatScore: pair.heatScore,
         }))
     } catch (err) {
         logger.error({ feature: 'h2h', err }, 'getTopPairs failed')

@@ -712,9 +712,23 @@ describe('savePairRecord', () => {
 describe('getTopPairs', () => {
     function setupTopPairs(pairRows: unknown, playerRows: unknown) {
         hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
+            if (table === 'h2h_matches') {
+                // First query: get pair_ids with non-voided matches
+                const pairRowsTyped = pairRows as Array<{ id: number; h2h_matches: Array<{ is_voided: boolean }> }>
+                const matchPairIds = (pairRowsTyped ?? [])
+                    .filter((p) => p.h2h_matches.some((m) => !m.is_voided))
+                    .map((p) => ({ pair_id: p.id }))
+                return {
+                    select: vi.fn().mockReturnValue({
+                        eq: vi.fn().mockResolvedValue({ data: matchPairIds, error: null }),
+                    }),
+                }
+            }
             if (table === 'h2h_pairs') {
                 return {
-                    select: vi.fn().mockResolvedValue({ data: pairRows, error: null }),
+                    select: vi.fn().mockReturnValue({
+                        in: vi.fn().mockResolvedValue({ data: pairRows, error: null }),
+                    }),
                 }
             }
             if (table === 'community_players') {
@@ -738,7 +752,7 @@ describe('getTopPairs', () => {
         vi.clearAllMocks()
     })
 
-    it('returns pairs sorted by match count descending', async () => {
+    it('returns pairs sorted by heatScore descending', async () => {
         const pairRows = [
             {
                 id: 1,
@@ -896,7 +910,7 @@ describe('getTopPairs', () => {
         expect(result).toHaveLength(3)
     })
 
-    it('breaks match count ties by lastMatchDate descending', async () => {
+    it('ranks more recent matches higher when match counts are equal', async () => {
         const pairRows = [
             {
                 id: 1,
@@ -924,10 +938,89 @@ describe('getTopPairs', () => {
         expect(result[1].player1.characterId).toBe(49312)
     })
 
+    describe('heatScore computation', () => {
+        beforeEach(() => {
+            vi.useFakeTimers()
+            vi.setSystemTime(new Date('2026-04-19T12:00:00Z'))
+        })
+
+        afterEach(() => {
+            vi.useRealTimers()
+        })
+
+        it('includes heatScore as a finite number on every returned entry', async () => {
+            const pairRows = [
+                {
+                    id: 1,
+                    player1_character_id: 49312,
+                    player2_character_id: 2741271,
+                    h2h_matches: [
+                        { winner_character_id: 49312, match_date: '2026-04-01T00:00:00Z', is_voided: false },
+                        { winner_character_id: 2741271, match_date: '2026-04-02T00:00:00Z', is_voided: false },
+                    ],
+                },
+            ]
+            setupTopPairs(pairRows, PLAYERS)
+
+            const result = await getTopPairs(10)
+
+            expect(result).toHaveLength(1)
+            expect(typeof result[0].heatScore).toBe('number')
+            expect(isFinite(result[0].heatScore)).toBe(true)
+            expect(result[0].heatScore).toBeGreaterThan(0)
+        })
+
+        it('pair with 10 recent matches outranks pair with 30 matches played 8 months ago', async () => {
+            const yesterday = '2026-04-18T12:00:00Z'
+            const eightMonthsAgo = '2025-08-19T12:00:00Z'
+            const pairRows = [
+                {
+                    id: 1,
+                    player1_character_id: 49312,
+                    player2_character_id: 2741271,
+                    // 30 matches, all 8 months ago, stomp series (30-0)
+                    h2h_matches: Array.from({ length: 30 }, () => ({
+                        winner_character_id: 49312,
+                        match_date: eightMonthsAgo,
+                        is_voided: false,
+                    })),
+                },
+                {
+                    id: 2,
+                    player1_character_id: 1111,
+                    player2_character_id: 2222,
+                    // 10 matches yesterday, perfectly even (5-5)
+                    h2h_matches: [
+                        ...Array.from({ length: 5 }, () => ({
+                            winner_character_id: 1111,
+                            match_date: yesterday,
+                            is_voided: false,
+                        })),
+                        ...Array.from({ length: 5 }, () => ({
+                            winner_character_id: 2222,
+                            match_date: yesterday,
+                            is_voided: false,
+                        })),
+                    ],
+                },
+            ]
+            setupTopPairs(pairRows, PLAYERS)
+
+            const result = await getTopPairs(10)
+
+            expect(result[0].player1.characterId).toBe(1111)
+            expect(result[0].heatScore).toBeGreaterThan(result[1].heatScore)
+            expect(result[1].player1.characterId).toBe(49312)
+        })
+    })
+
     it('logs error and returns empty array when Supabase fails', async () => {
         const dbError = new Error('DB error')
         hoisted.mockSupabaseFrom.mockReturnValue({
-            select: vi.fn().mockResolvedValue({ data: null, error: dbError }),
+            select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ data: null, error: dbError }),
+                in: vi.fn().mockResolvedValue({ data: null, error: dbError }),
+            }),
         })
 
         const result = await getTopPairs(10)

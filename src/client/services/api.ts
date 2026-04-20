@@ -118,7 +118,7 @@ export const getH2H = async (player1: number, player2: number) => {
     return response
 }
 
-export const getTopH2HPairs = async (limit = 20) => {
+export const getTopH2HPairs = async (limit = 50) => {
     const response = await api.get<TopPairEntry[]>(`api/h2h/top-pairs`, { params: { limit } })
     return response
 }
