@@ -121,7 +121,12 @@ export const FlagMatchModal = ({
                         required
                         data={playerOptions}
                         value={btag}
-                        onChange={setBtag}
+                        onChange={(val) => {
+                            // Mantine puts the label into the input on option select.
+                            // Resolve back to the actual btag value so the server check passes.
+                            const match = playerOptions.find((o) => o.label === val)
+                            setBtag(match ? match.value : val)
+                        }}
                         filter={({ options, search }) => {
                             const q = search.toLowerCase()
                             return (options as { value: string; label: string }[]).filter(
