@@ -107,7 +107,7 @@ describe('blizzardPollerService.poll', () => {
         expect(new Date(match.date).getTime() / 1000).toBe(SHARED_TIMESTAMP)
     })
 
-    it('scenario: Tie+Tie custom match — valid pair, persistMatch called with winnerCharacterId -1', async () => {
+    it('scenario: Tie+Tie custom match — lossCount=0, Guard 4 skips it', async () => {
         hoisted.mockFetchPlayerMatches
             .mockResolvedValueOnce([
                 { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Tie', speed: 'Faster', date: SHARED_TIMESTAMP },
@@ -118,10 +118,7 @@ describe('blizzardPollerService.poll', () => {
 
         await poll()
 
-        expect(hoisted.mockPersistMatch).toHaveBeenCalledTimes(1)
-        const [, , match] = hoisted.mockPersistMatch.mock.calls[0]
-        expect(match.winnerCharacterId).toBe(-1)
-        expect(match.source).toBe('blizzard')
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
     })
 
     it('scenario: multiple H2H matches in same cycle — all are persisted', async () => {
@@ -194,7 +191,7 @@ describe('blizzardPollerService.poll', () => {
         expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
     })
 
-    it('scenario: 3 community players in same CUSTOM bucket — not a 1v1, persistMatch not called', async () => {
+    it('scenario: 3 community players — Win+Win+Loss triggers multiple-WINs guard, persistMatch not called', async () => {
         const THIRD_ID = 8459434 // e.g. Dark
         const THIRD_PROFILE = { profileId: 999, realmId: 1, regionId: 1, region: 'US' }
 
@@ -219,6 +216,60 @@ describe('blizzardPollerService.poll', () => {
             ])
             .mockResolvedValueOnce([
                 { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+        expect(hoisted.mockLogger.warn).toHaveBeenCalledWith(
+            expect.objectContaining({ feature: 'blizzard-poller', decisions: expect.arrayContaining(['WIN', 'WIN', 'LOSS']) }),
+            expect.stringContaining('multiple WINs')
+        )
+    })
+
+    it('scenario: Ruby Rock LE — Dark=Obs, Tomahawk=Obs, Spark=Win, Kerverus=Loss → lossCount=1 → Spark vs Kerverus persisted', async () => {
+        const DARK_ID = 8459434
+        const TOMAHAWK_ID = 25351639
+        const SPARK_ID = 12345678
+        const KERVERUS_ID = 87654321
+
+        hoisted.mockGetCommunityData.mockResolvedValue({
+            players: [
+                { id: String(DARK_ID), btag: 'Dark#1749' },
+                { id: String(TOMAHAWK_ID), btag: 'Tomahawkcr#1710' },
+                { id: String(SPARK_ID), btag: 'Spark#1234' },
+                { id: String(KERVERUS_ID), btag: 'Kerverus#5678' },
+            ],
+            playerIds: new Set([String(DARK_ID), String(TOMAHAWK_ID), String(SPARK_ID), String(KERVERUS_ID)]),
+        })
+        hoisted.mockResolveBlizzardProfile
+            .mockResolvedValueOnce({ profileId: 100, realmId: 1, regionId: 1, region: 'US' }) // Dark
+            .mockResolvedValueOnce({ profileId: 200, realmId: 1, regionId: 1, region: 'US' }) // Tomahawk
+            .mockResolvedValueOnce({ profileId: 300, realmId: 1, regionId: 1, region: 'US' }) // Spark
+            .mockResolvedValueOnce({ profileId: 400, realmId: 1, regionId: 1, region: 'US' }) // Kerverus
+
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Observer', speed: 'Faster', date: SHARED_TIMESTAMP }]) // Dark
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Observer', speed: 'Faster', date: SHARED_TIMESTAMP }]) // Tomahawk
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP }])     // Spark
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP }])    // Kerverus
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).toHaveBeenCalledTimes(1)
+        const [charId1, charId2, match] = hoisted.mockPersistMatch.mock.calls[0]
+        expect([charId1, charId2].sort()).toEqual([SPARK_ID, KERVERUS_ID].sort())
+        expect(match.winnerCharacterId).toBe(SPARK_ID)
+        expect(match.source).toBe('blizzard')
+    })
+
+    it('scenario: 2-loss bucket (both players have Loss) — lossCount=2, Guard 4 kills it', async () => {
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP },
             ])
             .mockResolvedValueOnce([
                 { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP },
