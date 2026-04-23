@@ -3,6 +3,7 @@ import { fetchPlayerMatches, type BlizzardProfile, type BlizzardPlayerMatch } fr
 import { resolveBlizzardProfile, persistMatch } from './h2hService'
 import type { H2HMatch } from '../../shared/types'
 import logger from '../logging/logger'
+import supabase from '../db/supabaseClient'
 
 // ============================================================================
 // Constants
@@ -194,6 +195,21 @@ export async function poll(): Promise<void> {
 
         // Synthetic matchId — 'BZ-' prefix ensures no collision with Pulse integer IDs
         const matchId = `BZ-${tsStr}_${mapName.replace(/\s+/g, '_')}`
+
+        // Guard 6 — cross-pair matchId dedup: skip if this matchId is already stored for any pair
+        const { data: existing } = await supabase
+            .from('h2h_matches')
+            .select('id, pair_id')
+            .eq('match_id', matchId)
+            .maybeSingle()
+
+        if (existing) {
+            logger.debug(
+                { feature: 'blizzard-poller', matchId, existingPairId: existing.pair_id },
+                'Skipping match — matchId already stored for another pair'
+            )
+            continue
+        }
 
         const match: H2HMatch = {
             matchId,

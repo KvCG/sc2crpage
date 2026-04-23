@@ -10,6 +10,7 @@ const hoisted = vi.hoisted(() => ({
     mockFetchPlayerMatches: vi.fn(),
     mockPersistMatch: vi.fn(),
     mockLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    mockSupabaseFrom: vi.fn(),
 }))
 
 vi.mock('../../../services/communityDataService', () => ({
@@ -29,7 +30,29 @@ vi.mock('../../../services/blizzardMatchClient', () => ({
 
 vi.mock('../../../logging/logger', () => ({ default: hoisted.mockLogger }))
 
+vi.mock('../../../db/supabaseClient', () => ({
+    default: { from: hoisted.mockSupabaseFrom },
+}))
+
 import { poll } from '../../../services/blizzardPollerService'
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns a mock Supabase chain for the Guard 6 dedup query:
+ * supabase.from(...).select(...).eq(...).maybeSingle()
+ */
+function makeDedupeBuilder(result: { data: unknown; error: unknown }) {
+    return {
+        select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue(result),
+            }),
+        }),
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -68,6 +91,8 @@ describe('blizzardPollerService.poll', () => {
             .mockResolvedValueOnce(US_PROFILE)   // Pistola
             .mockResolvedValueOnce(US_PROFILE2)  // Wither
         hoisted.mockPersistMatch.mockResolvedValue(undefined)
+        // Default: no duplicate found in h2h_matches
+        hoisted.mockSupabaseFrom.mockReturnValue(makeDedupeBuilder({ data: null, error: null }))
     })
 
     it('scenario: no overlapping matches — persistMatch is never called', async () => {
@@ -316,5 +341,48 @@ describe('blizzardPollerService.poll', () => {
             expect.objectContaining({ feature: 'blizzard-poller', persisted: 0 }),
             'Poll cycle complete'
         )
+    })
+
+    it('Guard 6 — matchId already in h2h_matches for another pair → persistMatch not called, debug logged', async () => {
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+
+        // Simulate matchId already stored for a different pair (pair_id = 99)
+        hoisted.mockSupabaseFrom.mockReturnValue(
+            makeDedupeBuilder({ data: { id: 1, pair_id: 99 }, error: null })
+        )
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+        expect(hoisted.mockLogger.debug).toHaveBeenCalledWith(
+            expect.objectContaining({
+                feature: 'blizzard-poller',
+                matchId: `BZ-${SHARED_TIMESTAMP}_Ruby_Rock_LE`,
+                existingPairId: 99,
+            }),
+            expect.any(String)
+        )
+    })
+
+    it('Guard 6 — unique matchId (no existing row) → persistMatch called normally', async () => {
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+            .mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+
+        // Default mock already returns { data: null } — no existing row
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).toHaveBeenCalledTimes(1)
     })
 })
