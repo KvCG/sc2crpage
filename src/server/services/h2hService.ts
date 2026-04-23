@@ -16,6 +16,7 @@ interface CharacterTeamEntry {
     }
     members: Array<{
         character?: {
+            id?: number
             battlenetId: number
             realm: number
             region: string
@@ -134,7 +135,14 @@ export async function resolveTeamLegacyUid(characterId: number): Promise<string>
     legacyUidCache.set(characterId, team.legacyUid)
 
     // Opportunistically cache Blizzard profile coordinates from same response
-    const anyTeamMember = teams[0]?.members?.[0]
+    const foundMember = teams.flatMap((t) => t.members ?? []).find((m) => m.character?.id === characterId)
+    const anyTeamMember = foundMember ?? teams[0]?.members?.[0]
+    if (!foundMember && anyTeamMember) {
+        logger.warn(
+            { feature: 'h2h', characterId, foundCharId: anyTeamMember.character?.id, msg: 'characterId not found in teams response — possible Pulse id remap' },
+            'resolveTeamLegacyUid: characterId not found in teams response'
+        )
+    }
     if (anyTeamMember?.character && !blizzardProfileCache.has(characterId)) {
         blizzardProfileCache.set(characterId, {
             profileId: anyTeamMember.character.battlenetId,
@@ -160,7 +168,14 @@ export async function resolveBlizzardProfile(characterId: number): Promise<Blizz
 
     const teams = await httpGet<CharacterTeamEntry[]>(endpoints.characterTeams, { characterId })
 
-    const anyTeamMember = teams[0]?.members?.[0]
+    const foundMember = teams.flatMap((t) => t.members ?? []).find((m) => m.character?.id === characterId)
+    const anyTeamMember = foundMember ?? teams[0]?.members?.[0]
+    if (!foundMember && anyTeamMember) {
+        logger.warn(
+            { feature: 'h2h', characterId, foundCharId: anyTeamMember.character?.id, msg: 'characterId not found in teams response — possible Pulse id remap' },
+            'resolveBlizzardProfile: characterId not found in teams response'
+        )
+    }
     if (!anyTeamMember?.character) {
         throw new Error(`No character data returned by Pulse for characterId ${characterId}`)
     }
@@ -302,6 +317,14 @@ export async function savePairRecord(record: H2HPairRecord): Promise<void> {
  * string Blizzard synthetic keys (`BZ-{timestamp}_{map}`).
  */
 export async function persistMatch(charId1: number, charId2: number, match: H2HMatch): Promise<void> {
+    if (charId1 === charId2) {
+        logger.warn(
+            { feature: 'h2h', charId1, matchId: match.matchId },
+            'persistMatch called with same player for both sides — skipping',
+        )
+        return
+    }
+
     const player1CharacterId = Math.min(charId1, charId2)
     const player2CharacterId = Math.max(charId1, charId2)
 
