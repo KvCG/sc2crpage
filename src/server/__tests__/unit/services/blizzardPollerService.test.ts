@@ -385,4 +385,53 @@ describe('blizzardPollerService.poll', () => {
 
         expect(hoisted.mockPersistMatch).toHaveBeenCalledTimes(1)
     })
+
+    it('regression Apr 23 — round-robin: Dark=Win, Kerverus=Obs, Spark=Loss persisted; Tomahawk absent from bucket', async () => {
+        // Before T1 fix, resolveBlizzardProfile(TOMAHAWK_ID) returned Dark's battlenetId (611074)
+        // because Dark was members[0] in Tomahawk's 2v2 team. This caused Tomahawk to fetch Dark's
+        // match history and appear in the same bucket as Dark, inflating lossCount and corrupting
+        // the result. After T1, each player resolves to their own battlenetId.
+        const DARK_ID = 8459434       // battlenetId=611074
+        const KERVERUS_ID = 87654321
+        const SPARK_ID = 12345678
+        const TOMAHAWK_ID = 25351639  // battlenetId=2347183 (own — distinct from Dark's)
+
+        const WINTER_TIMESTAMP = 1745408400
+        const WINTER_MAP = 'Winter Madness LE'
+
+        hoisted.mockGetCommunityData.mockResolvedValue({
+            players: [
+                { id: String(DARK_ID),     btag: 'Dark#1749' },
+                { id: String(KERVERUS_ID), btag: 'Kerverus#5678' },
+                { id: String(SPARK_ID),    btag: 'Spark#1234' },
+                { id: String(TOMAHAWK_ID), btag: 'Tomahawkcr#1710' },
+            ],
+            playerIds: new Set([String(DARK_ID), String(KERVERUS_ID), String(SPARK_ID), String(TOMAHAWK_ID)]),
+        })
+
+        // T1 fix: each player resolves to their own profile — Tomahawk gets battlenetId=2347183,
+        // not Dark's 611074.
+        hoisted.mockResolveBlizzardProfile.mockReset()
+        hoisted.mockResolveBlizzardProfile
+            .mockResolvedValueOnce({ profileId: 611074,  realmId: 1, regionId: 1, region: 'US' }) // Dark (own)
+            .mockResolvedValueOnce({ profileId: 500000,  realmId: 1, regionId: 1, region: 'US' }) // Kerverus
+            .mockResolvedValueOnce({ profileId: 600000,  realmId: 1, regionId: 1, region: 'US' }) // Spark
+            .mockResolvedValueOnce({ profileId: 2347183, realmId: 1, regionId: 1, region: 'US' }) // Tomahawk (own)
+
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([{ map: WINTER_MAP, type: SHARED_TYPE, decision: 'Win',      speed: 'Faster', date: WINTER_TIMESTAMP }]) // Dark
+            .mockResolvedValueOnce([{ map: WINTER_MAP, type: SHARED_TYPE, decision: 'Observer', speed: 'Faster', date: WINTER_TIMESTAMP }]) // Kerverus
+            .mockResolvedValueOnce([{ map: WINTER_MAP, type: SHARED_TYPE, decision: 'Loss',     speed: 'Faster', date: WINTER_TIMESTAMP }]) // Spark
+            .mockResolvedValueOnce([]) // Tomahawk — distinct profile, no shared game in history
+
+        await poll()
+
+        // Bucket after Observer filter: Dark(Win) + Spark(Loss) → lossCount=1 → persisted
+        expect(hoisted.mockPersistMatch).toHaveBeenCalledTimes(1)
+        const [charId1, charId2, match] = hoisted.mockPersistMatch.mock.calls[0]
+        expect([charId1, charId2].sort()).toEqual([DARK_ID, SPARK_ID].sort())
+        expect(match.winnerCharacterId).toBe(DARK_ID)
+        expect(match.map).toBe(WINTER_MAP)
+        expect(match.source).toBe('blizzard')
+    })
 })
