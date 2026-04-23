@@ -66,7 +66,7 @@ const NON_1V1_TEAM     = { legacyUid: '204-0-1-2.999999.1',  league: { queueType
 const PISTOLA_1V1_TEAM_WITH_MEMBER = {
     legacyUid: '201-0-1-2.883917.3',
     league: { queueType: 201, teamType: 0 },
-    members: [{ character: { battlenetId: 883917, realm: 1, region: 'US' } }],
+    members: [{ character: { id: 49312, battlenetId: 883917, realm: 1, region: 'US' } }],
 }
 
 // ---------------------------------------------------------------------------
@@ -355,6 +355,47 @@ describe('resolveBlizzardProfile', () => {
 
         await expect(resolveBlizzardProfile(49312)).rejects.toThrow(
             'No character data returned by Pulse for characterId 49312'
+        )
+    })
+
+    it('returns the correct member profile when the queried player is not members[0]', async () => {
+        // Simulates the cross-player contamination bug: a 2v2 team where the other
+        // player (battlenetId=611074, id=8459434) is members[0], and Tomahawk
+        // (battlenetId=2347183, id=25351639) is members[1].
+        const teamsResponse = [
+            {
+                legacyUid: '204-0-1-2.foo.1',
+                league: { queueType: 204, teamType: 0 },
+                members: [
+                    { character: { id: 8459434, battlenetId: 611074, realm: 1, region: 'US' } },
+                    { character: { id: 25351639, battlenetId: 2347183, realm: 1, region: 'US' } },
+                ],
+            },
+        ]
+        hoisted.mockHttpGet.mockResolvedValue(teamsResponse)
+
+        const profile = await resolveBlizzardProfile(25351639)
+
+        expect(profile.profileId).toBe(2347183)
+    })
+
+    it('uses fallback member and logs a warn when characterId is not found in any team member', async () => {
+        // Pulse id remap scenario: no member has id=99999, fallback to members[0]
+        const teamsResponse = [
+            {
+                legacyUid: '201-0-1-2.999.1',
+                league: { queueType: 201, teamType: 0 },
+                members: [{ character: { id: 77777, battlenetId: 999888, realm: 1, region: 'US' } }],
+            },
+        ]
+        hoisted.mockHttpGet.mockResolvedValue(teamsResponse)
+
+        const profile = await resolveBlizzardProfile(99999)
+
+        expect(profile.profileId).toBe(999888)
+        expect(hoisted.mockLogger.warn).toHaveBeenCalledWith(
+            expect.objectContaining({ feature: 'h2h', characterId: 99999, foundCharId: 77777 }),
+            expect.any(String)
         )
     })
 

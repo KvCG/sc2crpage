@@ -31,3 +31,6 @@ coverage/
 
 # obsidian vault
 docs/.obsidian
+scripts/investigate-roundrobin.mjs
+scripts/verify-dark-tomahawk-duplicate.mjs
+scripts/verify-shared-accounts.mjs

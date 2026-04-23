@@ -3,6 +3,7 @@ import { fetchPlayerMatches, type BlizzardProfile, type BlizzardPlayerMatch } fr
 import { resolveBlizzardProfile, persistMatch } from './h2hService'
 import type { H2HMatch } from '../../shared/types'
 import logger from '../logging/logger'
+import supabase from '../db/supabaseClient'
 
 // ============================================================================
 // Constants
@@ -155,40 +156,35 @@ export async function poll(): Promise<void> {
         )
         if (communityBucket.length < 2) continue
 
-        // Guard 1 — team game: 3+ community players in the same CUSTOM bucket means
-        // a 2v2/3v3/etc. lobby. The Blizzard API returns type="Custom" for ALL
-        // custom lobby formats, so bucket size is the clearest signal.
-        if (communityBucket.length > 2) {
+        // Guard 4 — LOSS-count: a real 1v1 has exactly one LOSS decision after
+        // excluding Observers who inflate the raw bucket size (e.g. observers in
+        // a BO practice session share the same timestamp+map+CUSTOM key as the
+        // two real opponents).
+        const activeBucket = communityBucket.filter((b) => b.decision.toUpperCase() !== 'OBSERVER')
+        const lossCount = activeBucket.filter((b) => b.decision.toUpperCase() === 'LOSS').length
+
+        if (lossCount !== 1) {
             logger.debug(
-                { feature: 'blizzard-poller', key, players: communityBucket.map((b) => b.characterId) },
-                'Skipping CUSTOM bucket — 3+ community players indicates a team game'
+                { feature: 'blizzard-poller', key, lossCount },
+                'Skipping CUSTOM bucket — LOSS count is not 1'
             )
             continue
         }
 
-        // Guard 3 — valid decision pair
-        // A real 1v1 has exactly one WIN + one LOSS. Any other combination
-        // (Win+Observer, Win+Win, Win+Left, Win+Disagree, Tie+Tie, etc.) means at
-        // least one player was not a real opponent (observer, teammate, desync, etc.).
-        // This supersedes guard 2 (same-decision check) and is the correct general form.
-        // NOTE: Two community players on opposing sides of a 2v2 with Win+Loss decisions
-        // remain indistinguishable from a 1v1 — this edge case is accepted and documented.
-        const decisions = communityBucket.map((b) => b.decision.toUpperCase()).sort()
-        const isValidPair =
-            (decisions[0] === 'LOSS' && decisions[1] === 'WIN') ||
-            (decisions[0] === 'TIE' && decisions[1] === 'TIE')
-
-        if (!isValidPair) {
-            logger.debug(
-                { feature: 'blizzard-poller', key, decisions, players: communityBucket.map((b) => b.characterId) },
-                'Skipping CUSTOM bucket — decisions do not form a valid 1v1 pair'
+        const winEntries = activeBucket.filter((b) => b.decision.toUpperCase() === 'WIN')
+        if (winEntries.length > 1) {
+            const decisions = activeBucket.map((b) => b.decision.toUpperCase())
+            logger.warn(
+                { feature: 'blizzard-poller', key, decisions },
+                'Skipping CUSTOM bucket — multiple WINs after Observer exclusion'
             )
             continue
         }
 
-        // Take first two correlated community players
-        const p1 = communityBucket[0]
-        const p2 = communityBucket[1]
+        // p2 is the loser, p1 is the winner
+        const p2 = activeBucket.find((b) => b.decision.toUpperCase() === 'LOSS')!
+        const p1 = winEntries[0]
+        if (!p1) continue // safety: no WIN entry (e.g. Loss+Left)
 
         // Parse key back into parts: {timestamp}|{map}|{TYPE}
         const pipeIdx = key.indexOf('|')
@@ -197,10 +193,23 @@ export async function poll(): Promise<void> {
         const mapName = key.slice(pipeIdx + 1, lastPipeIdx)
         const matchType = key.slice(lastPipeIdx + 1)
 
-        const winner = communityBucket.find((b) => b.decision.toUpperCase() === 'WIN')
-
         // Synthetic matchId — 'BZ-' prefix ensures no collision with Pulse integer IDs
         const matchId = `BZ-${tsStr}_${mapName.replace(/\s+/g, '_')}`
+
+        // Guard 6 — cross-pair matchId dedup: skip if this matchId is already stored for any pair
+        const { data: existing } = await supabase
+            .from('h2h_matches')
+            .select('id, pair_id')
+            .eq('match_id', matchId)
+            .maybeSingle()
+
+        if (existing) {
+            logger.debug(
+                { feature: 'blizzard-poller', matchId, existingPairId: existing.pair_id },
+                'Skipping match — matchId already stored for another pair'
+            )
+            continue
+        }
 
         const match: H2HMatch = {
             matchId,
@@ -209,7 +218,7 @@ export async function poll(): Promise<void> {
             durationSeconds: 0,
             region: p1.region,
             type: matchType,
-            winnerCharacterId: winner?.characterId ?? -1,
+            winnerCharacterId: p1.characterId,
             player1RatingChange: null,
             player2RatingChange: null,
             player1RatingAtTime: null,
