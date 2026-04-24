@@ -1,15 +1,34 @@
-import { useEffect } from 'react'
-import { Affix, Box, Button, Group, Image, Paper, Stack, Text } from '@mantine/core'
+import { useEffect, useMemo, useState } from 'react'
+import {
+    Affix,
+    Box,
+    Button,
+    Divider,
+    Group,
+    Image,
+    Paper,
+    Stack,
+    Text,
+} from '@mantine/core'
 import { useClickOutside, useMediaQuery } from '@mantine/hooks'
 import { IconX } from '@tabler/icons-react'
+import { useNavigate } from 'react-router-dom'
 import { getLeagueSrc } from '../../utils/rankingHelper'
 import { raceAssets } from '../../constants/races'
+import { getTopH2HPairs } from '../../services/api'
+import type { TopPairEntry } from '../../../shared/types'
 import type { H2HQuickViewPlayer } from '../../types/h2hQuickView'
 
 interface PlayerQuickViewProps {
     opened: boolean
     player: H2HQuickViewPlayer | null
     onClose: () => void
+}
+
+interface SuggestedRival {
+    id: number
+    name: string
+    matchCount: number
 }
 
 const LEAGUE_LABELS: Record<number, string> = {
@@ -92,6 +111,41 @@ const renderProfile = (player: H2HQuickViewPlayer, compact = false) => {
 export const PlayerQuickView = ({ opened, player, onClose }: PlayerQuickViewProps) => {
     const isCompactViewport = useMediaQuery('(max-width: 62em)') ?? false
     const quickViewRef = useClickOutside(onClose)
+    const navigate = useNavigate()
+    const [topPairs, setTopPairs] = useState<TopPairEntry[]>([])
+    const [isLoadingTopPairs, setIsLoadingTopPairs] = useState(false)
+
+    useEffect(() => {
+        if (!opened || !player) {
+            return
+        }
+
+        let mounted = true
+        setIsLoadingTopPairs(true)
+
+        getTopH2HPairs()
+            .then((topPairsResponse) => {
+                if (!mounted) {
+                    return
+                }
+
+                setTopPairs(Array.isArray(topPairsResponse.data) ? topPairsResponse.data : [])
+            })
+            .catch(() => {
+                if (mounted) {
+                    setTopPairs([])
+                }
+            })
+            .finally(() => {
+                if (mounted) {
+                    setIsLoadingTopPairs(false)
+                }
+            })
+
+        return () => {
+            mounted = false
+        }
+    }, [opened, player])
 
     useEffect(() => {
         if (!opened) {
@@ -111,8 +165,86 @@ export const PlayerQuickView = ({ opened, player, onClose }: PlayerQuickViewProp
         }
     }, [opened, onClose])
 
+    const selectedPlayerId = player?.characterId ?? null
+    const suggestedRivals = useMemo(() => {
+        if (selectedPlayerId === null) {
+            return []
+        }
+
+        const uniqueRivals = new Map<number, SuggestedRival>()
+        for (const pair of topPairs) {
+            if (pair.player1.characterId === selectedPlayerId) {
+                uniqueRivals.set(pair.player2.characterId, {
+                    id: pair.player2.characterId,
+                    name: pair.player2.name ?? pair.player2.btag.split('#')[0],
+                    matchCount: pair.matchCount,
+                })
+            }
+
+            if (pair.player2.characterId === selectedPlayerId) {
+                uniqueRivals.set(pair.player1.characterId, {
+                    id: pair.player1.characterId,
+                    name: pair.player1.name ?? pair.player1.btag.split('#')[0],
+                    matchCount: pair.matchCount,
+                })
+            }
+
+            if (uniqueRivals.size >= 3) {
+                break
+            }
+        }
+
+        return Array.from(uniqueRivals.values()).slice(0, 3)
+    }, [selectedPlayerId, topPairs])
+
     if (!opened || !player) {
         return null
+    }
+
+    const handleSelectPlayer = (player2Id: number) => {
+        const player1Param = encodeURIComponent(String(player.characterId))
+        const player2Param = encodeURIComponent(String(player2Id))
+        navigate(`/h2h?player1=${player1Param}&player2=${player2Param}`)
+        onClose()
+    }
+
+    const renderPlayerChooser = () => {
+        return (
+            <Stack gap="xs" mt="sm">
+                <Divider />
+                <Text fw={600} size="sm">
+                    Rivals
+                </Text>
+
+                {isLoadingTopPairs && (
+                    <Text size="xs" c="dimmed">
+                        Loading rivals...
+                    </Text>
+                )}
+
+                {!isLoadingTopPairs && suggestedRivals.length > 0 && (
+                    <Stack gap={4}>
+                        {suggestedRivals.map((suggestedRival) => (
+                            <Button
+                                key={suggestedRival.id}
+                                variant="light"
+                                justify="space-between"
+                                onClick={() => handleSelectPlayer(suggestedRival.id)}
+                                aria-label={`Launch H2H versus ${suggestedRival.name}`}
+                            >
+                                {suggestedRival.name} ({suggestedRival.matchCount} games)
+                            </Button>
+                        ))}
+                    </Stack>
+                )}
+
+                {!isLoadingTopPairs && suggestedRivals.length === 0 && (
+                    <Text size="xs" c="dimmed">
+                        No rivalry data available for this player.
+                    </Text>
+                )}
+            </Stack>
+        )
     }
 
     if (isCompactViewport) {
@@ -159,6 +291,7 @@ export const PlayerQuickView = ({ opened, player, onClose }: PlayerQuickViewProp
                         </Button>
                     </Group>
                     {renderProfile(player, true)}
+                    {renderPlayerChooser()}
                 </Paper>
             </Box>
         )
@@ -181,6 +314,7 @@ export const PlayerQuickView = ({ opened, player, onClose }: PlayerQuickViewProp
                     </Button>
                 </Group>
                 {renderProfile(player)}
+                {renderPlayerChooser()}
             </Paper>
         </Affix>
     )
