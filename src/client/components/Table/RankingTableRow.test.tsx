@@ -57,6 +57,10 @@ describe('RankingTableRow H2H action', () => {
         expect(onOpenH2HQuickView).toHaveBeenCalledWith({
             characterId: 101,
             displayName: 'Pistola',
+            btag: 'Pistola#1234',
+            mmr: 5300,
+            mainRace: 'TERRAN',
+            leagueType: 6,
         })
     })
 

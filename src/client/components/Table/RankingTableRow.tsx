@@ -7,12 +7,13 @@ import { getStandardName } from '../../utils/common'
 import { formatPositionChange } from '../../utils/tableHelpers'
 import type { DecoratedRow } from '../../utils/rankingHelper'
 import type { ColumnOptions } from './TableColumnFilters'
+import type { H2HQuickViewPlayer } from '../../types/h2hQuickView'
 
 interface RankingTableRowProps {
     row: DecoratedRow
     index: number
     visibleColumns: ColumnOptions
-    onOpenH2HQuickView?: (player: { characterId: number; displayName: string }) => void
+    onOpenH2HQuickView?: (player: H2HQuickViewPlayer) => void
 }
 
 export function RankingTableRow({ row, index, visibleColumns, onOpenH2HQuickView }: RankingTableRowProps) {
@@ -33,11 +34,18 @@ export function RankingTableRow({ row, index, visibleColumns, onOpenH2HQuickView
     const characterId = typeof row.id === 'number' ? row.id : null
 
     const handleOpenH2H = () => {
-        if (characterId === null || !onOpenH2HQuickView) {
+        if (characterId === null || !onOpenH2HQuickView || typeof rating !== 'number') {
             return
         }
 
-        onOpenH2HQuickView({ characterId, displayName })
+        onOpenH2HQuickView({
+            characterId,
+            displayName,
+            btag,
+            mmr: rating,
+            mainRace,
+            leagueType,
+        })
     }
 
     const { arrow, deltaText } = formatPositionChange(positionChangeIndicator, positionDelta)

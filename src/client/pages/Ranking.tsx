@@ -1,25 +1,26 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { SeasonPicker } from '../components/Ranking/SeasonPicker'
-import { Button, Flex, Modal, Stack, Text } from '@mantine/core'
+import { Button, Flex } from '@mantine/core'
 import { IconRefresh } from '@tabler/icons-react'
 import { addPositionChangeIndicator, type DecoratedRow } from '../utils/rankingHelper'
 import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
 import { getSnapshot, getSeasons } from '../services/api'
 import { DateTime } from 'luxon'
 import type { SeasonEntry } from '../../shared/types'
+import { PlayerQuickView } from '../components/h2h/PlayerQuickView'
+import type { H2HQuickViewPlayer } from '../types/h2hQuickView'
 
 export const Ranking = () => {
-    const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const { data, loading, error, fetch } = useFetch('ranking')
     const [currentData, setCurrentData] = useState<DecoratedRow[] | null>(null)
     const [baseline, setBaseline] = useState<DecoratedRow[] | null>(null)
     const [seasons, setSeasons] = useState<SeasonEntry[]>([])
     const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null)
-    const [quickViewPlayerA, setQuickViewPlayerA] = useState<{ characterId: number; displayName: string } | null>(null)
+    const [quickViewPlayerA, setQuickViewPlayerA] = useState<H2HQuickViewPlayer | null>(null)
 
     const currentSeasonId = seasons.length > 0 ? seasons[0].id : null
     const isCurrentSeason = selectedSeasonId === null || selectedSeasonId === currentSeasonId
@@ -147,29 +148,11 @@ export const Ranking = () => {
 
     return (
         <>
-            <Modal
+            <PlayerQuickView
                 opened={quickViewPlayerA !== null}
+                player={quickViewPlayerA}
                 onClose={() => setQuickViewPlayerA(null)}
-                title="H2H Quick View"
-                centered
-            >
-                {quickViewPlayerA && (
-                    <Stack>
-                        <Text size="sm" c="dimmed">
-                            Player A is prefilled from your ranking selection.
-                        </Text>
-                        <Text fw={700}>{quickViewPlayerA.displayName}</Text>
-                        <Button
-                            onClick={() => {
-                                navigate(`/h2h?player1=${quickViewPlayerA.characterId}`)
-                                setQuickViewPlayerA(null)
-                            }}
-                        >
-                            Open H2H Launcher
-                        </Button>
-                    </Stack>
-                )}
-            </Modal>
+            />
             <Flex justify={'center'} direction={'column'}>
                 <h1>StarCraft II Costa Rica's Top Players</h1>
                 <Flex justify={'center'} style={{ paddingBottom: '10px' }}>
