@@ -1,7 +1,7 @@
 {
     "name": "sc2crpage",
     "private": true,
-    "version": "2.0.5",
+    "version": "2.0.6",
     "type": "module",
     "scripts": {
         "fedev": "vite --config vite.config.ts",
