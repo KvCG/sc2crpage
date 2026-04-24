@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
+import { MemoryRouter } from 'react-router-dom'
 import { RankingTable } from './Table'
 
 describe('RankingTable position delta rendering', () => {
@@ -38,9 +39,11 @@ describe('RankingTable position delta rendering', () => {
         ]
 
         render(
-            <MantineProvider>
-                <RankingTable data={rows as any} loading={false} />
-            </MantineProvider>
+            <MemoryRouter>
+                <MantineProvider>
+                    <RankingTable data={rows as any} loading={false} />
+                </MantineProvider>
+            </MemoryRouter>
         )
 
         expect(screen.getByText('▲ 3')).toBeTruthy()

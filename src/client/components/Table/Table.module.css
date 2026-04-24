@@ -92,6 +92,45 @@
     font-weight: bolder
 }
 
+.nameCellContent {
+    min-width: 0;
+}
+
+.playerName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.h2hAction {
+    border: 1px solid var(--mantine-color-blue-6);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--mantine-color-blue-4);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    padding: 4px 8px;
+    min-width: 44px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.h2hAction:hover:enabled {
+    background: rgba(51, 154, 240, 0.18);
+}
+
+.h2hAction:focus-visible {
+    outline: 2px solid var(--mantine-color-blue-5);
+    outline-offset: 2px;
+}
+
+.h2hAction:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 @media (max-width: 30em) {
     .posIndicator {
         position: sticky;
@@ -115,5 +154,11 @@
         left: 80px;
         z-index: 3;
         background: var(--mantine-color-body);
+    }
+
+    .h2hAction {
+        min-width: 38px;
+        padding: 3px 6px;
+        font-size: 0.65rem;
     }
 }
