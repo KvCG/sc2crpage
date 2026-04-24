@@ -5,6 +5,7 @@ import classes from './AdminLayout.module.css'
 
 const adminLinks = [
     { to: '/admin/h2h-flags', label: 'Flag Review' },
+    { to: '/admin/pending-matches', label: 'Pending Matches' },
     { to: '/admin/players', label: 'Players' },
 ]
 

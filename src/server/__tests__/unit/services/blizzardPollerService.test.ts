@@ -41,10 +41,9 @@ import { poll } from '../../../services/blizzardPollerService'
 // ---------------------------------------------------------------------------
 
 /**
- * Returns a mock Supabase chain for the Guard 6 dedup query:
- * supabase.from(...).select(...).eq(...).maybeSingle()
+ * Returns a mock Supabase chain for select().eq().maybeSingle() queries.
  */
-function makeDedupeBuilder(result: { data: unknown; error: unknown }) {
+function makeSelectBuilder(result: { data: unknown; error: unknown }) {
     return {
         select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
@@ -52,6 +51,38 @@ function makeDedupeBuilder(result: { data: unknown; error: unknown }) {
             }),
         }),
     }
+}
+
+/** Returns a mock Supabase chain for upsert() calls. */
+function makeUpsertBuilder() {
+    return { upsert: vi.fn().mockResolvedValue({ error: null }) }
+}
+
+/**
+ * Sets up mockSupabaseFrom to dispatch by table name.
+ * h2h_matches → Guard 6 dedup (select chain)
+ * h2h_pending_matches → staging select chain + upsert chain (alternating)
+ */
+function setupSupabaseMocks(opts: {
+    h2hMatchesResult?: { data: unknown; error: unknown }
+    pendingMatchesExisting?: { data: unknown; error: unknown }
+    pendingUpsert?: ReturnType<typeof makeUpsertBuilder>
+} = {}) {
+    const h2hResult = opts.h2hMatchesResult ?? { data: null, error: null }
+    const pendingSelect = opts.pendingMatchesExisting ?? { data: null, error: null }
+    const upsertBuilder = opts.pendingUpsert ?? makeUpsertBuilder()
+
+    hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
+        if (table === 'h2h_matches') return makeSelectBuilder(h2hResult)
+        if (table === 'h2h_pending_matches') {
+            // First call → select check; subsequent calls → upsert
+            const callCount = (hoisted.mockSupabaseFrom as ReturnType<typeof vi.fn>).mock.calls
+                .filter((c: string[]) => c[0] === 'h2h_pending_matches').length
+            if (callCount <= 1) return makeSelectBuilder(pendingSelect)
+            return upsertBuilder
+        }
+        return makeSelectBuilder({ data: null, error: null })
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -91,8 +122,8 @@ describe('blizzardPollerService.poll', () => {
             .mockResolvedValueOnce(US_PROFILE)   // Pistola
             .mockResolvedValueOnce(US_PROFILE2)  // Wither
         hoisted.mockPersistMatch.mockResolvedValue(undefined)
-        // Default: no duplicate found in h2h_matches
-        hoisted.mockSupabaseFrom.mockReturnValue(makeDedupeBuilder({ data: null, error: null }))
+        // Default: no duplicate found in h2h_matches; h2h_pending_matches not confirmed
+        setupSupabaseMocks()
     })
 
     it('scenario: no overlapping matches — persistMatch is never called', async () => {
@@ -216,7 +247,7 @@ describe('blizzardPollerService.poll', () => {
         expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
     })
 
-    it('scenario: 3 community players — Win+Win+Loss triggers multiple-WINs guard, persistMatch not called', async () => {
+    it('scenario: 3 community players — Win+Win+Loss triggers multi_winner staging, persistMatch not called', async () => {
         const THIRD_ID = 8459434 // e.g. Dark
         const THIRD_PROFILE = { profileId: 999, realmId: 1, regionId: 1, region: 'US' }
 
@@ -234,7 +265,7 @@ describe('blizzardPollerService.poll', () => {
             .mockResolvedValueOnce(US_PROFILE2)   // Wither
             .mockResolvedValueOnce(THIRD_PROFILE) // Dark
 
-        // All three share the same timestamp+map+type — 2v2 custom
+        // All three share the same timestamp+map+type — Win+Win+Loss
         hoisted.mockFetchPlayerMatches
             .mockResolvedValueOnce([
                 { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP },
@@ -246,12 +277,16 @@ describe('blizzardPollerService.poll', () => {
                 { map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP },
             ])
 
+        // Track upsert calls on h2h_pending_matches
+        const upsertSpy = vi.fn().mockResolvedValue({ error: null })
+        setupSupabaseMocks({ pendingUpsert: { upsert: upsertSpy } })
+
         await poll()
 
         expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
-        expect(hoisted.mockLogger.warn).toHaveBeenCalledWith(
-            expect.objectContaining({ feature: 'blizzard-poller', decisions: expect.arrayContaining(['WIN', 'WIN', 'LOSS']) }),
-            expect.stringContaining('multiple WINs')
+        expect(upsertSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ reason: 'multi_winner' }),
+            expect.any(Object)
         )
     })
 
@@ -353,9 +388,7 @@ describe('blizzardPollerService.poll', () => {
             ])
 
         // Simulate matchId already stored for a different pair (pair_id = 99)
-        hoisted.mockSupabaseFrom.mockReturnValue(
-            makeDedupeBuilder({ data: { id: 1, pair_id: 99 }, error: null })
-        )
+        setupSupabaseMocks({ h2hMatchesResult: { data: { id: 1, pair_id: 99 }, error: null } })
 
         await poll()
 
@@ -433,5 +466,179 @@ describe('blizzardPollerService.poll', () => {
         expect(match.winnerCharacterId).toBe(DARK_ID)
         expect(match.map).toBe(WINTER_MAP)
         expect(match.source).toBe('blizzard')
+    })
+
+    // ── Staging tests ─────────────────────────────────────────────────────────
+
+    it('staging: Win+Win+Loss+Loss (4-player 2v2) → staged as 3plus_active_after_dedup, inferredMode 2v2', async () => {
+        const IDS = [PISTOLA_ID, WITHER_ID, 1111111, 2222222]
+        hoisted.mockGetCommunityData.mockResolvedValue({
+            players: IDS.map((id, i) => ({ id: String(id), btag: `Player${i}#1234` })),
+            playerIds: new Set(IDS.map(String)),
+        })
+        hoisted.mockResolveBlizzardProfile.mockReset()
+        IDS.forEach(() =>
+            hoisted.mockResolveBlizzardProfile.mockResolvedValueOnce({ profileId: Math.random(), realmId: 1, regionId: 1, region: 'US' })
+        )
+        const decisions = ['Win', 'Win', 'Loss', 'Loss']
+        decisions.forEach((d) =>
+            hoisted.mockFetchPlayerMatches.mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: d, speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+        )
+
+        const upsertSpy = vi.fn().mockResolvedValue({ error: null })
+        setupSupabaseMocks({ pendingUpsert: { upsert: upsertSpy } })
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+        expect(upsertSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ reason: '3plus_active_after_dedup', inferred_mode: '2v2' }),
+            expect.any(Object)
+        )
+    })
+
+    it('staging: Win+Win+Win+Loss+Loss (5-player) → staged as uneven_active_sides, inferredMode uneven', async () => {
+        const IDS = [PISTOLA_ID, WITHER_ID, 1111111, 2222222, 3333333]
+        hoisted.mockGetCommunityData.mockResolvedValue({
+            players: IDS.map((id, i) => ({ id: String(id), btag: `Player${i}#1234` })),
+            playerIds: new Set(IDS.map(String)),
+        })
+        hoisted.mockResolveBlizzardProfile.mockReset()
+        IDS.forEach(() =>
+            hoisted.mockResolveBlizzardProfile.mockResolvedValueOnce({ profileId: Math.random(), realmId: 1, regionId: 1, region: 'US' })
+        )
+        const decisions = ['Win', 'Win', 'Win', 'Loss', 'Loss']
+        decisions.forEach((d) =>
+            hoisted.mockFetchPlayerMatches.mockResolvedValueOnce([
+                { map: SHARED_MAP, type: SHARED_TYPE, decision: d, speed: 'Faster', date: SHARED_TIMESTAMP },
+            ])
+        )
+
+        const upsertSpy = vi.fn().mockResolvedValue({ error: null })
+        setupSupabaseMocks({ pendingUpsert: { upsert: upsertSpy } })
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+        expect(upsertSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ reason: 'uneven_active_sides', inferred_mode: 'uneven' }),
+            expect.any(Object)
+        )
+    })
+
+    it('staging: confirmed pending row is never overwritten', async () => {
+        const THIRD_ID = 8459434
+        hoisted.mockGetCommunityData.mockResolvedValue({
+            players: [
+                { id: String(PISTOLA_ID), btag: 'Pistola#1234' },
+                { id: String(WITHER_ID), btag: 'Wither#5678' },
+                { id: String(THIRD_ID), btag: 'Dark#1749' },
+            ],
+            playerIds: new Set([String(PISTOLA_ID), String(WITHER_ID), String(THIRD_ID)]),
+        })
+        hoisted.mockResolveBlizzardProfile.mockReset()
+        hoisted.mockResolveBlizzardProfile
+            .mockResolvedValueOnce(US_PROFILE)
+            .mockResolvedValueOnce(US_PROFILE2)
+            .mockResolvedValueOnce({ profileId: 999, realmId: 1, regionId: 1, region: 'US' })
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP }])
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP }])
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP }])
+
+        // pending row already confirmed
+        const upsertSpy = vi.fn().mockResolvedValue({ error: null })
+        setupSupabaseMocks({
+            pendingMatchesExisting: { data: { match_id: `BZ-${SHARED_TIMESTAMP}_Ruby_Rock_LE`, review_outcome: 'confirmed' }, error: null },
+            pendingUpsert: { upsert: upsertSpy },
+        })
+
+        await poll()
+
+        expect(upsertSpy).not.toHaveBeenCalled()
+        expect(hoisted.mockLogger.debug).toHaveBeenCalledWith(
+            expect.objectContaining({ feature: 'blizzard-poller', matchId: `BZ-${SHARED_TIMESTAMP}_Ruby_Rock_LE` }),
+            expect.stringContaining('confirmed')
+        )
+    })
+
+    it('staging: Loss+Loss (no WIN) — not staged, simple skip', async () => {
+        const upsertSpy = vi.fn().mockResolvedValue({ error: null })
+        setupSupabaseMocks({ pendingUpsert: { upsert: upsertSpy } })
+
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP }])
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP }])
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+        expect(upsertSpy).not.toHaveBeenCalled()
+    })
+
+    it('staging: Win+Win+Win (3-player all-WIN) → staged as 3plus_active_after_dedup, inferredMode ffa', async () => {
+        const THIRD_ID = 8459434
+        hoisted.mockGetCommunityData.mockResolvedValue({
+            players: [
+                { id: String(PISTOLA_ID), btag: 'Pistola#1234' },
+                { id: String(WITHER_ID), btag: 'Wither#5678' },
+                { id: String(THIRD_ID), btag: 'Dark#1749' },
+            ],
+            playerIds: new Set([String(PISTOLA_ID), String(WITHER_ID), String(THIRD_ID)]),
+        })
+        hoisted.mockResolveBlizzardProfile.mockReset()
+        hoisted.mockResolveBlizzardProfile
+            .mockResolvedValueOnce(US_PROFILE)
+            .mockResolvedValueOnce(US_PROFILE2)
+            .mockResolvedValueOnce({ profileId: 999, realmId: 1, regionId: 1, region: 'US' })
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP }])
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP }])
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Win', speed: 'Faster', date: SHARED_TIMESTAMP }])
+
+        const upsertSpy = vi.fn().mockResolvedValue({ error: null })
+        setupSupabaseMocks({ pendingUpsert: { upsert: upsertSpy } })
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+        expect(upsertSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ reason: '3plus_active_after_dedup', inferred_mode: 'ffa' }),
+            expect.any(Object)
+        )
+    })
+
+    it('staging: Loss+Loss+Loss (3-player all-LOSS) → staged as 3plus_active_after_dedup, inferredMode ffa', async () => {
+        const THIRD_ID = 8459434
+        hoisted.mockGetCommunityData.mockResolvedValue({
+            players: [
+                { id: String(PISTOLA_ID), btag: 'Pistola#1234' },
+                { id: String(WITHER_ID), btag: 'Wither#5678' },
+                { id: String(THIRD_ID), btag: 'Dark#1749' },
+            ],
+            playerIds: new Set([String(PISTOLA_ID), String(WITHER_ID), String(THIRD_ID)]),
+        })
+        hoisted.mockResolveBlizzardProfile.mockReset()
+        hoisted.mockResolveBlizzardProfile
+            .mockResolvedValueOnce(US_PROFILE)
+            .mockResolvedValueOnce(US_PROFILE2)
+            .mockResolvedValueOnce({ profileId: 999, realmId: 1, regionId: 1, region: 'US' })
+        hoisted.mockFetchPlayerMatches
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP }])
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP }])
+            .mockResolvedValueOnce([{ map: SHARED_MAP, type: SHARED_TYPE, decision: 'Loss', speed: 'Faster', date: SHARED_TIMESTAMP }])
+
+        const upsertSpy = vi.fn().mockResolvedValue({ error: null })
+        setupSupabaseMocks({ pendingUpsert: { upsert: upsertSpy } })
+
+        await poll()
+
+        expect(hoisted.mockPersistMatch).not.toHaveBeenCalled()
+        expect(upsertSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ reason: '3plus_active_after_dedup', inferred_mode: 'ffa' }),
+            expect.any(Object)
+        )
     })
 })
