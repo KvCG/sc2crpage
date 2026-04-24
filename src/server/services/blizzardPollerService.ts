@@ -1,6 +1,7 @@
 import { CommunityDataService } from './communityDataService'
 import { fetchPlayerMatches, type BlizzardProfile, type BlizzardPlayerMatch } from './blizzardMatchClient'
 import { resolveBlizzardProfile, persistMatch } from './h2hService'
+import { classifyPendingBucket } from './pendingMatchClassifier'
 import type { H2HMatch, PendingMatch } from '../../shared/types'
 import logger from '../logging/logger'
 import supabase from '../db/supabaseClient'
@@ -82,28 +83,8 @@ async function stagePendingMatch(
     const matchDate = new Date(Number(tsStr) * 1000).toISOString()
     const region = bucket[0]?.region ?? 'US'
 
-    const activeBucket = bucket.filter((b) => b.decision.toUpperCase() !== 'OBSERVER')
-    const winCount = activeBucket.filter((b) => b.decision.toUpperCase() === 'WIN').length
-    const lossCount = activeBucket.filter((b) => b.decision.toUpperCase() === 'LOSS').length
-    const observerCount = bucket.length - activeBucket.length
-
-    const totalActive = activeBucket.length
-    let inferredMode: PendingMatch['inferredMode']
-    if (reason === 'uneven_active_sides') {
-        inferredMode = 'uneven'
-    } else if (totalActive >= 3 && (winCount === 0 || lossCount === 0)) {
-        inferredMode = 'ffa'
-    } else if (totalActive === 2) {
-        inferredMode = 'unknown'
-    } else if (totalActive % 2 === 0) {
-        const perSide = totalActive / 2
-        if (perSide === 2) inferredMode = '2v2'
-        else if (perSide === 3) inferredMode = '3v3'
-        else if (perSide === 4) inferredMode = '4v4'
-        else inferredMode = 'unknown'
-    } else {
-        inferredMode = 'unknown'
-    }
+    const { winCount, lossCount, observerCount, activePlayerCount: totalActive, inferredMode } =
+        classifyPendingBucket(bucket.map((b) => b.decision))
 
     // Skip if already confirmed
     const { data: existing } = await supabase
@@ -129,7 +110,7 @@ async function stagePendingMatch(
             candidate_ids: bucket.map((b) => b.characterId),
             raw_decisions: bucket.map((b) => ({ characterId: b.characterId, decision: b.decision })),
             reason,
-            active_player_count: activeBucket.length,
+            active_player_count: totalActive,
             win_count: winCount,
             loss_count: lossCount,
             observer_count: observerCount,
@@ -240,38 +221,28 @@ export async function poll(): Promise<void> {
         )
         if (communityBucket.length < 2) continue
 
-        // Guard 4 — LOSS-count: a real 1v1 has exactly one LOSS decision after
-        // excluding Observers who inflate the raw bucket size (e.g. observers in
-        // a BO practice session share the same timestamp+map+CUSTOM key as the
-        // two real opponents).
-        const activeBucket = communityBucket.filter((b) => b.decision.toUpperCase() !== 'OBSERVER')
-        const lossCount = activeBucket.filter((b) => b.decision.toUpperCase() === 'LOSS').length
+        // Guard 4 — classify bucket; stage non-1v1 matches, persist clean 1v1s.
+        const { reason, lossCount } = classifyPendingBucket(
+            communityBucket.map((b) => b.decision)
+        )
+
+        if (reason !== null) {
+            await stagePendingMatch(key, communityBucket, reason)
+            continue
+        }
 
         if (lossCount !== 1) {
-            const winCount = activeBucket.filter((b) => b.decision.toUpperCase() === 'WIN').length
-            if (activeBucket.length >= 3) {
-                // 3+ active players — stage for review
-                let reason: PendingMatch['reason']
-                if (winCount >= 2 && lossCount >= 2 && winCount !== lossCount) {
-                    reason = 'uneven_active_sides'
-                } else {
-                    reason = '3plus_active_after_dedup'
-                }
-                await stagePendingMatch(key, communityBucket, reason)
-            } else {
-                logger.debug(
-                    { feature: 'blizzard-poller', key, lossCount },
-                    'Skipping CUSTOM bucket — LOSS count is not 1'
-                )
-            }
+            // Not stageable: < 3 active and lossCount is not 1 (e.g. LOSS+LEFT)
+            logger.debug(
+                { feature: 'blizzard-poller', key, lossCount },
+                'Skipping CUSTOM bucket — LOSS count is not 1'
+            )
             continue
         }
 
+        // lossCount === 1, winCount === 1 → resolvable 1v1
+        const activeBucket = communityBucket.filter((b) => b.decision.toUpperCase() !== 'OBSERVER')
         const winEntries = activeBucket.filter((b) => b.decision.toUpperCase() === 'WIN')
-        if (winEntries.length > 1) {
-            await stagePendingMatch(key, communityBucket, 'multi_winner')
-            continue
-        }
 
         // p2 is the loser, p1 is the winner
         const p2 = activeBucket.find((b) => b.decision.toUpperCase() === 'LOSS')!

@@ -534,6 +534,7 @@ router.post(
                     case 'NOT_FOUND':
                         return res.status(404).json({ error: error.message })
                     case 'ALREADY_REVIEWED':
+                    case 'TEAM_MATCH':
                         return res.status(409).json({ error: error.message })
                     case 'UNKNOWN_PLAYER':
                     case 'INVALID_WINNER':

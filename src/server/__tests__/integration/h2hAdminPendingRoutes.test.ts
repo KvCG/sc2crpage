@@ -440,6 +440,21 @@ describe('POST /h2h/admin/pending/:id/confirm', () => {
         expect(res.statusCode).toBe(400)
     })
 
+    it('returns 409 when service throws TEAM_MATCH', async () => {
+        const { PendingServiceError } = await import('../../services/h2hPendingService')
+        hoisted.confirmPendingMatchMock.mockRejectedValue(
+            new PendingServiceError(
+                'TEAM_MATCH',
+                'Cannot confirm a team match (reason=3plus_active_after_dedup) into 1v1 history — reject it instead',
+            ),
+        )
+
+        const res = await callRoute({ id: '17' }, validConfirmBody)
+
+        expect(res.statusCode).toBe(409)
+        expect((res.jsonData as Record<string, unknown>).error).toContain('team match')
+    })
+
     it('returns 500 when service throws an unexpected error', async () => {
         hoisted.confirmPendingMatchMock.mockRejectedValue(new Error('DB failure'))
 

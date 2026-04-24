@@ -14,6 +14,7 @@ export type PendingServiceErrorCode =
     | 'UNKNOWN_PLAYER'
     | 'INVALID_WINNER'
     | 'SAME_PLAYER'
+    | 'TEAM_MATCH'
 
 export class PendingServiceError extends Error {
     readonly code: PendingServiceErrorCode
@@ -137,6 +138,13 @@ export async function confirmPendingMatch(
         throw new PendingServiceError(
             'ALREADY_REVIEWED',
             `Pending match ${id} has already been reviewed (${pending.review_outcome})`,
+        )
+    }
+
+    if (pending.reason !== 'multi_winner') {
+        throw new PendingServiceError(
+            'TEAM_MATCH',
+            `Cannot confirm a team match (reason=${pending.reason}) into 1v1 history — reject it instead`,
         )
     }
 
