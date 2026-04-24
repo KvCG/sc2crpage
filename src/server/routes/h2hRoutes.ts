@@ -10,6 +10,12 @@ import {
 } from '../services/h2hFlagService'
 import { communityDataService } from '../services/communityDataService'
 import { requireAdminAuth } from '../middleware/adminAuthMiddleware'
+import {
+    listPendingMatches,
+    confirmPendingMatch,
+    rejectPendingMatch,
+    PendingServiceError,
+} from '../services/h2hPendingService'
 import logger from '../logging/logger'
 import type { H2HMatch, H2HPlayerMeta, H2HResponse, MatchFlagType } from '../../shared/types'
 
@@ -431,5 +437,165 @@ router.patch('/h2h/flags/:flagId', requireAdminAuth, async (req: Request, res: R
         return res.status(500).json({ error: 'Failed to process flag review' })
     }
 })
+
+// ---------------------------------------------------------------------------
+// GET /api/h2h/admin/pending — Admin: list unreviewed pending matches
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/h2h/admin/pending
+ *
+ * Returns all pending matches where review_outcome IS NULL, ordered by
+ * match_date descending.
+ *
+ * Protected: requires a valid admin JWT in the Authorization header.
+ */
+router.get('/h2h/admin/pending', requireAdminAuth, async (req: Request, res: Response) => {
+    logger.info({ feature: 'pending-matches' }, 'Admin listing pending matches')
+
+    try {
+        const pending = await listPendingMatches()
+        return res.json(pending)
+    } catch (error) {
+        logger.error({ feature: 'pending-matches', error }, 'Error listing pending matches')
+        return res.status(500).json({ error: 'Failed to list pending matches' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/h2h/admin/pending/:id/confirm — Admin: confirm a pending match
+// ---------------------------------------------------------------------------
+
+const confirmPendingBodySchema = z.object({
+    player1CharacterId: z
+        .number({ required_error: 'player1CharacterId is required' })
+        .int()
+        .positive(),
+    player2CharacterId: z
+        .number({ required_error: 'player2CharacterId is required' })
+        .int()
+        .positive(),
+    winnerCharacterId: z
+        .number({ required_error: 'winnerCharacterId is required' })
+        .int()
+        .positive(),
+})
+
+/**
+ * POST /api/h2h/admin/pending/:id/confirm
+ *
+ * Confirms a pending match by selecting two players and a winner, then
+ * persists it as a 1v1 match via persistMatch.
+ *
+ * Body:
+ * - player1CharacterId: numeric character ID (required)
+ * - player2CharacterId: numeric character ID (required)
+ * - winnerCharacterId: must equal player1 or player2 (required)
+ *
+ * Protected: requires a valid admin JWT in the Authorization header.
+ */
+router.post(
+    '/h2h/admin/pending/:id/confirm',
+    requireAdminAuth,
+    async (req: Request, res: Response) => {
+        const id = parseInt(req.params.id, 10)
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({ error: 'id must be a positive integer' })
+        }
+
+        const parsed = confirmPendingBodySchema.safeParse(req.body)
+        if (!parsed.success) {
+            const details = parsed.error.issues.map((issue) => ({
+                field: issue.path.join('.'),
+                message: issue.message,
+                received:
+                    issue.path.length > 0 ? req.body?.[issue.path[0] as string] : undefined,
+            }))
+            return res.status(400).json({ error: 'Invalid request body', details })
+        }
+
+        const { player1CharacterId, player2CharacterId, winnerCharacterId } = parsed.data
+
+        logger.info(
+            { feature: 'pending-matches', id, player1CharacterId, player2CharacterId, winnerCharacterId },
+            'Admin confirming pending match',
+        )
+
+        try {
+            await confirmPendingMatch(id, player1CharacterId, player2CharacterId, winnerCharacterId)
+            return res.json({
+                message: 'Match confirmed and persisted',
+                pendingId: id,
+                reviewOutcome: 'confirmed',
+            })
+        } catch (error) {
+            if (error instanceof PendingServiceError) {
+                switch (error.code) {
+                    case 'NOT_FOUND':
+                        return res.status(404).json({ error: error.message })
+                    case 'ALREADY_REVIEWED':
+                    case 'TEAM_MATCH':
+                        return res.status(409).json({ error: error.message })
+                    case 'UNKNOWN_PLAYER':
+                    case 'INVALID_WINNER':
+                    case 'SAME_PLAYER':
+                        return res.status(400).json({ error: error.message })
+                }
+            }
+            logger.error(
+                { feature: 'pending-matches', id, error },
+                'Error confirming pending match',
+            )
+            return res.status(500).json({ error: 'Failed to confirm pending match' })
+        }
+    },
+)
+
+// ---------------------------------------------------------------------------
+// POST /api/h2h/admin/pending/:id/reject — Admin: reject a pending match
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /api/h2h/admin/pending/:id/reject
+ *
+ * Marks a pending match as rejected without persisting any match record.
+ *
+ * Protected: requires a valid admin JWT in the Authorization header.
+ */
+router.post(
+    '/h2h/admin/pending/:id/reject',
+    requireAdminAuth,
+    async (req: Request, res: Response) => {
+        const id = parseInt(req.params.id, 10)
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({ error: 'id must be a positive integer' })
+        }
+
+        logger.info({ feature: 'pending-matches', id }, 'Admin rejecting pending match')
+
+        try {
+            await rejectPendingMatch(id)
+            return res.json({
+                message: 'Match rejected',
+                pendingId: id,
+                reviewOutcome: 'rejected',
+            })
+        } catch (error) {
+            if (error instanceof PendingServiceError) {
+                switch (error.code) {
+                    case 'NOT_FOUND':
+                        return res.status(404).json({ error: error.message })
+                    case 'ALREADY_REVIEWED':
+                        return res.status(409).json({ error: error.message })
+                }
+            }
+            logger.error(
+                { feature: 'pending-matches', id, error },
+                'Error rejecting pending match',
+            )
+            return res.status(500).json({ error: 'Failed to reject pending match' })
+        }
+    },
+)
 
 export default router
