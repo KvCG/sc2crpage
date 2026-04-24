@@ -1,4 +1,4 @@
-import { Table } from '@mantine/core'
+import { Group, Table } from '@mantine/core'
 import cx from 'clsx'
 import classes from './Table.module.css'
 import { addOnlineIndicator, getLeagueSrc } from '../../utils/rankingHelper'
@@ -7,14 +7,16 @@ import { getStandardName } from '../../utils/common'
 import { formatPositionChange } from '../../utils/tableHelpers'
 import type { DecoratedRow } from '../../utils/rankingHelper'
 import type { ColumnOptions } from './TableColumnFilters'
+import type { H2HQuickViewPlayer } from '../../types/h2hQuickView'
 
 interface RankingTableRowProps {
     row: DecoratedRow
     index: number
     visibleColumns: ColumnOptions
+    onOpenH2HQuickView?: (player: H2HQuickViewPlayer) => void
 }
 
-export function RankingTableRow({ row, index, visibleColumns }: RankingTableRowProps) {
+export function RankingTableRow({ row, index, visibleColumns, onOpenH2HQuickView }: RankingTableRowProps) {
     const {
         btag,
         rating,
@@ -28,6 +30,24 @@ export function RankingTableRow({ row, index, visibleColumns }: RankingTableRowP
         totalGames,
     } = row
 
+    const displayName = getStandardName(row)
+    const characterId = typeof row.id === 'number' ? row.id : null
+
+    const handleOpenH2H = () => {
+        if (characterId === null || !onOpenH2HQuickView || typeof rating !== 'number') {
+            return
+        }
+
+        onOpenH2HQuickView({
+            characterId,
+            displayName,
+            btag,
+            mmr: rating,
+            mainRace,
+            leagueType,
+        })
+    }
+
     const { arrow, deltaText } = formatPositionChange(positionChangeIndicator, positionDelta)
 
     return (
@@ -39,7 +59,18 @@ export function RankingTableRow({ row, index, visibleColumns }: RankingTableRowP
             {visibleColumns.top && <Table.Td className={classes.top}>{index + 1}</Table.Td>}
             {visibleColumns.name && (
                 <Table.Td className={classes.name} title={btag}>
-                    {getStandardName(row)}
+                    <Group justify="space-between" wrap="nowrap" gap="xs" className={classes.nameCellContent}>
+                        <span className={classes.playerName}>{displayName}</span>
+                        <button
+                            type="button"
+                            className={classes.h2hAction}
+                            onClick={handleOpenH2H}
+                            disabled={characterId === null}
+                            aria-label={`Open H2H with ${displayName}`}
+                        >
+                            H2H
+                        </button>
+                    </Group>
                 </Table.Td>
             )}
             {visibleColumns.mmr && <Table.Td>{rating}</Table.Td>}
