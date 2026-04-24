@@ -175,8 +175,10 @@ export const H2H = () => {
         setPlayer2Id(p2.id)
     }, [players])
 
-    const resolvePlayerOption = (label: string): PlayerOption | undefined =>
-        players.find(p => p.label === label)
+    const resolvePlayerOption = useCallback(
+        (label: string): PlayerOption | undefined => players.find(p => p.label === label),
+        [players]
+    )
 
     const handlePlayer1Change = (value: string) => {
         setPlayer1Input(value)
@@ -189,6 +191,22 @@ export const H2H = () => {
         const opt = resolvePlayerOption(value)
         setPlayer2Id(opt?.id ?? null)
     }
+
+    useEffect(() => {
+        if (players.length === 0) {
+            return
+        }
+
+        if (player1Input.length > 0) {
+            const player1Option = resolvePlayerOption(player1Input)
+            setPlayer1Id(player1Option?.id ?? null)
+        }
+
+        if (player2Input.length > 0) {
+            const player2Option = resolvePlayerOption(player2Input)
+            setPlayer2Id(player2Option?.id ?? null)
+        }
+    }, [players, player1Input, player2Input, resolvePlayerOption])
 
     const filteredMatches = (matches: H2HMatch[]): H2HMatch[] => {
         let result: H2HMatch[]
