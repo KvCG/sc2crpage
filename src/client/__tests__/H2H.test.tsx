@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
+import { MemoryRouter } from 'react-router-dom'
 
 const hoisted = vi.hoisted(() => ({
     mockGetCommunityPlayers: vi.fn(),
@@ -107,7 +108,11 @@ const h2hResponse = {
     },
 }
 
-const wrap = (ui: React.ReactElement) => render(<MantineProvider>{ui}</MantineProvider>)
+const wrap = (ui: React.ReactElement, path = '/h2h') => render(
+    <MemoryRouter initialEntries={[path]}>
+        <MantineProvider>{ui}</MantineProvider>
+    </MemoryRouter>
+)
 const openPicker = () => fireEvent.click(screen.getByRole('button', { name: 'Compare Players' }))
 const renderWithPicker = async () => {
     wrap(<H2H />)
@@ -117,6 +122,7 @@ const renderWithPicker = async () => {
 
 describe('H2H page', () => {
     beforeEach(() => {
+        vi.clearAllMocks()
         hoisted.mockGetCommunityPlayers.mockResolvedValue(communityPlayersResponse)
         hoisted.mockGetH2H.mockResolvedValue(h2hResponse)
         hoisted.mockGetTopH2HPairs.mockResolvedValue(topPairsResponse)
@@ -125,6 +131,46 @@ describe('H2H page', () => {
     it('renders Compare Players button and hides pickers on mount', async () => {
         wrap(<H2H />)
         await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        expect(screen.getByRole('button', { name: 'Compare Players' })).toBeTruthy()
+        expect(screen.queryByLabelText('Select Player 1')).toBeNull()
+        expect(screen.queryByLabelText('Select Player 2')).toBeNull()
+    })
+
+    it('hydrates both players from URL params, fetches H2H, and hides picker UI', async () => {
+        wrap(<H2H />, '/h2h?player1=101&player2=202')
+
+        await waitFor(() =>
+            expect(hoisted.mockGetH2H).toHaveBeenCalledWith(101, 202)
+        )
+        await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
+
+        expect(screen.queryByLabelText('Select Player 1')).toBeNull()
+        expect(screen.queryByLabelText('Select Player 2')).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Close compare' })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Compare Players' })).toBeNull()
+    })
+
+    it('hydrates one player from URL params and waits for manual second player selection', async () => {
+        wrap(<H2H />, '/h2h?player1=101')
+
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        expect(hoisted.mockGetH2H).not.toHaveBeenCalled()
+
+        expect(screen.getByLabelText('Select Player 1')).toBeTruthy()
+        expect(screen.getByLabelText('Select Player 2')).toBeTruthy()
+
+        fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+        await waitFor(() =>
+            expect(hoisted.mockGetH2H).toHaveBeenCalledWith(101, 202)
+        )
+    })
+
+    it('with no URL params does not prefetch H2H and keeps manual compare entry', async () => {
+        wrap(<H2H />)
+
+        await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+        expect(hoisted.mockGetH2H).not.toHaveBeenCalled()
         expect(screen.getByRole('button', { name: 'Compare Players' })).toBeTruthy()
         expect(screen.queryByLabelText('Select Player 1')).toBeNull()
         expect(screen.queryByLabelText('Select Player 2')).toBeNull()

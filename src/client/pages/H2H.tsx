@@ -16,6 +16,7 @@ import {
     Center,
 } from '@mantine/core'
 import { IconAlertCircle, IconFlag } from '@tabler/icons-react'
+import { useSearchParams } from 'react-router-dom'
 import { getCommunityPlayers, getH2H, getTopH2HPairs } from '../services/api'
 import type { H2HResponse, H2HMatch, TopPairEntry } from '../../shared/types'
 import { FlagMatchModal } from '../components/Match/FlagMatchModal'
@@ -41,13 +42,33 @@ const MATCH_TYPE_CUSTOM = 'CUSTOM'
 const MATCH_TYPE_SHOWMATCH = 'showmatch'
 const MATCH_TYPE_TOURNAMENT = 'tournament'
 
+const parseCharacterIdParam = (rawValue: string | null): number | null => {
+    if (rawValue === null) return null
+
+    let decodedValue = rawValue
+    try {
+        decodedValue = decodeURIComponent(rawValue).trim()
+    } catch {
+        return null
+    }
+
+    if (!/^\d+$/.test(decodedValue)) return null
+
+    const parsedValue = Number(decodedValue)
+    if (!Number.isSafeInteger(parsedValue) || parsedValue <= 0) return null
+
+    return parsedValue
+}
+
 export const H2H = () => {
+    const [searchParams] = useSearchParams()
     const [players, setPlayers] = useState<PlayerOption[]>([])
     const [showPicker, setShowPicker] = useState(false)
     const [player1Input, setPlayer1Input] = useState('')
     const [player2Input, setPlayer2Input] = useState('')
     const [player1Id, setPlayer1Id] = useState<number | null>(null)
     const [player2Id, setPlayer2Id] = useState<number | null>(null)
+    const [isUrlPairHydrated, setIsUrlPairHydrated] = useState(false)
 
     const [topPairs, setTopPairs] = useState<TopPairEntry[]>([])
     const [topPairsLoading, setTopPairsLoading] = useState(true)
@@ -87,6 +108,23 @@ export const H2H = () => {
             })
     }, [])
 
+    // Hydrate picker state from URL when launched with preselected players.
+    useEffect(() => {
+        const player1FromUrl = parseCharacterIdParam(searchParams.get('player1'))
+        const player2FromUrl = parseCharacterIdParam(searchParams.get('player2'))
+
+        setPlayer1Id(player1FromUrl)
+        setPlayer2Id(player2FromUrl)
+
+        const hasAnyPlayerParam = searchParams.get('player1') !== null || searchParams.get('player2') !== null
+        const hasBothPlayers = player1FromUrl !== null && player2FromUrl !== null
+
+        setIsUrlPairHydrated(hasBothPlayers)
+        if (hasAnyPlayerParam && !hasBothPlayers) {
+            setShowPicker(true)
+        }
+    }, [searchParams])
+
     const fetchH2H = useCallback(async (p1: number, p2: number) => {
         setLoading(true)
         setError(null)
@@ -117,6 +155,7 @@ export const H2H = () => {
 
     const handleCancel = useCallback(() => {
         setShowPicker(false)
+        setIsUrlPairHydrated(false)
         setPlayer1Input('')
         setPlayer2Input('')
         setPlayer1Id(null)
@@ -338,7 +377,7 @@ export const H2H = () => {
                 onClose={() => setFlaggedMatchId(null)}
             />
 
-            {(showPicker || searchInitiated) && (
+            {(showPicker || searchInitiated) && !isUrlPairHydrated && (
                 <Group align="flex-end" mb="lg" justify="center">
                     <Autocomplete
                         label="Player 1"

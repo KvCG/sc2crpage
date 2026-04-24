@@ -92,6 +92,49 @@
     font-weight: bolder
 }
 
+.nameCellContent {
+    min-width: 0;
+    gap: 6px;
+}
+
+.playerName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.h2hAction {
+    border: 1px solid var(--mantine-color-blue-6);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--mantine-color-blue-4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    padding: 4px 8px;
+    min-width: 44px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.h2hAction:hover:enabled {
+    background: rgba(51, 154, 240, 0.18);
+}
+
+.h2hAction:focus-visible {
+    outline: 2px solid var(--mantine-color-blue-5);
+    outline-offset: 2px;
+}
+
+.h2hAction:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 @media (max-width: 30em) {
     .posIndicator {
         position: sticky;
@@ -115,5 +158,30 @@
         left: 80px;
         z-index: 3;
         background: var(--mantine-color-body);
+    }
+
+    .h2hAction {
+        min-width: 24px;
+        padding: 2px 4px;
+        font-size: 0;
+        line-height: 0;
+    }
+
+    .h2hAction::before {
+        content: '';
+        width: 10px;
+        height: 10px;
+        display: block;
+        background:
+            linear-gradient(45deg, transparent 42%, currentColor 42%, currentColor 58%, transparent 58%),
+            linear-gradient(-45deg, transparent 42%, currentColor 42%, currentColor 58%, transparent 58%);
+    }
+
+    .nameCellContent {
+        gap: 4px;
+    }
+
+    .playerName {
+        max-width: 74px;
     }
 }

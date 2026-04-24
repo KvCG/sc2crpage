@@ -10,6 +10,8 @@ import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
 import { getSnapshot, getSeasons } from '../services/api'
 import { DateTime } from 'luxon'
 import type { SeasonEntry } from '../../shared/types'
+import { PlayerQuickView } from '../components/h2h/PlayerQuickView'
+import type { H2HQuickViewPlayer } from '../types/h2hQuickView'
 
 export const Ranking = () => {
     const [searchParams] = useSearchParams()
@@ -18,6 +20,7 @@ export const Ranking = () => {
     const [baseline, setBaseline] = useState<DecoratedRow[] | null>(null)
     const [seasons, setSeasons] = useState<SeasonEntry[]>([])
     const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null)
+    const [quickViewPlayerA, setQuickViewPlayerA] = useState<H2HQuickViewPlayer | null>(null)
 
     const currentSeasonId = seasons.length > 0 ? seasons[0].id : null
     const isCurrentSeason = selectedSeasonId === null || selectedSeasonId === currentSeasonId
@@ -132,13 +135,24 @@ export const Ranking = () => {
             return <p>No players found for this season.</p>
         }
         if (currentData || loading) {
-            return <RankingTable data={currentData} loading={loading} />
+            return (
+                <RankingTable
+                    data={currentData}
+                    loading={loading}
+                    onOpenH2HQuickView={(player) => setQuickViewPlayerA(player)}
+                />
+            )
         }
         return <p>No results found.</p>
     }
 
     return (
         <>
+            <PlayerQuickView
+                opened={quickViewPlayerA !== null}
+                player={quickViewPlayerA}
+                onClose={() => setQuickViewPlayerA(null)}
+            />
             <Flex justify={'center'} direction={'column'}>
                 <h1>StarCraft II Costa Rica's Top Players</h1>
                 <Flex justify={'center'} style={{ paddingBottom: '10px' }}>

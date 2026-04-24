@@ -9,9 +9,14 @@ import { usePersistedColumns } from '../../hooks/usePersistedColumns'
 import { getInitialColumnConfig } from '../../utils/tableHelpers'
 import { filterByRace, countRaces, normalizeRace, getRaceDisplayName } from '../../utils/raceUtils'
 import type { DecoratedRow } from '../../utils/rankingHelper'
+import type { H2HQuickViewPlayer } from '../../types/h2hQuickView'
 
-type TableProps = { data: DecoratedRow[] | null; loading: boolean }
-export function RankingTable({ data, loading }: TableProps) {
+type TableProps = {
+    data: DecoratedRow[] | null
+    loading: boolean
+    onOpenH2HQuickView?: (player: H2HQuickViewPlayer) => void
+}
+export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) {
     const isSmallScreen = useMediaQuery('(max-width: 48em)') ?? false
     const [selectedRace, setSelectedRace] = useState<string>('')
 
@@ -123,6 +128,7 @@ export function RankingTable({ data, loading }: TableProps) {
                                         row={row}
                                         index={index}
                                         visibleColumns={visibleColumns}
+                                        onOpenH2HQuickView={onOpenH2HQuickView}
                                     />
                                 ) : null
                             )}
