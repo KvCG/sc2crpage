@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios'
 import config from './config'
 import resolveRequestId from '../utils/requestIdentity'
-import type { MatchFlagType, MatchFlagStatus, H2HFlagWithMatch, TopPairEntry } from '../../shared/types'
+import type { MatchFlagType, MatchFlagStatus, H2HFlagWithMatch, TopPairEntry, PendingMatch } from '../../shared/types'
 
 const api: AxiosInstance = axios.create({
     baseURL: config.API_URL,
@@ -180,4 +180,35 @@ export const patchAdminFlag = async (flagId: number, payload: PatchAdminFlagPayl
         headers: { Authorization: `Bearer ${token}` },
     })
     return response.data
+}
+
+export const getAdminPendingMatches = async (): Promise<PendingMatch[]> => {
+    const token = sessionStorage.getItem('adminToken')
+    const response = await api.get<PendingMatch[]>('api/h2h/admin/pending', {
+        headers: { Authorization: `Bearer ${token}` },
+    })
+    return response.data
+}
+
+export interface ConfirmPendingMatchPayload {
+    player1CharacterId: number
+    player2CharacterId: number
+    winnerCharacterId: number
+}
+
+export const confirmAdminPendingMatch = async (
+    id: number,
+    payload: ConfirmPendingMatchPayload,
+): Promise<void> => {
+    const token = sessionStorage.getItem('adminToken')
+    await api.post(`api/h2h/admin/pending/${id}/confirm`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
+}
+
+export const rejectAdminPendingMatch = async (id: number): Promise<void> => {
+    const token = sessionStorage.getItem('adminToken')
+    await api.post(`api/h2h/admin/pending/${id}/reject`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+    })
 }
