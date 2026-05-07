@@ -5,6 +5,7 @@ import type { TopPairEntry } from '../../../shared/types'
 interface H2HTopPairsProps {
     pairs: TopPairEntry[]
     onSelectPair: (p1Id: number, p2Id: number) => void
+    onSelectPlayer?: (playerId: number) => void
     isLoading: boolean
 }
 
@@ -32,7 +33,7 @@ const formatDate = (iso: string): string => iso.slice(0, 10)
 const displayName = (player: { btag: string; name?: string }): string =>
     player.name ?? player.btag.split('#')[0]
 
-export const H2HTopPairs = ({ pairs, onSelectPair, isLoading }: H2HTopPairsProps) => {
+export const H2HTopPairs = ({ pairs, onSelectPair, onSelectPlayer, isLoading }: H2HTopPairsProps) => {
     const maxHeat = pairs.reduce((max, p) => Math.max(max, p.heatScore), 0) || 1
     const topThree = pairs.slice(0, 3)
     const rest = pairs.slice(3)
@@ -65,14 +66,22 @@ export const H2HTopPairs = ({ pairs, onSelectPair, isLoading }: H2HTopPairsProps
                                         <Badge color={RANK_BADGE_COLORS[index]} mb="xs">#{index + 1}</Badge>
                                         <Group gap={4} wrap="nowrap" align="center">
                                             {p1Leading && <IconCrown size={14} color="var(--mantine-color-teal-5)" />}
-                                            <Text fw={700} size="lg" c={p1Leading ? 'teal' : undefined}>
+                                            <Text fw={700} size="lg" c={p1Leading ? 'teal' : undefined}
+                                                style={onSelectPlayer ? { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' } : undefined}
+                                                onClick={onSelectPlayer ? (e) => { e.stopPropagation(); onSelectPlayer(pair.player1.characterId) } : undefined}
+                                                aria-label={onSelectPlayer ? `View ${displayName(pair.player1)} in Player View` : undefined}
+                                            >
                                                 {displayName(pair.player1)}
                                             </Text>
                                             <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>{pair.player1Wins}</Text>
                                         </Group>
                                         <Group gap={4} wrap="nowrap" align="center">
                                             {p2Leading && <IconCrown size={14} color="var(--mantine-color-teal-5)" />}
-                                            <Text fw={700} size="lg" c={p2Leading ? 'teal' : undefined}>
+                                            <Text fw={700} size="lg" c={p2Leading ? 'teal' : undefined}
+                                                style={onSelectPlayer ? { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' } : undefined}
+                                                onClick={onSelectPlayer ? (e) => { e.stopPropagation(); onSelectPlayer(pair.player2.characterId) } : undefined}
+                                                aria-label={onSelectPlayer ? `View ${displayName(pair.player2)} in Player View` : undefined}
+                                            >
                                                 {displayName(pair.player2)}
                                             </Text>
                                             <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>{pair.player2Wins}</Text>
@@ -130,14 +139,22 @@ export const H2HTopPairs = ({ pairs, onSelectPair, isLoading }: H2HTopPairsProps
                                                 <Group gap={6} wrap="nowrap" align="center" justify="center">
                                                     <Group gap={3} wrap="nowrap" align="center">
                                                         {p1Leading && <IconCrown size={12} color="var(--mantine-color-teal-5)" />}
-                                                        <Text size="sm" fw={p1Leading ? 600 : undefined} c={p1Leading ? 'teal' : undefined}>
+                                                        <Text size="sm" fw={p1Leading ? 600 : undefined} c={p1Leading ? 'teal' : undefined}
+                                                            style={onSelectPlayer ? { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' } : undefined}
+                                                            onClick={onSelectPlayer ? (e) => { e.stopPropagation(); onSelectPlayer(pair.player1.characterId) } : undefined}
+                                                            aria-label={onSelectPlayer ? `View ${displayName(pair.player1)} in Player View` : undefined}
+                                                        >
                                                             {displayName(pair.player1)} ({pair.player1Wins})
                                                         </Text>
                                                     </Group>
                                                     <Text size="sm" c="dimmed">vs</Text>
                                                     <Group gap={3} wrap="nowrap" align="center">
                                                         {p2Leading && <IconCrown size={12} color="var(--mantine-color-teal-5)" />}
-                                                        <Text size="sm" fw={p2Leading ? 600 : undefined} c={p2Leading ? 'teal' : undefined}>
+                                                        <Text size="sm" fw={p2Leading ? 600 : undefined} c={p2Leading ? 'teal' : undefined}
+                                                            style={onSelectPlayer ? { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' } : undefined}
+                                                            onClick={onSelectPlayer ? (e) => { e.stopPropagation(); onSelectPlayer(pair.player2.characterId) } : undefined}
+                                                            aria-label={onSelectPlayer ? `View ${displayName(pair.player2)} in Player View` : undefined}
+                                                        >
                                                             {displayName(pair.player2)} ({pair.player2Wins})
                                                         </Text>
                                                     </Group>

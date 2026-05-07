@@ -14,6 +14,7 @@ import {
     Stack,
     Paper,
     Center,
+    SegmentedControl,
 } from '@mantine/core'
 import { IconAlertCircle, IconFlag } from '@tabler/icons-react'
 import { useSearchParams } from 'react-router-dom'
@@ -21,6 +22,7 @@ import { getCommunityPlayers, getH2H, getTopH2HPairs } from '../services/api'
 import type { H2HResponse, H2HMatch, TopPairEntry } from '../../shared/types'
 import { FlagMatchModal } from '../components/Match/FlagMatchModal'
 import { H2HTopPairs } from '../components/h2h/H2HTopPairs'
+import { H2HPlayerView } from '../components/h2h/H2HPlayerView'
 
 interface PlayerOption {
     value: string   // characterId as string
@@ -69,6 +71,9 @@ export const H2H = () => {
     const [player1Id, setPlayer1Id] = useState<number | null>(null)
     const [player2Id, setPlayer2Id] = useState<number | null>(null)
     const [isUrlPairHydrated, setIsUrlPairHydrated] = useState(false)
+
+    const [landingMode, setLandingMode] = useState<'rivalries' | 'player'>('rivalries')
+    const [initialFocalId, setInitialFocalId] = useState<number | null>(null)
 
     const [topPairs, setTopPairs] = useState<TopPairEntry[]>([])
     const [topPairsLoading, setTopPairsLoading] = useState(true)
@@ -123,6 +128,12 @@ export const H2H = () => {
         if (hasAnyPlayerParam && !hasBothPlayers) {
             setShowPicker(true)
         }
+
+        const modeFromUrl = searchParams.get('mode')
+        if (modeFromUrl === 'player') setLandingMode('player')
+
+        const focalFromUrl = parseCharacterIdParam(searchParams.get('focal'))
+        setInitialFocalId(focalFromUrl)
     }, [searchParams])
 
     const fetchH2H = useCallback(async (p1: number, p2: number) => {
@@ -174,6 +185,11 @@ export const H2H = () => {
         setPlayer2Input(p2.label)
         setPlayer2Id(p2.id)
     }, [players])
+
+    const handleSelectPlayer = useCallback((playerId: number) => {
+        setLandingMode('player')
+        setInitialFocalId(playerId)
+    }, [])
 
     const resolvePlayerOption = useCallback(
         (label: string): PlayerOption | undefined => players.find(p => p.label === label),
@@ -425,25 +441,42 @@ export const H2H = () => {
 
             {!searchInitiated ? (
                 <Stack gap="xs" mb="xl">
-                    <Group justify="space-between" align="center" wrap="nowrap">
-                        <div style={{ flex: 1 }} />
-                        <Stack gap={2} align="center" style={{ flex: 2 }}>
-                            <Title order={3} ta="center">Top Rivalries</Title>
-                            <Text size="sm" c="dimmed" ta="center">The most contested matchups in the CR scene</Text>
-                        </Stack>
-                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                            {!showPicker && (
-                                <Button variant="light" onClick={() => setShowPicker(true)}>
-                                    Compare Players
-                                </Button>
-                            )}
-                        </div>
+                    <Group justify="center" mb="xs">
+                        <SegmentedControl
+                            value={landingMode}
+                            onChange={(v) => setLandingMode(v as 'rivalries' | 'player')}
+                            data={[
+                                { label: 'Top Rivalries', value: 'rivalries' },
+                                { label: 'Player View', value: 'player' },
+                            ]}
+                        />
                     </Group>
-                    <H2HTopPairs
-                        pairs={topPairs}
-                        onSelectPair={handleSelectPair}
-                        isLoading={topPairsLoading}
-                    />
+                    {landingMode === 'rivalries' ? (
+                        <>
+                            <Group justify="space-between" align="center" wrap="nowrap">
+                                <div style={{ flex: 1 }} />
+                                <Stack gap={2} align="center" style={{ flex: 2 }}>
+                                    <Title order={3} ta="center">Top Rivalries</Title>
+                                    <Text size="sm" c="dimmed" ta="center">The most contested matchups in the CR scene</Text>
+                                </Stack>
+                                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                                    {!showPicker && (
+                                        <Button variant="light" onClick={() => setShowPicker(true)}>
+                                            Compare Players
+                                        </Button>
+                                    )}
+                                </div>
+                            </Group>
+                            <H2HTopPairs
+                                pairs={topPairs}
+                                onSelectPair={handleSelectPair}
+                                onSelectPlayer={handleSelectPlayer}
+                                isLoading={topPairsLoading}
+                            />
+                        </>
+                    ) : (
+                        <H2HPlayerView players={players} onSelectPair={handleSelectPair} initialFocalId={initialFocalId ?? undefined} />
+                    )}
                 </Stack>
             ) : (
                 renderContent()

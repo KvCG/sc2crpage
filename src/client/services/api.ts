@@ -123,6 +123,11 @@ export const getTopH2HPairs = async (limit = 50) => {
     return response
 }
 
+export const getPlayerH2HPairs = async (playerId: number) => {
+    const response = await api.get<TopPairEntry[]>(`api/h2h/player-pairs`, { params: { player: playerId } })
+    return response
+}
+
 export const getCommunityPlayers = async () => {
     const response = await api.get('api/community-players')
     return response

@@ -91,10 +91,23 @@ export async function fetchPlayerMatches(profile: BlizzardProfile): Promise<Bliz
         const status = e?.response?.status
         const code = e?.code
 
-        // 404 = profile not in Blizzard legacy API (inactive / deleted account).
+        // 404 = profile not in Blizzard legacy API (inactive / deleted account,
+        //       or stale battlenetId in Pulse — profile may have been migrated).
         // ECONNABORTED = consistent timeout (e.g. Latin America realm 2 — legacy API dead zone).
-        // Both are unresolvable; return empty silently.
-        if (status === 404 || code === 'ECONNABORTED') return []
+        if (status === 404) {
+            logger.warn(
+                {
+                    feature: 'blizzard-match-client',
+                    profileId: profile.profileId,
+                    region: profile.region,
+                    regionId: profile.regionId,
+                    realmId: profile.realmId,
+                },
+                'Blizzard legacy profile returned 404 — profile unreachable; player matches will not be polled. Check if battlenetId is stale in Pulse.'
+            )
+            return []
+        }
+        if (code === 'ECONNABORTED') return []
 
         logger.warn(
             {

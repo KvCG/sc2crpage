@@ -635,3 +635,88 @@ export async function getTopPairs(limit: number): Promise<TopPairEntry[]> {
         return []
     }
 }
+
+/**
+ * Returns all H2H pairs for a given player, with wins normalised to the focal
+ * player's perspective (player1 is always the focal player), sorted by
+ * non-voided match count descending.
+ */
+export async function getPlayerPairs(characterId: number): Promise<TopPairEntry[]> {
+    try {
+        const { data: pairs, error: pairsError } = await supabase
+            .from('h2h_pairs')
+            .select(
+                'id, player1_character_id, player2_character_id, ' +
+                    'h2h_matches(winner_character_id, match_date, is_voided)',
+            )
+            .or(`player1_character_id.eq.${characterId},player2_character_id.eq.${characterId}`)
+
+        if (pairsError) throw pairsError
+        if (!pairs || pairs.length === 0) return []
+
+        const aggregated = (pairs as unknown as PairRow[])
+            .map((pair) => {
+                const isFocalPlayer1 = pair.player1_character_id === characterId
+                const opponentCharacterId = isFocalPlayer1
+                    ? pair.player2_character_id
+                    : pair.player1_character_id
+
+                const active = pair.h2h_matches.filter((m) => !m.is_voided)
+                const matchCount = active.length
+                const focalWins = active.filter(
+                    (m) => m.winner_character_id === characterId,
+                ).length
+                const opponentWins = active.filter(
+                    (m) => m.winner_character_id === opponentCharacterId,
+                ).length
+                const lastMatchDate = active.reduce(
+                    (latest, m) => (m.match_date > latest ? m.match_date : latest),
+                    '',
+                )
+
+                return { opponentCharacterId, matchCount, focalWins, opponentWins, lastMatchDate }
+            })
+            .filter((p) => p.matchCount > 0)
+            .sort((a, b) => b.matchCount - a.matchCount)
+
+        if (aggregated.length === 0) return []
+
+        const charIds = [characterId, ...new Set(aggregated.map((p) => p.opponentCharacterId))]
+
+        const { data: players, error: playersError } = await supabase
+            .from('community_players')
+            .select('character_id, btag, display_name')
+            .in('character_id', charIds)
+
+        if (playersError) throw playersError
+
+        const playerMap = new Map(
+            (players ?? []).map((p) => [
+                Number((p as unknown as CommunityPlayerRow).character_id),
+                p as unknown as CommunityPlayerRow,
+            ]),
+        )
+
+        const buildPlayerMeta = (
+            cid: number,
+        ): { characterId: number; btag: string; name?: string } => {
+            const p = playerMap.get(cid)
+            if (!p) return { characterId: cid, btag: '' }
+            const name = p.display_name ?? p.btag.split('#')[0]
+            return { characterId: cid, btag: p.btag, name }
+        }
+
+        return aggregated.map((pair) => ({
+            player1: buildPlayerMeta(characterId),
+            player2: buildPlayerMeta(pair.opponentCharacterId),
+            matchCount: pair.matchCount,
+            player1Wins: pair.focalWins,
+            player2Wins: pair.opponentWins,
+            lastMatchDate: pair.lastMatchDate,
+            heatScore: 0,
+        }))
+    } catch (err) {
+        logger.error({ feature: 'h2h', characterId, err }, 'getPlayerPairs failed')
+        return []
+    }
+}
