@@ -127,4 +127,27 @@ describe('H2HTopPairs', () => {
         expect(screen.getByText('#2')).toBeTruthy()
         expect(screen.getByText('#3')).toBeTruthy()
     })
+
+    it('clicking a card player name calls onSelectPlayer with correct id and does not call onSelectPair', () => {
+        const onSelectPair = vi.fn()
+        const onSelectPlayer = vi.fn()
+        wrap(<H2HTopPairs pairs={fivePairs} onSelectPair={onSelectPair} onSelectPlayer={onSelectPlayer} isLoading={false} />)
+        fireEvent.click(screen.getByLabelText('View Alpha in Player View'))
+        expect(onSelectPlayer).toHaveBeenCalledWith(1)
+        expect(onSelectPair).not.toHaveBeenCalled()
+    })
+
+    it('clicking a table row player name calls onSelectPlayer with correct id and does not call onSelectPair', () => {
+        const onSelectPair = vi.fn()
+        const onSelectPlayer = vi.fn()
+        wrap(<H2HTopPairs pairs={fivePairs} onSelectPair={onSelectPair} onSelectPlayer={onSelectPlayer} isLoading={false} />)
+        fireEvent.click(screen.getByLabelText('View Foxtrot in Player View'))
+        expect(onSelectPlayer).toHaveBeenCalledWith(7)
+        expect(onSelectPair).not.toHaveBeenCalled()
+    })
+
+    it('player names have no aria-label and no click handler when onSelectPlayer is not provided', () => {
+        wrap(<H2HTopPairs pairs={fivePairs} onSelectPair={vi.fn()} isLoading={false} />)
+        expect(screen.queryByLabelText(/View .* in Player View/)).toBeNull()
+    })
 })

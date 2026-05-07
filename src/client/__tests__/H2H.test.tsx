@@ -694,6 +694,31 @@ describe('H2H page', () => {
             await waitFor(() => expect(hoisted.mockGetPlayerH2HPairs).toHaveBeenCalledWith(101))
             await waitFor(() => expect(screen.getByText('Wither')).toBeTruthy())
         })
+
+        it('clicking a player name in top rivalries switches to Player View pre-loaded for that player', async () => {
+            hoisted.mockGetPlayerH2HPairs.mockResolvedValue({
+                data: [
+                    {
+                        player1: { characterId: 101, btag: 'Pistola#1234', name: 'Pistola' },
+                        player2: { characterId: 202, btag: 'Wither#5678', name: 'Wither' },
+                        matchCount: 10,
+                        player1Wins: 6,
+                        player2Wins: 4,
+                        lastMatchDate: '2026-04-10T18:00:00',
+                        heatScore: 80,
+                    },
+                ],
+            })
+
+            wrap(<H2H />)
+            await waitFor(() => expect(screen.getAllByTestId('h2h-rivalry-card').length).toBeGreaterThan(0))
+
+            fireEvent.click(screen.getByLabelText('View Pistola in Player View'))
+
+            // Focal player auto-loaded
+            await waitFor(() => expect(hoisted.mockGetPlayerH2HPairs).toHaveBeenCalledWith(101))
+            await waitFor(() => expect(screen.getByText('Wither')).toBeTruthy())
+        })
     })
 
     it('shows ghost flag icon only on rows with hasPendingFlag true', async () => {

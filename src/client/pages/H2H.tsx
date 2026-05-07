@@ -186,6 +186,11 @@ export const H2H = () => {
         setPlayer2Id(p2.id)
     }, [players])
 
+    const handleSelectPlayer = useCallback((playerId: number) => {
+        setLandingMode('player')
+        setInitialFocalId(playerId)
+    }, [])
+
     const resolvePlayerOption = useCallback(
         (label: string): PlayerOption | undefined => players.find(p => p.label === label),
         [players]
@@ -465,6 +470,7 @@ export const H2H = () => {
                             <H2HTopPairs
                                 pairs={topPairs}
                                 onSelectPair={handleSelectPair}
+                                onSelectPlayer={handleSelectPlayer}
                                 isLoading={topPairsLoading}
                             />
                         </>
