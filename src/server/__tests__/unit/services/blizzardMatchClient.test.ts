@@ -101,13 +101,16 @@ describe('fetchPlayerMatches', () => {
         )
     })
 
-    it('returns an empty array silently on 404 (profile not found)', async () => {
+    it('returns an empty array and logs a warning on 404 (profile not found)', async () => {
         hoisted.mockAxiosGet.mockRejectedValue({ response: { status: 404 } })
 
         const result = await fetchPlayerMatches(US_PROFILE)
 
         expect(result).toEqual([])
-        expect(hoisted.mockLogger.warn).not.toHaveBeenCalled()
+        expect(hoisted.mockLogger.warn).toHaveBeenCalledWith(
+            expect.objectContaining({ feature: 'blizzard-match-client', profileId: 883917 }),
+            expect.stringContaining('404')
+        )
     })
 
     it('returns an empty array silently on ECONNABORTED (Latin America realm dead zone)', async () => {

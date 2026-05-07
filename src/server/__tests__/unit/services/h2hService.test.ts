@@ -28,6 +28,7 @@ import {
     savePairRecord,
     loadPairRecord,
     getTopPairs,
+    getPlayerPairs,
 } from '../../../services/h2hService'
 
 // ---------------------------------------------------------------------------
@@ -1129,6 +1130,310 @@ describe('getTopPairs', () => {
         expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
             expect.objectContaining({ feature: 'h2h', err: dbError }),
             'getTopPairs failed',
+        )
+    })
+})
+
+describe('getPlayerPairs', () => {
+    const PLAYERS = [
+        { character_id: 49312,  btag: 'Pistola#1234', display_name: 'Pistola' },
+        { character_id: 2741271, btag: 'Wither#5678',  display_name: null },
+        { character_id: 1111,   btag: 'Alpha#0001',   display_name: 'Alpha' },
+    ]
+
+    function setupPlayerPairs(pairRows: unknown, playerRows: unknown) {
+        hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
+            if (table === 'h2h_pairs') {
+                return {
+                    select: vi.fn().mockReturnValue({
+                        or: vi.fn().mockResolvedValue({ data: pairRows, error: null }),
+                    }),
+                }
+            }
+            if (table === 'community_players') {
+                return {
+                    select: vi.fn().mockReturnValue({
+                        in: vi.fn().mockResolvedValue({ data: playerRows, error: null }),
+                    }),
+                }
+            }
+        })
+    }
+
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('returns pairs where focal player is stored as player1', async () => {
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,   // focal
+                player2_character_id: 2741271,
+                h2h_matches: [
+                    { winner_character_id: 49312,   match_date: '2026-04-01T00:00:00Z', is_voided: false },
+                    { winner_character_id: 49312,   match_date: '2026-04-02T00:00:00Z', is_voided: false },
+                    { winner_character_id: 2741271, match_date: '2026-04-03T00:00:00Z', is_voided: false },
+                ],
+            },
+        ]
+        setupPlayerPairs(pairRows, PLAYERS)
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result).toHaveLength(1)
+        expect(result[0].player1.characterId).toBe(49312)
+        expect(result[0].player2.characterId).toBe(2741271)
+        expect(result[0].matchCount).toBe(3)
+        expect(result[0].player1Wins).toBe(2)
+        expect(result[0].player2Wins).toBe(1)
+    })
+
+    it('normalises wins when focal player is stored as player2', async () => {
+        // Focal player is 2741271 but stored as player2_character_id
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,
+                player2_character_id: 2741271,  // focal
+                h2h_matches: [
+                    { winner_character_id: 2741271, match_date: '2026-04-01T00:00:00Z', is_voided: false },
+                    { winner_character_id: 2741271, match_date: '2026-04-02T00:00:00Z', is_voided: false },
+                    { winner_character_id: 49312,   match_date: '2026-04-03T00:00:00Z', is_voided: false },
+                ],
+            },
+        ]
+        setupPlayerPairs(pairRows, PLAYERS)
+
+        const result = await getPlayerPairs(2741271)
+
+        expect(result[0].player1.characterId).toBe(2741271)  // focal is always player1
+        expect(result[0].player2.characterId).toBe(49312)
+        expect(result[0].player1Wins).toBe(2)  // focal (2741271) wins
+        expect(result[0].player2Wins).toBe(1)  // opponent (49312) wins
+    })
+
+    it('returns multiple pairs across both stored positions', async () => {
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,   // focal as player1
+                player2_character_id: 2741271,
+                h2h_matches: [
+                    { winner_character_id: 49312, match_date: '2026-04-01T00:00:00Z', is_voided: false },
+                    { winner_character_id: 49312, match_date: '2026-04-02T00:00:00Z', is_voided: false },
+                ],
+            },
+            {
+                id: 2,
+                player1_character_id: 1111,
+                player2_character_id: 49312,   // focal as player2
+                h2h_matches: [
+                    { winner_character_id: 49312, match_date: '2026-04-05T00:00:00Z', is_voided: false },
+                    { winner_character_id: 49312, match_date: '2026-04-06T00:00:00Z', is_voided: false },
+                    { winner_character_id: 49312, match_date: '2026-04-07T00:00:00Z', is_voided: false },
+                    { winner_character_id: 49312, match_date: '2026-04-08T00:00:00Z', is_voided: false },
+                    { winner_character_id: 49312, match_date: '2026-04-09T00:00:00Z', is_voided: false },
+                ],
+            },
+        ]
+        setupPlayerPairs(pairRows, PLAYERS)
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result).toHaveLength(2)
+        // pair2 has 5 matches; pair1 has 2 — sorted by matchCount DESC
+        expect(result[0].matchCount).toBe(5)
+        expect(result[0].player1.characterId).toBe(49312)
+        expect(result[0].player2.characterId).toBe(1111)
+        expect(result[1].matchCount).toBe(2)
+        expect(result[1].player2.characterId).toBe(2741271)
+    })
+
+    it('returns empty array when player has no pairs', async () => {
+        setupPlayerPairs([], PLAYERS)
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result).toEqual([])
+    })
+
+    it('returns empty array when pairs table returns null', async () => {
+        setupPlayerPairs(null, PLAYERS)
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result).toEqual([])
+    })
+
+    it('excludes pairs where all matches are voided', async () => {
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,
+                player2_character_id: 2741271,
+                h2h_matches: [
+                    { winner_character_id: 49312, match_date: '2026-04-01T00:00:00Z', is_voided: true },
+                    { winner_character_id: 49312, match_date: '2026-04-02T00:00:00Z', is_voided: true },
+                ],
+            },
+            {
+                id: 2,
+                player1_character_id: 49312,
+                player2_character_id: 1111,
+                h2h_matches: [
+                    { winner_character_id: 49312, match_date: '2026-04-05T00:00:00Z', is_voided: false },
+                ],
+            },
+        ]
+        setupPlayerPairs(pairRows, PLAYERS)
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result).toHaveLength(1)
+        expect(result[0].player2.characterId).toBe(1111)
+    })
+
+    it('sorts by matchCount descending', async () => {
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,
+                player2_character_id: 2741271,
+                h2h_matches: Array.from({ length: 3 }, () => ({
+                    winner_character_id: 49312,
+                    match_date: '2026-04-01T00:00:00Z',
+                    is_voided: false,
+                })),
+            },
+            {
+                id: 2,
+                player1_character_id: 49312,
+                player2_character_id: 1111,
+                h2h_matches: Array.from({ length: 7 }, () => ({
+                    winner_character_id: 49312,
+                    match_date: '2026-04-01T00:00:00Z',
+                    is_voided: false,
+                })),
+            },
+        ]
+        setupPlayerPairs(pairRows, PLAYERS)
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result[0].matchCount).toBe(7)
+        expect(result[1].matchCount).toBe(3)
+    })
+
+    it('heatScore is always 0', async () => {
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,
+                player2_character_id: 2741271,
+                h2h_matches: [
+                    { winner_character_id: 49312, match_date: '2026-04-01T00:00:00Z', is_voided: false },
+                ],
+            },
+        ]
+        setupPlayerPairs(pairRows, PLAYERS)
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result[0].heatScore).toBe(0)
+    })
+
+    it('uses display_name when available, falls back to btag split on #', async () => {
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,   // display_name: 'Pistola'
+                player2_character_id: 2741271,  // display_name: null → 'Wither'
+                h2h_matches: [
+                    { winner_character_id: 49312, match_date: '2026-04-01T00:00:00Z', is_voided: false },
+                ],
+            },
+        ]
+        setupPlayerPairs(pairRows, PLAYERS)
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result[0].player1.name).toBe('Pistola')
+        expect(result[0].player2.name).toBe('Wither')
+        expect(result[0].player2.btag).toBe('Wither#5678')
+    })
+
+    it('omits name and uses empty btag when player not in community_players', async () => {
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,
+                player2_character_id: 9999,  // not in community_players
+                h2h_matches: [
+                    { winner_character_id: 49312, match_date: '2026-04-01T00:00:00Z', is_voided: false },
+                ],
+            },
+        ]
+        setupPlayerPairs(pairRows, [{ character_id: 49312, btag: 'Pistola#1234', display_name: 'Pistola' }])
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result[0].player2.btag).toBe('')
+        expect(result[0].player2.name).toBeUndefined()
+    })
+
+    it('logs error and returns empty array when Supabase fails on pairs query', async () => {
+        const dbError = new Error('Connection refused')
+        hoisted.mockSupabaseFrom.mockReturnValue({
+            select: vi.fn().mockReturnValue({
+                or: vi.fn().mockResolvedValue({ data: null, error: dbError }),
+            }),
+        })
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result).toEqual([])
+        expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+            expect.objectContaining({ feature: 'h2h', characterId: 49312, err: dbError }),
+            'getPlayerPairs failed',
+        )
+    })
+
+    it('logs error and returns empty array when Supabase fails on players query', async () => {
+        const pairRows = [
+            {
+                id: 1,
+                player1_character_id: 49312,
+                player2_character_id: 2741271,
+                h2h_matches: [
+                    { winner_character_id: 49312, match_date: '2026-04-01T00:00:00Z', is_voided: false },
+                ],
+            },
+        ]
+        const dbError = new Error('Timeout')
+        hoisted.mockSupabaseFrom.mockImplementation((table: string) => {
+            if (table === 'h2h_pairs') {
+                return {
+                    select: vi.fn().mockReturnValue({
+                        or: vi.fn().mockResolvedValue({ data: pairRows, error: null }),
+                    }),
+                }
+            }
+            if (table === 'community_players') {
+                return {
+                    select: vi.fn().mockReturnValue({
+                        in: vi.fn().mockResolvedValue({ data: null, error: dbError }),
+                    }),
+                }
+            }
+        })
+
+        const result = await getPlayerPairs(49312)
+
+        expect(result).toEqual([])
+        expect(hoisted.mockLogger.error).toHaveBeenCalledWith(
+            expect.objectContaining({ feature: 'h2h', characterId: 49312, err: dbError }),
+            'getPlayerPairs failed',
         )
     })
 })
