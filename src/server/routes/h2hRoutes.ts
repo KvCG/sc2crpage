@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
-import { loadPairRecord, syncPair, H2HResolutionError, getTopPairs } from '../services/h2hService'
+import { loadPairRecord, syncPair, H2HResolutionError, getTopPairs, getPlayerPairs } from '../services/h2hService'
 import {
     submitFlag,
     listFlags,
@@ -210,6 +210,51 @@ router.get('/h2h/top-pairs', async (req: Request, res: Response) => {
     } catch (error) {
         logger.error({ feature: 'h2h', limit, error }, 'Error processing top-pairs request')
         return res.status(500).json({ error: 'Failed to retrieve top pairs' })
+    }
+})
+
+// ---------------------------------------------------------------------------
+// GET /api/h2h/player-pairs — All pairs for a given player
+// ---------------------------------------------------------------------------
+
+const playerPairsQuerySchema = z.object({
+    player: z
+        .string({ required_error: 'player is required' })
+        .regex(/^\d+$/, 'player must be a numeric character ID')
+        .transform(Number),
+})
+
+/**
+ * GET /api/h2h/player-pairs
+ *
+ * Returns all H2H pairs for a given community player, with wins normalised
+ * to the focal player's perspective and sorted by match count descending.
+ *
+ * Query Parameters:
+ * - player: numeric character ID (required)
+ */
+router.get('/h2h/player-pairs', async (req: Request, res: Response) => {
+    const parsed = playerPairsQuerySchema.safeParse(req.query)
+
+    if (!parsed.success) {
+        const details = parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: req.query[issue.path[0] as string],
+        }))
+        return res.status(400).json({ error: 'Invalid query parameters', details })
+    }
+
+    const { player } = parsed.data
+
+    logger.info({ feature: 'h2h', player }, 'Processing player-pairs request')
+
+    try {
+        const pairs = await getPlayerPairs(player)
+        return res.json(pairs)
+    } catch (error) {
+        logger.error({ feature: 'h2h', player, error }, 'Error processing player-pairs request')
+        return res.status(500).json({ error: 'Internal server error' })
     }
 })
 

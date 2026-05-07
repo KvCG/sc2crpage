@@ -7,6 +7,7 @@ const hoisted = vi.hoisted(() => ({
     getCommunityPlayerMock: vi.fn(),
     listFlagsMock: vi.fn(),
     getTopPairsMock: vi.fn(),
+    getPlayerPairsMock: vi.fn(),
     loggerMock: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('../../services/h2hService', () => ({
     loadPairRecord: hoisted.loadPairRecordMock,
     syncPair: hoisted.syncPairMock,
     getTopPairs: hoisted.getTopPairsMock,
+    getPlayerPairs: hoisted.getPlayerPairsMock,
     H2HResolutionError: class H2HResolutionError extends Error {
         readonly characterId: number
         constructor(characterId: number) {
@@ -173,6 +175,7 @@ describe('h2hRoutes', () => {
         hoisted.listFlagsMock.mockReset()
         hoisted.listFlagsMock.mockResolvedValue([])
         hoisted.getTopPairsMock.mockReset()
+        hoisted.getPlayerPairsMock.mockReset()
         hoisted.loggerMock.info.mockReset()
         hoisted.loggerMock.error.mockReset()
 
@@ -472,6 +475,80 @@ describe('h2hRoutes', () => {
             const res = await callTopPairsRoute()
 
             expect(res.set).toHaveBeenCalledWith('Cache-Control', 'public, max-age=3600')
+        })
+    })
+
+    describe('GET /h2h/player-pairs', () => {
+        let playerPairsHandler: (req: Request, res: Response) => Promise<void>
+
+        beforeEach(async () => {
+            const routes = await import('../../routes/h2hRoutes')
+            const router = routes.default
+            const layer = router.stack?.find((l: any) => l.route?.path === '/h2h/player-pairs')
+            playerPairsHandler = layer?.route?.stack?.[0]?.handle
+        })
+
+        async function callPlayerPairsRoute(query: Record<string, string> = {}) {
+            const req = createMockRequest(query)
+            const res = createMockResponse()
+            await playerPairsHandler(req, res as unknown as Response)
+            return res
+        }
+
+        const samplePlayerPairs = [
+            {
+                player1: { characterId: 49312, btag: 'Alpha#1234', name: 'Alpha' },
+                player2: { characterId: 2741271, btag: 'Beta#5678', name: 'Beta' },
+                matchCount: 5,
+                player1Wins: 3,
+                player2Wins: 2,
+                lastMatchDate: '2026-04-10T00:00:00Z',
+            },
+        ]
+
+        it('returns 200 with TopPairEntry[] when player is valid', async () => {
+            hoisted.getPlayerPairsMock.mockResolvedValue(samplePlayerPairs)
+
+            const res = await callPlayerPairsRoute({ player: '101' })
+
+            expect(res.statusCode).toBe(200)
+            expect(res.jsonData).toEqual(samplePlayerPairs)
+            expect(hoisted.getPlayerPairsMock).toHaveBeenCalledWith(101)
+        })
+
+        it('returns 200 with [] when player has no recorded pairs', async () => {
+            hoisted.getPlayerPairsMock.mockResolvedValue([])
+
+            const res = await callPlayerPairsRoute({ player: '101' })
+
+            expect(res.statusCode).toBe(200)
+            expect(res.jsonData).toEqual([])
+        })
+
+        it('returns 400 with field-level error when player param is missing', async () => {
+            const res = await callPlayerPairsRoute()
+
+            expect(res.statusCode).toBe(400)
+            const body = res.jsonData as Record<string, unknown>
+            expect(body.error).toBe('Invalid query parameters')
+            expect(Array.isArray(body.details)).toBe(true)
+        })
+
+        it('returns 400 when player is non-numeric', async () => {
+            const res = await callPlayerPairsRoute({ player: 'abc' })
+
+            expect(res.statusCode).toBe(400)
+            const body = res.jsonData as Record<string, unknown>
+            expect(body.error).toBe('Invalid query parameters')
+        })
+
+        it('returns 500 with { error: "Internal server error" } when getPlayerPairs throws', async () => {
+            hoisted.getPlayerPairsMock.mockRejectedValue(new Error('db failure'))
+
+            const res = await callPlayerPairsRoute({ player: '101' })
+
+            expect(res.statusCode).toBe(500)
+            expect(res.jsonData).toEqual({ error: 'Internal server error' })
         })
     })
 })
