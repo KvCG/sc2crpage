@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Autocomplete, Group, Skeleton, Table, Text } from '@mantine/core'
 import { IconChevronRight } from '@tabler/icons-react'
 import { getPlayerH2HPairs, getSnapshot } from '../../services/api'
@@ -14,6 +14,7 @@ interface PlayerOption {
 interface H2HPlayerViewProps {
     players: PlayerOption[]
     onSelectPair: (p1Id: number, p2Id: number) => void
+    initialFocalId?: number
 }
 
 const formatWinPct = (wins: number, total: number): string => {
@@ -23,12 +24,23 @@ const formatWinPct = (wins: number, total: number): string => {
 
 const formatDate = (iso: string): string => iso.slice(0, 10)
 
-export const H2HPlayerView = ({ players, onSelectPair }: H2HPlayerViewProps) => {
+export const H2HPlayerView = ({ players, onSelectPair, initialFocalId }: H2HPlayerViewProps) => {
     const [focalInput, setFocalInput] = useState('')
-    const [focalId, setFocalId] = useState<number | null>(null)
+    const [focalId, setFocalId] = useState<number | null>(initialFocalId ?? null)
     const [pairs, setPairs] = useState<TopPairEntry[]>([])
     const [loading, setLoading] = useState(false)
     const [raceMap, setRaceMap] = useState<Map<number, string>>(new Map())
+    const initialPopulated = useRef(false)
+
+    // Pre-populate focal player from URL param once players array is ready
+    useEffect(() => {
+        if (initialPopulated.current || initialFocalId === undefined || players.length === 0) return
+        const opt = players.find(p => p.id === initialFocalId)
+        if (opt) {
+            setFocalInput(opt.label)
+            initialPopulated.current = true
+        }
+    }, [initialFocalId, players])
 
     // Build raceMap from ranking snapshot on mount (best-effort)
     useEffect(() => {

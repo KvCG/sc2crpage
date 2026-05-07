@@ -8,6 +8,8 @@ const hoisted = vi.hoisted(() => ({
     mockGetH2H: vi.fn(),
     mockGetTopH2HPairs: vi.fn(),
     mockPostH2HFlag: vi.fn(),
+    mockGetPlayerH2HPairs: vi.fn(),
+    mockGetSnapshot: vi.fn(),
 }))
 
 vi.mock('../services/api', () => ({
@@ -15,6 +17,8 @@ vi.mock('../services/api', () => ({
     getH2H: hoisted.mockGetH2H,
     getTopH2HPairs: hoisted.mockGetTopH2HPairs,
     postH2HFlag: hoisted.mockPostH2HFlag,
+    getPlayerH2HPairs: hoisted.mockGetPlayerH2HPairs,
+    getSnapshot: hoisted.mockGetSnapshot,
 }))
 
 import { H2H } from '../pages/H2H'
@@ -126,6 +130,8 @@ describe('H2H page', () => {
         hoisted.mockGetCommunityPlayers.mockResolvedValue(communityPlayersResponse)
         hoisted.mockGetH2H.mockResolvedValue(h2hResponse)
         hoisted.mockGetTopH2HPairs.mockResolvedValue(topPairsResponse)
+        hoisted.mockGetPlayerH2HPairs.mockResolvedValue({ data: [] })
+        hoisted.mockGetSnapshot.mockResolvedValue({ data: { data: [] } })
     })
 
     it('renders Compare Players button and hides pickers on mount', async () => {
@@ -198,7 +204,7 @@ describe('H2H page', () => {
     it('renders Top Rivalries heading and subtext on landing state', async () => {
         wrap(<H2H />)
         await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
-        expect(screen.getByText('Top Rivalries')).toBeTruthy()
+        expect(screen.getByRole('heading', { name: 'Top Rivalries' })).toBeTruthy()
         expect(screen.getByText('The most contested matchups in the CR scene')).toBeTruthy()
     })
 
@@ -211,7 +217,7 @@ describe('H2H page', () => {
         await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
         await waitFor(() => expect(screen.getByText('Equilibrium')).toBeTruthy())
 
-        expect(screen.queryByText('Top Rivalries')).toBeNull()
+        expect(screen.queryByRole('heading', { name: 'Top Rivalries' })).toBeNull()
         expect(screen.queryByText('The most contested matchups in the CR scene')).toBeNull()
     })
 
@@ -582,6 +588,112 @@ describe('H2H page', () => {
 
         // Activity rivalry cards visible again
         await waitFor(() => expect(screen.getAllByTestId('h2h-rivalry-card').length).toBeGreaterThan(0))
+    })
+
+    describe('landing mode toggle', () => {
+        it('renders toggle before search is initiated and hides it after', async () => {
+            wrap(<H2H />)
+            await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
+
+            expect(screen.getByRole('radio', { name: 'Player View' })).toBeTruthy()
+
+            fireEvent.click(screen.getByRole('button', { name: 'Compare Players' }))
+            fireEvent.change(screen.getByLabelText('Select Player 1'), { target: { value: 'Pistola' } })
+            fireEvent.change(screen.getByLabelText('Select Player 2'), { target: { value: 'Wither' } })
+
+            await waitFor(() => expect(hoisted.mockGetH2H).toHaveBeenCalled())
+
+            expect(screen.queryByRole('radio', { name: 'Player View' })).toBeNull()
+        })
+
+        it('default mode shows H2HTopPairs and not H2HPlayerView', async () => {
+            wrap(<H2H />)
+            await waitFor(() => expect(screen.getAllByTestId('h2h-rivalry-card').length).toBeGreaterThan(0))
+            expect(screen.queryByText('Select a player to see their match record')).toBeNull()
+        })
+
+        it('switching to Player View renders H2HPlayerView and hides H2HTopPairs', async () => {
+            wrap(<H2H />)
+            await waitFor(() => expect(screen.getAllByTestId('h2h-rivalry-card').length).toBeGreaterThan(0))
+
+            fireEvent.click(screen.getByRole('radio', { name: 'Player View' }))
+
+            await waitFor(() =>
+                expect(screen.getByText('Select a player to see their match record')).toBeTruthy()
+            )
+            expect(screen.queryAllByTestId('h2h-rivalry-card')).toHaveLength(0)
+
+            // Switch back
+            fireEvent.click(screen.getByRole('radio', { name: 'Top Rivalries' }))
+            await waitFor(() => expect(screen.getAllByTestId('h2h-rivalry-card').length).toBeGreaterThan(0))
+            expect(screen.queryByText('Select a player to see their match record')).toBeNull()
+        })
+
+        it('selecting opponent in Player View calls getH2H with correct ids', async () => {
+            hoisted.mockGetPlayerH2HPairs.mockResolvedValue({
+                data: [
+                    {
+                        player1: { characterId: 101, btag: 'Pistola#1234', name: 'Pistola' },
+                        player2: { characterId: 202, btag: 'Wither#5678', name: 'Wither' },
+                        matchCount: 10,
+                        player1Wins: 6,
+                        player2Wins: 4,
+                        lastMatchDate: '2026-04-10T18:00:00',
+                        heatScore: 80,
+                    },
+                ],
+            })
+
+            wrap(<H2H />)
+            await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalled())
+
+            fireEvent.click(screen.getByRole('radio', { name: 'Player View' }))
+            await waitFor(() =>
+                expect(screen.getByText('Select a player to see their match record')).toBeTruthy()
+            )
+
+            fireEvent.change(screen.getByPlaceholderText('Search player…'), { target: { value: 'Pistola' } })
+
+            await waitFor(() => expect(hoisted.mockGetPlayerH2HPairs).toHaveBeenCalledWith(101))
+            await waitFor(() => expect(screen.getByText('Wither')).toBeTruthy())
+
+            fireEvent.click(screen.getByText('Wither'))
+
+            await waitFor(() =>
+                expect(hoisted.mockGetH2H).toHaveBeenCalledWith(101, 202)
+            )
+        })
+
+        it('?mode=player URL param opens Player View mode on landing', async () => {
+            wrap(<H2H />, '/h2h?mode=player')
+            await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+            expect(screen.getByText('Select a player to see their match record')).toBeTruthy()
+            expect(screen.queryAllByTestId('h2h-rivalry-card')).toHaveLength(0)
+        })
+
+        it('?mode=player&focal=101 pre-populates focal player in Player View', async () => {
+            hoisted.mockGetPlayerH2HPairs.mockResolvedValue({
+                data: [
+                    {
+                        player1: { characterId: 101, btag: 'Pistola#1234', name: 'Pistola' },
+                        player2: { characterId: 202, btag: 'Wither#5678', name: 'Wither' },
+                        matchCount: 8,
+                        player1Wins: 5,
+                        player2Wins: 3,
+                        lastMatchDate: '2026-04-10T18:00:00',
+                        heatScore: 75,
+                    },
+                ],
+            })
+
+            wrap(<H2H />, '/h2h?mode=player&focal=101')
+            await waitFor(() => expect(hoisted.mockGetCommunityPlayers).toHaveBeenCalled())
+
+            // Focal player pre-populated triggers getPlayerH2HPairs
+            await waitFor(() => expect(hoisted.mockGetPlayerH2HPairs).toHaveBeenCalledWith(101))
+            await waitFor(() => expect(screen.getByText('Wither')).toBeTruthy())
+        })
     })
 
     it('shows ghost flag icon only on rows with hasPendingFlag true', async () => {

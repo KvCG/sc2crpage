@@ -243,6 +243,20 @@ export const PlayerQuickView = ({ opened, player, onClose }: PlayerQuickViewProp
                         No rivalry data available for this player.
                     </Text>
                 )}
+
+                <Divider mt="xs" />
+                <Button
+                    variant="subtle"
+                    size="xs"
+                    fullWidth
+                    aria-label="View all rivalries for this player"
+                    onClick={() => {
+                        navigate(`/h2h?mode=player&focal=${encodeURIComponent(String(player.characterId))}`)
+                        onClose()
+                    }}
+                >
+                    View All Rivalries
+                </Button>
             </Stack>
         )
     }

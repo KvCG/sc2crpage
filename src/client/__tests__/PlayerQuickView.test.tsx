@@ -144,4 +144,18 @@ describe('PlayerQuickView', () => {
         expect(screen.getByText('No rivalry data available for this player.')).toBeTruthy()
         expect(screen.queryByLabelText('Search player 2')).toBeNull()
     })
+
+    it('clicking View All Rivalries navigates to player view mode and closes panel', async () => {
+        hoisted.mockUseMediaQuery.mockReturnValue(false)
+        const onClose = vi.fn()
+
+        wrap(<PlayerQuickView opened player={player} onClose={onClose} />)
+
+        await waitFor(() => expect(hoisted.mockGetTopH2HPairs).toHaveBeenCalledTimes(1))
+
+        fireEvent.click(screen.getByRole('button', { name: /view all rivalries/i }))
+
+        expect(hoisted.mockNavigate).toHaveBeenCalledWith('/h2h?mode=player&focal=101')
+        expect(onClose).toHaveBeenCalledTimes(1)
+    })
 })
