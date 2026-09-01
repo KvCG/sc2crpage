@@ -10,7 +10,7 @@ import type { ColumnOptions } from './TableColumnFilters'
 import type { H2HQuickViewPlayer } from '../../types/h2hQuickView'
 
 // Mirror of getLeagueSrc (src/client/utils/rankingHelper.ts) — leagueType → display name
-const LEAGUE_NAMES: Record<number, string> = {
+export const LEAGUE_NAMES: Record<number, string> = {
     0: 'Bronze',
     1: 'Silver',
     2: 'Gold',

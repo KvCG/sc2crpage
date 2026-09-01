@@ -1,0 +1,78 @@
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: rem(4px);
+}
+
+/* Full-width row, whole card is the H2H tap target (≥44px) */
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: rem(2px);
+    width: 100%;
+    min-height: 44px;
+    padding: rem(8px) rem(10px);
+    border: rem(1px) solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-3));
+    border-radius: var(--mantine-radius-sm);
+    background-color: var(--mantine-color-body);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.row:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.line1 {
+    display: flex;
+    align-items: center;
+    gap: rem(8px);
+}
+
+.position {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-1));
+}
+
+/* no clamp/ellipsis: full btag must stay readable on mobile */
+.name {
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+}
+
+.mmr {
+    flex: 0 0 auto;
+    margin-left: auto;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.line2 {
+    display: flex;
+    align-items: center;
+    gap: rem(6px);
+    font-size: 0.85em;
+    color: light-dark(var(--mantine-color-gray-5), var(--mantine-color-dark-2));
+}
+
+.line2 img {
+    max-width: rem(16px);
+    max-height: rem(16px);
+}
+
+.raceName {
+    flex: 0 0 auto;
+}
+
+.leagueIcon {
+    flex: 0 0 auto;
+}
+
+.lastPlayed {
+    flex: 0 0 auto;
+    margin-left: auto;
+}

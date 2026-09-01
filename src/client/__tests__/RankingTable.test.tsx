@@ -1,8 +1,19 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { RankingTable } from '../components/Table/Table'
 import type { DecoratedRow } from '../utils/rankingHelper'
+
+// Controllable mock: default `undefined` matches jsdom (no matchMedia) → `?? false` → desktop path,
+// so the existing cases below keep running the table branch
+vi.mock('@mantine/hooks', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@mantine/hooks')>()
+    return {
+        ...actual,
+        useMediaQuery: vi.fn(() => undefined),
+    }
+})
 
 // One player per race; minimal shape — getStandardName reads `name`, and
 // RankingTable only renders rows whose `rating` is truthy
@@ -79,5 +90,35 @@ describe('RankingTable race chip toggle', () => {
         fireEvent.click(screen.getByRole('img', { name: 'zerg' }))
 
         allRows()
+    })
+})
+
+describe('RankingTable mobile branch (S21-T7)', () => {
+    it('renders the card list, not a table, and hides the column trigger at the 48em breakpoint', () => {
+        vi.mocked(useMediaQuery).mockReturnValue(true)
+
+        wrap(<RankingTable data={rows} loading={false} onOpenH2HQuickView={vi.fn()} />)
+
+        expect(document.querySelector('table')).toBeNull()
+        for (const name of ['Z', 'P', 'T', 'R']) {
+            expect(screen.getByRole('button', { name: `Open H2H with ${name}` })).toBeTruthy()
+        }
+        expect(screen.queryByRole('button', { name: 'Select Columns To Display' })).toBeNull()
+
+        vi.mocked(useMediaQuery).mockReturnValue(undefined)
+    })
+
+    it('race chips still filter the list on small screens', () => {
+        vi.mocked(useMediaQuery).mockReturnValue(true)
+
+        wrap(<RankingTable data={rows} loading={false} />)
+        allRows()
+
+        fireEvent.click(screen.getByRole('img', { name: 'zerg' }))
+
+        expect(screen.getByRole('button', { name: 'Open H2H with Z' })).toBeTruthy()
+        expect(screen.queryByRole('button', { name: 'Open H2H with P' })).toBeNull()
+
+        vi.mocked(useMediaQuery).mockReturnValue(undefined)
     })
 })

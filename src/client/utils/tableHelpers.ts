@@ -22,30 +22,6 @@ export const DEFAULT_VISIBLE_COLUMNS: ColumnOptions = {
 }
 
 /**
- * Compact column visibility configuration for mobile/small screens
- */
-export const COMPACT_VISIBLE_COLUMNS: ColumnOptions = {
-    top: true,
-    name: true,
-    mmr: true,
-    rank: false,
-    race: true,
-    lastPlayed: false,
-    terran: false,
-    protoss: false,
-    zerg: false,
-    random: false,
-    total: false,
-}
-
-/**
- * Gets appropriate column configuration based on screen size
- */
-export function getInitialColumnConfig(isSmallScreen: boolean): ColumnOptions {
-    return isSmallScreen ? COMPACT_VISIBLE_COLUMNS : DEFAULT_VISIBLE_COLUMNS
-}
-
-/**
  * Formats position change indicator text
  */
 export function formatPositionChange(

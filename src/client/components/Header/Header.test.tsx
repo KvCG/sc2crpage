@@ -39,8 +39,10 @@ describe('Header.module.css — SC2 contract (S20 T2)', () => {
         expect(activeLink).toMatch(/font-weight:\s*600/)
     })
 
-    it('base .link: sm font-size and weight 500 (no size jump between active/inactive)', () => {
-        expect(baseLink).toMatch(/font-size:\s*var\(--mantine-font-size-sm\)/)
+    it('base .link: 13px display font, uppercase, weight 500 (no size jump between active/inactive)', () => {
+        expect(baseLink).toMatch(/font-size:\s*rem\(13px\)/)
+        expect(baseLink).toMatch(/font-family:\s*var\(--mantine-font-family-headings\)/)
+        expect(baseLink).toMatch(/text-transform:\s*uppercase/)
         expect(baseLink).toMatch(/font-weight:\s*500/)
         expect(baseLink).not.toContain('15px')
     })

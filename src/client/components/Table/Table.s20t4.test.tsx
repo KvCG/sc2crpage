@@ -162,16 +162,15 @@ describe('Table.module.css SC2 polish contract (S20-T4)', () => {
         expect(r).toContain('22px')
     })
 
-    it('race backgrounds and the 30em sticky-column block are untouched', () => {
+    it('race backgrounds are untouched', () => {
         expect(rule('.zerg')).toContain('rgba(103, 0, 129, 0.3)')
         expect(rule('.terran')).toContain('rgba(25, 0, 255, 0.3)')
         expect(rule('.protoss')).toContain('rgba(34, 182, 42, 0.3)')
         expect(rule('.random')).toContain('rgba(239, 240, 226, 0.288)')
+    })
 
-        const media = css.indexOf('@media (max-width: 30em)')
-        expect(media, 'max-width: 30em media query should exist').toBeGreaterThan(-1)
-        const mediaBlock = css.slice(media)
-        expect(mediaBlock).toContain('position: sticky')
-        expect(mediaBlock).toContain('left: 0px')
+    it('the 30em sticky-column block is gone (S21-T7: mobile renders a list, not a table)', () => {
+        expect(css).not.toContain('@media (max-width: 30em)')
+        expect(css).not.toContain('max-width: 74px')
     })
 })
