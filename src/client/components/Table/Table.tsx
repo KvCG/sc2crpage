@@ -83,17 +83,17 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
                 )}
             </Grid.Col>
 
-            <Skeleton className={classes.skeleton} visible={loading} maw={700} miw={250}>
+            <Skeleton className={classes.skeleton} visible={loading} miw={250}>
                 <div className={classes.tableContainer}>
                     <Table
-                        verticalSpacing="3"
+                        verticalSpacing="6"
                         striped
                         stickyHeader
                         highlightOnHover
                         stripedColor="dark"
-                        maw={700}
+                        w="100%"
                         miw={250}
-                        mb={50}
+                        mb="md"
                     >
                         <Table.Thead className={classes.header}>
                             <Table.Tr>
@@ -104,7 +104,9 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
                                 {visibleColumns.name && (
                                     <Table.Th className={classes.name}>Name</Table.Th>
                                 )}
-                                {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
+                                {visibleColumns.mmr && (
+                                    <Table.Th className={classes.mmr}>MMR</Table.Th>
+                                )}
                                 {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
                                 {visibleColumns.race && <Table.Th>Race</Table.Th>}
 

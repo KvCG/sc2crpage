@@ -45,6 +45,17 @@
     vertical-align: text-top;
 }
 
+/* After .rank on purpose: same specificity, later rule wins the cascade */
+.league {
+    max-width: 22px;
+    max-height: 22px;
+}
+
+.mmr {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
 .scrolled {
     box-shadow: var(--mantine-shadow-sm);
 }
@@ -69,7 +80,7 @@
     font-size: 0.8em;
     line-height: 1;
     font-weight: bolder;
-    opacity: 0.7;
+    opacity: 0.95;
 }
 
 .posIndicator[data-content='▲'] {

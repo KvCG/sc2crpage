@@ -9,6 +9,19 @@ import type { DecoratedRow } from '../../utils/rankingHelper'
 import type { ColumnOptions } from './TableColumnFilters'
 import type { H2HQuickViewPlayer } from '../../types/h2hQuickView'
 
+// Mirror of getLeagueSrc (src/client/utils/rankingHelper.ts) — leagueType → display name
+const LEAGUE_NAMES: Record<number, string> = {
+    0: 'Bronze',
+    1: 'Silver',
+    2: 'Gold',
+    3: 'Platinum',
+    4: 'Diamond',
+    5: 'Master',
+    6: 'Grandmaster',
+}
+
+const getLeagueName = (leagueType: number): string => LEAGUE_NAMES[leagueType] ?? 'Unranked'
+
 interface RankingTableRowProps {
     row: DecoratedRow
     index: number
@@ -73,10 +86,15 @@ export function RankingTableRow({ row, index, visibleColumns, onOpenH2HQuickView
                     </Group>
                 </Table.Td>
             )}
-            {visibleColumns.mmr && <Table.Td>{rating}</Table.Td>}
+            {visibleColumns.mmr && <Table.Td className={classes.mmr}>{rating}</Table.Td>}
             {visibleColumns.rank && (
                 <Table.Td>
-                    <img className={classes.rank} src={getLeagueSrc(leagueType)} alt="league" />
+                    <img
+                        className={cx(classes.rank, classes.league)}
+                        src={getLeagueSrc(leagueType)}
+                        title={getLeagueName(leagueType)}
+                        alt="league"
+                    />
                 </Table.Td>
             )}
             {visibleColumns.race && (
