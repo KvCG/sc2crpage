@@ -10,12 +10,12 @@
  *   - CSS Variables: var(--color-race-terran)
  */
 
-// Race colors extracted from SVG assets (authentic SC2 colors)
+// Race colors extracted from SVG assets (S21 on-dark: ≥3:1 against panel navy)
 export const RACE_COLORS = {
-  TERRAN: '#295a91',   // Blue - from terran.svg
-  PROTOSS: '#dec93e',  // Gold - from protoss.svg  
-  ZERG: '#882991',     // Purple - from zerg.svg
-  RANDOM: '#fff4b6',   // Cream - from random.svg
+  TERRAN: '#63ADE3',   // Blue - from terran.svg (S21 on-dark)
+  PROTOSS: '#DEC93E',  // Gold - from protoss.svg (unchanged, already on-dark)
+  ZERG: '#C77BD4',     // Purple - from zerg.svg (S21 on-dark)
+  RANDOM: '#E8DFB4',   // Cream - from random.svg (S21 on-dark)
 } as const
 
 // League colors as requested by user
