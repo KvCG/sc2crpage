@@ -34,6 +34,11 @@ const theme: MantineThemeOverride = createTheme({
         ],
     },
     radius: { sm: '2px', md: '4px', lg: '6px', xl: '8px' },
+    fontFamily: '"IBM Plex Sans", -apple-system, "Segoe UI", sans-serif',
+    headings: {
+        fontFamily: '"Chakra Petch", "IBM Plex Sans", "Segoe UI", sans-serif',
+        fontWeight: '700',
+    },
 })
 
 // Development only, when running npm run dev, this listen to a websocket to refresh the browser on server code changes
