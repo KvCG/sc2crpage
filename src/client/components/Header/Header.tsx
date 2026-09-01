@@ -46,7 +46,19 @@ export const Header = () => {
     return (
         <header className={classes.header}>
             <Container size="lg" className={classes.inner}>
-                <Logo />
+                <Group gap="sm">
+                    <Logo />
+                    <Text
+                        component="span"
+                        ff="var(--mantine-font-family-headings)"
+                        fz="16px"
+                        fw={700}
+                        lts="0.18em"
+                        c="dark.0"
+                    >
+                        SC2CR
+                    </Text>
+                </Group>
                 <Group gap={5} visibleFrom="md">
                     {items}
                 </Group>
@@ -57,11 +69,9 @@ export const Header = () => {
                             {!opened && (
                                 <Text
                                     className={classes.banner}
-                                    gradient={{ from: 'yellow', to: 'green', deg: 90 }}
-                                    variant="gradient"
                                     hiddenFrom="md"
-                                    fw={700}
-                                    c={'orange'}
+                                    fw={600}
+                                    c="blue.4"
                                     size="sm"
                                 >
                                     {"See what's new →"}
