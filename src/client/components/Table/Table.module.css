@@ -45,6 +45,17 @@
     vertical-align: text-top;
 }
 
+/* After .rank on purpose: same specificity, later rule wins the cascade */
+.league {
+    max-width: 22px;
+    max-height: 22px;
+}
+
+.mmr {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
 .scrolled {
     box-shadow: var(--mantine-shadow-sm);
 }
@@ -69,7 +80,7 @@
     font-size: 0.8em;
     line-height: 1;
     font-weight: bolder;
-    opacity: 0.7;
+    opacity: 0.95;
 }
 
 .posIndicator[data-content='▲'] {
@@ -101,6 +112,46 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Race filter chips — glass on the SC2 steel palette (S20 design contract tokens) */
+label.raceChip:not([data-disabled]) {
+    border: 1px solid color-mix(in srgb, var(--mantine-color-blue-2) 22%, transparent);
+    background-color: color-mix(in srgb, var(--mantine-color-dark-5) 55%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: inset 0 1px 0 rgba(234, 243, 251, 0.06);
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease,
+        transform 150ms ease;
+}
+
+label.raceChip:not([data-disabled]):hover {
+    border-color: color-mix(in srgb, var(--mantine-color-blue-2) 45%, transparent);
+    background-color: color-mix(in srgb, var(--mantine-color-dark-4) 60%, transparent);
+    transform: translateY(-1px);
+}
+
+label.raceChip[data-checked] {
+    padding-inline: var(--chip-padding);
+    border-color: color-mix(in srgb, var(--mantine-color-blue-3) 60%, transparent);
+    background-color: color-mix(in srgb, var(--mantine-color-blue-5) 38%, transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--mantine-color-blue-4) 35%, transparent),
+        inset 0 1px 0 rgba(234, 243, 251, 0.1);
+}
+
+label.raceChip[data-checked]:hover {
+    background-color: color-mix(in srgb, var(--mantine-color-blue-5) 50%, transparent);
+}
+
+.raceChipContent {
+    display: inline;
+    line-height: 1.2; /* keep text-top aligned to the text, not the 34px chip line box */
+}
+
+.raceChipCount {
+    margin-left: 8px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
 }
 
 .h2hAction {

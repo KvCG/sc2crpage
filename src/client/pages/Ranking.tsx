@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { SeasonPicker } from '../components/Ranking/SeasonPicker'
-import { Button, Flex } from '@mantine/core'
+import { Button, Flex, Group, Text } from '@mantine/core'
 import { IconRefresh } from '@tabler/icons-react'
+import terranBanner from '../assets/terran_banner.png'
 import { addPositionChangeIndicator, type DecoratedRow } from '../utils/rankingHelper'
 import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
 import { getSnapshot, getSeasons } from '../services/api'
@@ -153,10 +154,55 @@ export const Ranking = () => {
                 player={quickViewPlayerA}
                 onClose={() => setQuickViewPlayerA(null)}
             />
-            <Flex justify={'center'} direction={'column'}>
-                <h1>StarCraft II Costa Rica's Top Players</h1>
-                <Flex justify={'center'} style={{ paddingBottom: '10px' }}>
-                    <div>
+            <section style={{ position: 'relative', overflow: 'hidden' }}>
+                <img
+                    src={terranBanner}
+                    alt=""
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        // Height-constrained (no object-fit): the full square asset fits
+                        // the hero height, so the emblem is never cropped and reads as a
+                        // centered watermark behind the title.
+                        height: '100%',
+                        width: 'auto',
+                        // 0.07 (slice contract) was invisible in practice: the emblem
+                        // is dark steel blue on navy.
+                        opacity: 0.2,
+                        // Fade anchored to the hero box: emblem (top) stays in the
+                        // fully-opaque part of the mask, bottom edge dissolves.
+                        maskImage: 'linear-gradient(to bottom, black 30%, transparent 90%)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, black 30%, transparent 90%)',
+                        pointerEvents: 'none',
+                    }}
+                />
+                <Flex
+                    justify={'center'}
+                    align={'center'}
+                    direction={'column'}
+                    style={{ position: 'relative', zIndex: 1, paddingTop: '24px', paddingBottom: '16px' }}
+                >
+                    <Text
+                        c="blue.3"
+                        style={{ textTransform: 'uppercase', letterSpacing: '0.25em', fontSize: '0.8rem', fontWeight: 600 }}
+                    >
+                        SC2CR
+                    </Text>
+                    <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'white' }}>
+                        StarCraft II Costa Rica's Top Players
+                    </h1>
+                    <div
+                        style={{
+                            width: 120,
+                            height: 3,
+                            background: 'var(--mantine-color-blue-4)',
+                            transform: 'skewX(-12deg)',
+                            marginTop: '8px',
+                        }}
+                    />
+                    <Group justify="center" gap="sm" style={{ marginTop: '16px' }}>
                         <Button
                             leftSection={<IconRefresh size={16} />}
                             variant="light"
@@ -165,18 +211,16 @@ export const Ranking = () => {
                         >
                             Refresh
                         </Button>
-                    </div>
+                        {seasons.length > 0 && selectedSeasonId !== null && (
+                            <SeasonPicker
+                                seasons={seasons}
+                                value={selectedSeasonId}
+                                onChange={handleSeasonChange}
+                            />
+                        )}
+                    </Group>
                 </Flex>
-            </Flex>
-            {seasons.length > 0 && selectedSeasonId !== null && (
-                <Flex justify={'center'} style={{ paddingBottom: '10px' }}>
-                    <SeasonPicker
-                        seasons={seasons}
-                        value={selectedSeasonId}
-                        onChange={handleSeasonChange}
-                    />
-                </Flex>
-            )}
+            </section>
             {renderResults()}
         </>
     )

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useMediaQuery } from '@mantine/hooks'
-import { Table, Skeleton, Grid, Text, Box, Flex } from '@mantine/core'
+import { Table, Skeleton, Grid, Text, Box, Flex, Chip } from '@mantine/core'
 import classes from './Table.module.css'
 import { raceAssets } from '../../constants/races'
 import { RankingTableColumnFilters } from './TableColumnFilters'
 import { RankingTableRow } from './RankingTableRow'
 import { usePersistedColumns } from '../../hooks/usePersistedColumns'
 import { getInitialColumnConfig } from '../../utils/tableHelpers'
+import cx from 'clsx'
 import { filterByRace, countRaces, normalizeRace, getRaceDisplayName } from '../../utils/raceUtils'
 import type { DecoratedRow } from '../../utils/rankingHelper'
 import type { H2HQuickViewPlayer } from '../../types/h2hQuickView'
@@ -38,7 +39,7 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
         <Grid gutter="md">
             <Grid.Col span={12}>
                 {!loading && Array.isArray(tableData) && tableData.length > 0 && (
-                    <Text ta="center" mb="md">
+                    <Text ta="center" mb="md" size="xs" c="dimmed">
                         Select a race to filter the table. Click again to remove.
                     </Text>
                 )}
@@ -48,52 +49,49 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
                             {Object.entries(countRaces(data)).map(([race, count]) => {
                                 const normalizedRace = normalizeRace(race)
                                 return (
-                                    <Flex key={race} align="center" gap="0.5rem">
-                                        <button
-                                            style={{ 
-                                                border: 'none', 
-                                                background: 'none', 
-                                                cursor: 'pointer',
-                                                opacity: selectedRace === normalizedRace ? 0.7 : 1
-                                            }}
-                                            onClick={() => handleRaceFilter(selectedRace === normalizedRace ? '' : normalizedRace)}
-                                        >
+                                    <Chip
+                                        key={race}
+                                        variant={selectedRace === normalizedRace ? 'filled' : 'light'}
+                                        color="blue"
+                                        checked={selectedRace === normalizedRace}
+                                        onChange={() => handleRaceFilter(selectedRace === normalizedRace ? '' : normalizedRace)}
+                                        size="lg"
+                                        styles={{ checkIcon: { display: 'none' } }}
+                                        classNames={{ label: classes.raceChip }}
+                                    >
+                                        <span className={classes.raceChipContent}>
+                                            {/* Same alignment as the table's race/league icons: .rank + .league (text-top) */}
                                             <img
+                                                className={cx(classes.rank, classes.league)}
                                                 src={raceAssets[normalizedRace as keyof typeof raceAssets]?.assetPath}
                                                 alt={getRaceDisplayName(race)}
-                                                style={{ width: '36px', height: '36px' }}
                                             />
-                                        </button>
-                                        <Text>{count}</Text>
-                                    </Flex>
+                                            <span className={classes.raceChipCount}>{count}</span>
+                                        </span>
+                                    </Chip>
                                 )
                             })}
+                            <RankingTableColumnFilters
+                                columns={visibleColumns}
+                                onColumnChange={setVisibleColumns}
+                            />
                         </Flex>
                     </Box>
                 )}
                 {loading && <div>Loading...</div>}
             </Grid.Col>
 
-            <Grid.Col span={12}>
-                {!loading && Array.isArray(tableData) && tableData.length > 0 && (
-                    <RankingTableColumnFilters
-                        columns={visibleColumns}
-                        onColumnChange={setVisibleColumns}
-                    />
-                )}
-            </Grid.Col>
-
-            <Skeleton className={classes.skeleton} visible={loading} maw={700} miw={250}>
+            <Skeleton className={classes.skeleton} visible={loading} miw={250}>
                 <div className={classes.tableContainer}>
                     <Table
-                        verticalSpacing="3"
+                        verticalSpacing="6"
                         striped
                         stickyHeader
                         highlightOnHover
                         stripedColor="dark"
-                        maw={700}
+                        w="100%"
                         miw={250}
-                        mb={50}
+                        mb="md"
                     >
                         <Table.Thead className={classes.header}>
                             <Table.Tr>
@@ -104,7 +102,9 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
                                 {visibleColumns.name && (
                                     <Table.Th className={classes.name}>Name</Table.Th>
                                 )}
-                                {visibleColumns.mmr && <Table.Th>MMR</Table.Th>}
+                                {visibleColumns.mmr && (
+                                    <Table.Th className={classes.mmr}>MMR</Table.Th>
+                                )}
                                 {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
                                 {visibleColumns.race && <Table.Th>Race</Table.Th>}
 

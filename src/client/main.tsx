@@ -21,6 +21,19 @@ const theme: MantineThemeOverride = createTheme({
         lg: '74em',
         xl: '90em',
     },
+    primaryColor: 'blue',
+    primaryShade: { dark: 5 },
+    colors: {
+        blue: [
+            '#EAF3FB', '#C5DFF2', '#92C3E8', '#5FA6D9', '#3D8CC7',
+            '#2E6FA3', '#255A85', '#1D4668', '#16334B', '#0F2233',
+        ],
+        dark: [
+            '#E8EDF2', '#C7D0DA', '#93A1B1', '#5C6B7E', '#394453',
+            '#232C38', '#1B232E', '#151C25', '#10151D', '#0B0F15',
+        ],
+    },
+    radius: { sm: '2px', md: '4px', lg: '6px', xl: '8px' },
 })
 
 // Development only, when running npm run dev, this listen to a websocket to refresh the browser on server code changes
