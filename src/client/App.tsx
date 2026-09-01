@@ -24,7 +24,7 @@ const App: React.FC = () => {
     return (
         <>
             <Header />
-            <Container>
+            <Container size="lg">
                 <Routes>
                     <Route path="/" element={<Ranking />} />
                     {/* <Route path="/tournament" element={<Tournament />} /> */}
