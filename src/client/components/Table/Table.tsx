@@ -6,7 +6,8 @@ import { raceAssets } from '../../constants/races'
 import { RankingTableColumnFilters } from './TableColumnFilters'
 import { RankingTableRow } from './RankingTableRow'
 import { usePersistedColumns } from '../../hooks/usePersistedColumns'
-import { getInitialColumnConfig } from '../../utils/tableHelpers'
+import { DEFAULT_VISIBLE_COLUMNS } from '../../utils/tableHelpers'
+import { RankingCardList } from './RankingCardList'
 import cx from 'clsx'
 import { filterByRace, countRaces, normalizeRace, getRaceDisplayName } from '../../utils/raceUtils'
 import type { DecoratedRow } from '../../utils/rankingHelper'
@@ -21,7 +22,7 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
     const isSmallScreen = useMediaQuery('(max-width: 48em)') ?? false
     const [selectedRace, setSelectedRace] = useState<string>('')
 
-    const initialColumns = getInitialColumnConfig(isSmallScreen) // Adjust initial table columns based on screen size
+    const initialColumns = DEFAULT_VISIBLE_COLUMNS // Columns no longer depend on screen size (S21-T7: mobile renders a list)
     const [visibleColumns, setVisibleColumns] = usePersistedColumns(initialColumns) // Loads ans saves column preferences in localStorage
 
     // Filter data based on selected race
@@ -71,71 +72,83 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
                                     </Chip>
                                 )
                             })}
-                            <RankingTableColumnFilters
-                                columns={visibleColumns}
-                                onColumnChange={setVisibleColumns}
-                            />
+                            {/* No column selector on small screens: the card list has no columns to toggle */}
+                            {!isSmallScreen && (
+                                <RankingTableColumnFilters
+                                    columns={visibleColumns}
+                                    onColumnChange={setVisibleColumns}
+                                />
+                            )}
                         </Flex>
                     </Box>
                 )}
                 {loading && <div>Loading...</div>}
             </Grid.Col>
 
-            <Skeleton className={classes.skeleton} visible={loading} miw={250}>
-                <div className={classes.tableContainer}>
-                    <Table
-                        verticalSpacing="6"
-                        striped
-                        stickyHeader
-                        highlightOnHover
-                        stripedColor="dark"
-                        w="100%"
-                        miw={250}
-                        mb="md"
-                    >
-                        <Table.Thead className={classes.header}>
-                            <Table.Tr>
-                                <Table.Th className={classes.posIndicator}></Table.Th>
-                                {visibleColumns.top && (
-                                    <Table.Th className={classes.top}>Top</Table.Th>
-                                )}
-                                {visibleColumns.name && (
-                                    <Table.Th className={classes.name}>Name</Table.Th>
-                                )}
-                                {visibleColumns.mmr && (
-                                    <Table.Th className={classes.mmr}>MMR</Table.Th>
-                                )}
-                                {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
-                                {visibleColumns.race && <Table.Th>Race</Table.Th>}
+            {isSmallScreen ? (
+                // S21-T7: mobile renders the card list, not a table. tableData is already race-filtered.
+                tableData?.length ? (
+                    <RankingCardList data={tableData} onOpenH2HQuickView={onOpenH2HQuickView} />
+                ) : (
+                    <Skeleton visible={loading} miw={250} h={250} />
+                )
+            ) : (
+                <Skeleton className={classes.skeleton} visible={loading} miw={250}>
+                    <div className={classes.tableContainer}>
+                        <Table
+                            verticalSpacing="6"
+                            striped
+                            stickyHeader
+                            highlightOnHover
+                            stripedColor="dark"
+                            w="100%"
+                            miw={250}
+                            mb="md"
+                        >
+                            <Table.Thead className={classes.header}>
+                                <Table.Tr>
+                                    <Table.Th className={classes.posIndicator}></Table.Th>
+                                    {visibleColumns.top && (
+                                        <Table.Th className={classes.top}>Top</Table.Th>
+                                    )}
+                                    {visibleColumns.name && (
+                                        <Table.Th className={classes.name}>Name</Table.Th>
+                                    )}
+                                    {visibleColumns.mmr && (
+                                        <Table.Th className={classes.mmr}>MMR</Table.Th>
+                                    )}
+                                    {visibleColumns.rank && <Table.Th>Rank</Table.Th>}
+                                    {visibleColumns.race && <Table.Th>Race</Table.Th>}
 
-                                {visibleColumns.terran && <Table.Th># Terran</Table.Th>}
-                                {visibleColumns.protoss && <Table.Th># Protoss</Table.Th>}
-                                {visibleColumns.zerg && <Table.Th># Zerg</Table.Th>}
-                                {visibleColumns.random && <Table.Th># Random</Table.Th>}
-                                {visibleColumns.total && (
-                                    <Table.Th title="Total games played this season">
-                                        Total Games
-                                    </Table.Th>
+                                    {visibleColumns.terran && <Table.Th># Terran</Table.Th>}
+                                    {visibleColumns.protoss && <Table.Th># Protoss</Table.Th>}
+                                    {visibleColumns.zerg && <Table.Th># Zerg</Table.Th>}
+                                    {visibleColumns.random && <Table.Th># Random</Table.Th>}
+                                    {visibleColumns.total && (
+                                        <Table.Th title="Total games played this season">
+                                            Total Games
+                                        </Table.Th>
+                                    )}
+                                    {visibleColumns.lastPlayed && <Table.Th>Last Played</Table.Th>}
+                                </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                                {tableData?.map((row: DecoratedRow, index: number) =>
+                                    row.rating ? (
+                                        <RankingTableRow
+                                            key={row.btag}
+                                            row={row}
+                                            index={index}
+                                            visibleColumns={visibleColumns}
+                                            onOpenH2HQuickView={onOpenH2HQuickView}
+                                        />
+                                    ) : null
                                 )}
-                                {visibleColumns.lastPlayed && <Table.Th>Last Played</Table.Th>}
-                            </Table.Tr>
-                        </Table.Thead>
-                        <Table.Tbody>
-                            {tableData?.map((row: DecoratedRow, index: number) =>
-                                row.rating ? (
-                                    <RankingTableRow
-                                        key={row.btag}
-                                        row={row}
-                                        index={index}
-                                        visibleColumns={visibleColumns}
-                                        onOpenH2HQuickView={onOpenH2HQuickView}
-                                    />
-                                ) : null
-                            )}
-                        </Table.Tbody>
-                    </Table>
-                </div>
-            </Skeleton>
+                            </Table.Tbody>
+                        </Table>
+                    </div>
+                </Skeleton>
+            )}
         </Grid>
     )
 }
