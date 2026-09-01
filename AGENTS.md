@@ -5,6 +5,8 @@ React 18 + Vite + Mantine client · Node/Express + TypeScript server · Supabase
 players) + SC2Pulse + Challonge + Google Drive (replays). Docs hub: `docs/README.md`
 (`npm run docs`, port 3001).
 
+Vault project: SC2CR
+
 ## Detailed patterns (read before touching these areas)
 
 - `.github/instructions/copilot-instructions.md` — structure, conventions, invariants
