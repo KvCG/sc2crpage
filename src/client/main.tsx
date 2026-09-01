@@ -22,15 +22,19 @@ const theme: MantineThemeOverride = createTheme({
         xl: '90em',
     },
     primaryColor: 'blue',
-    primaryShade: { dark: 5 },
+    primaryShade: { dark: 6 },
     colors: {
         blue: [
-            '#EAF3FB', '#C5DFF2', '#92C3E8', '#5FA6D9', '#3D8CC7',
-            '#2E6FA3', '#255A85', '#1D4668', '#16334B', '#0F2233',
+            '#EAF3FB', '#C5DFF2', '#A3CFEC', '#7FC4F0', '#4E9FD8',
+            '#3A82B8', '#2E6FA3', '#245782', '#1B4261', '#122C41',
         ],
         dark: [
-            '#E8EDF2', '#C7D0DA', '#93A1B1', '#5C6B7E', '#394453',
-            '#232C38', '#1B232E', '#151C25', '#10151D', '#0B0F15',
+            '#F2F6FA', '#C8D4DF', '#8497A8', '#55697D', '#2A3947',
+            '#1A242F', '#161F29', '#0E141B', '#0B1016', '#070A0E',
+        ],
+        sc2cyan: [
+            '#E6FBF7', '#C0F4EA', '#96EBDC', '#71E2CE', '#54D8C4',
+            '#3BBFAB', '#2E9A8B', '#22756A', '#175049', '#0C2B28',
         ],
     },
     radius: { sm: '2px', md: '4px', lg: '6px', xl: '8px' },
