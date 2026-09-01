@@ -71,14 +71,14 @@ export const LEAGUE_COLOR_ARRAY = [
 
 // Chart theme colors for consistency across all charts
 export const CHART_THEME = {
-  BACKGROUND: '#25262b',           // Mantine dark-4
+  BACKGROUND: '#1B232E',           // S20 navy dark-6 (slice separators)
   GRID_COLOR: 'rgba(255, 255, 255, 0.1)',
-  TEXT_COLOR: '#c1c2c5',          // Mantine gray-4
-  BORDER_COLOR: '#373a40',        // Mantine dark-3
-  TOOLTIP_BG: '#25262b',
-  TOOLTIP_BORDER: '#373a40',
+  TEXT_COLOR: '#c1c2c5',          // neutral light gray, legible on navy
+  BORDER_COLOR: '#232C38',        // S20 navy dark-5 (axis borders)
+  TOOLTIP_BG: '#1B232E',          // S20 navy dark-6
+  TOOLTIP_BORDER: '#394453',      // S20 navy dark-4
   HOVER_BORDER: '#ffffff',
-  AXIS_TEXT: '#909296',           // Mantine gray-6
+  AXIS_TEXT: '#909296',           // neutral gray, legible on navy
 } as const
 
 // Activity level colors for activity distribution charts
