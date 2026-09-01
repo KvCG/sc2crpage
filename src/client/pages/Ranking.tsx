@@ -163,11 +163,16 @@ export const Ranking = () => {
                         top: 0,
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        width: '100%',
+                        // Height-constrained (no object-fit): the full square asset fits
+                        // the hero height, so the emblem is never cropped and reads as a
+                        // centered watermark behind the title.
                         height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'center',
-                        opacity: 0.07,
+                        width: 'auto',
+                        // 0.07 (slice contract) was invisible in practice: the emblem
+                        // is dark steel blue on navy.
+                        opacity: 0.2,
+                        // Fade anchored to the hero box: emblem (top) stays in the
+                        // fully-opaque part of the mask, bottom edge dissolves.
                         maskImage: 'linear-gradient(to bottom, black 30%, transparent 90%)',
                         WebkitMaskImage: 'linear-gradient(to bottom, black 30%, transparent 90%)',
                         pointerEvents: 'none',
