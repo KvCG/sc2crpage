@@ -1,0 +1,110 @@
+.hero {
+    position: relative;
+    overflow: hidden;
+}
+
+.banner {
+    position: absolute;
+    top: -60px;
+    right: -40px;
+    height: 340px;
+    width: auto;
+    opacity: 0.16;
+    mask-image: linear-gradient(to left, black 20%, transparent 85%);
+    -webkit-mask-image: linear-gradient(to left, black 20%, transparent 85%);
+    pointer-events: none;
+}
+
+.content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px 0 16px;
+}
+
+.columns {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.kicker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mantine-font-family-headings);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--mantine-color-blue-4);
+}
+
+.kickerBar {
+    display: inline-block;
+    width: 26px;
+    height: 2px;
+    background: var(--mantine-color-blue-4);
+    transform: skewX(-24deg);
+}
+
+.title {
+    margin: 10px 0 0;
+    font-family: var(--mantine-font-family-headings);
+    font-size: 2.75rem;
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--mantine-color-dark-0);
+    text-align: left;
+}
+
+.subtitle {
+    margin: 12px 0 0;
+    font-size: 15px;
+    color: var(--mantine-color-dark-2);
+    max-width: 480px;
+}
+
+.stats {
+    display: flex;
+    align-items: flex-end;
+    gap: 28px;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.statLabel {
+    font-family: var(--mantine-font-family-headings);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--mantine-color-dark-2);
+}
+
+.statValue {
+    font-size: 19px;
+    font-variant-numeric: tabular-nums;
+    color: var(--mantine-color-dark-0);
+}
+
+.toolbar {
+    justify-content: flex-start;
+}
+
+@media (max-width: 48em) {
+    .columns {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .stats {
+        display: none;
+    }
+}
