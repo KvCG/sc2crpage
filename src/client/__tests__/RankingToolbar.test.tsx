@@ -56,9 +56,14 @@ describe('Ranking toolbar (behavior pinned before hero refactor)', () => {
     })
 
     it('renders the Refresh button and clicking it calls fetch', async () => {
+        // S21-T11: Refresh moved out of the hero into the table controls row, which only
+        // renders once data is loaded — so this case loads rows.
+        hoisted.mockUseFetchData = [
+            { btag: 'Alpha#1', rating: 2540, name: 'Alpha', mainRace: 'TERRAN', positionChangeIndicator: 'none' },
+        ]
         wrap(<Ranking />)
 
-        const refresh = screen.getByRole('button', { name: 'Refresh' })
+        const refresh = await screen.findByRole('button', { name: 'Refresh' })
         fireEvent.click(refresh)
 
         expect(hoisted.mockFetch).toHaveBeenCalled()

@@ -69,16 +69,23 @@ describe('RankingTable race chip toggle', () => {
         expect((screen.getByRole('checkbox', { name: /protoss/i }) as HTMLInputElement).checked).toBe(false)
     })
 
-    it('renders the column menu trigger in the same row as the chips', () => {
+    it('renders the column menu trigger in the same controls row as the chips', () => {
         wrap(<RankingTable data={rows} loading={false} />)
-
         const trigger = screen.getByRole('button', { name: 'Select Columns To Display' })
         const zergChip = screen.getByRole('img', { name: 'zerg' })
+        const controlsRow = zergChip.closest('[data-controls-row]') as HTMLElement
+        expect(controlsRow, 'controls row should exist').toBeTruthy()
+        expect(controlsRow.contains(trigger)).toBe(true)
+    })
 
-        // Both the trigger and the chips live in the same Flex row
-        const chipsRow = zergChip.closest('.mantine-Flex-root') as HTMLElement
-        expect(chipsRow).toBeTruthy()
-        expect(trigger.parentElement).toBe(chipsRow)
+    it('shows the race name as text in the row race pill, not just the icon', () => {
+        wrap(<RankingTable data={rows} loading={false} />)
+
+        // 'zerg' appears twice in the DOM: the filter chip label and the row pill.
+        // Scope to the table cell to target the pill.
+        const zergPill = screen.getAllByText('zerg').find((el) => el.closest('td'))
+        expect(zergPill).toBeTruthy()
+        expect(zergPill?.closest('span')?.className).toContain('racePill')
     })
 
     it('clicking the selected chip again restores all rows', () => {

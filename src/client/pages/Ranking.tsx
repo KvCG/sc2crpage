@@ -3,8 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { SeasonPicker } from '../components/Ranking/SeasonPicker'
-import { Button, Group } from '@mantine/core'
-import { IconRefresh } from '@tabler/icons-react'
+import { Group } from '@mantine/core'
 import terranBanner from '../assets/terran_banner.png'
 import { addPositionChangeIndicator, type DecoratedRow } from '../utils/rankingHelper'
 import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
@@ -147,6 +146,8 @@ export const Ranking = () => {
                     data={currentData}
                     loading={loading}
                     onOpenH2HQuickView={(player) => setQuickViewPlayerA(player)}
+                    onRefresh={() => fetch(getUrlParams())}
+                    refreshLoading={loading}
                 />
             )
         }
@@ -201,14 +202,6 @@ export const Ranking = () => {
                         </dl>
                     </div>
                     <Group gap="sm" className={classes.toolbar}>
-                        <Button
-                            leftSection={<IconRefresh size={16} />}
-                            variant="light"
-                            onClick={() => fetch(getUrlParams())}
-                            loading={loading}
-                        >
-                            Refresh
-                        </Button>
                         {seasons.length > 0 && selectedSeasonId !== null && (
                             <SeasonPicker
                                 seasons={seasons}
