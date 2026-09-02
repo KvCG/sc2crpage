@@ -89,6 +89,9 @@
 }
 
 .statValue {
+    /* dd has a UA default margin-inline-start: 40px that offset the value from the
+       label; zero it so label and value share the left edge. */
+    margin: 0;
     font-size: 19px;
     font-variant-numeric: tabular-nums;
     color: var(--mantine-color-dark-0);

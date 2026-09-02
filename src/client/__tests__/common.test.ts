@@ -60,19 +60,19 @@ describe('formatRelativeTime', () => {
         expect(formatRelativeTime('2026-09-01T11:59:30.000Z', now)).toBe('just now')
     })
 
-    it('formats minutes with singular and plural', () => {
-        expect(formatRelativeTime('2026-09-01T11:59:00.000Z', now)).toBe('1 minute ago')
-        expect(formatRelativeTime('2026-09-01T11:55:00.000Z', now)).toBe('5 minutes ago')
+    it('formats minutes compactly', () => {
+        expect(formatRelativeTime('2026-09-01T11:59:00.000Z', now)).toBe('1m ago')
+        expect(formatRelativeTime('2026-09-01T11:55:00.000Z', now)).toBe('5m ago')
     })
 
-    it('formats hours with singular and plural', () => {
-        expect(formatRelativeTime('2026-09-01T11:00:00.000Z', now)).toBe('1 hour ago')
-        expect(formatRelativeTime('2026-09-01T10:00:00.000Z', now)).toBe('2 hours ago')
+    it('formats hours compactly', () => {
+        expect(formatRelativeTime('2026-09-01T11:00:00.000Z', now)).toBe('1h ago')
+        expect(formatRelativeTime('2026-09-01T10:00:00.000Z', now)).toBe('2h ago')
     })
 
-    it('formats days with singular and plural', () => {
-        expect(formatRelativeTime('2026-08-31T12:00:00.000Z', now)).toBe('1 day ago')
-        expect(formatRelativeTime('2026-08-29T12:00:00.000Z', now)).toBe('3 days ago')
+    it('formats days compactly', () => {
+        expect(formatRelativeTime('2026-08-31T12:00:00.000Z', now)).toBe('1d ago')
+        expect(formatRelativeTime('2026-08-29T12:00:00.000Z', now)).toBe('3d ago')
     })
 
     it('falls back to the full Costa Rica date beyond 7 days', () => {

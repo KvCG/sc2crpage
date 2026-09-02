@@ -1,10 +1,11 @@
 import { loadData } from './localStorage'
 
 /**
- * Formats an ISO timestamp as relative time ("5 minutes ago", "2 hours ago").
- * Accepts an explicit `now` for deterministic tests. Falls back to the raw
- * string when the value is not an ISO date (e.g., legacy snapshots cached in
- * the full locale format).
+ * Formats an ISO timestamp as a compact relative time ("5m ago", "2h ago", "3d ago").
+ * Under a minute reads "just now"; beyond 7 days it falls back to the full
+ * Costa Rica date. Accepts an explicit `now` for deterministic tests and returns
+ * the raw string when the value is not an ISO date (e.g., legacy snapshots
+ * cached in the full locale format).
  */
 export function formatRelativeTime(iso: string, now: Date = new Date()): string {
     // Strict ISO guard: browsers parse some locale strings too, and the
@@ -16,11 +17,11 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
     const seconds = Math.max(0, Math.floor((now.getTime() - then.getTime()) / 1000))
     if (seconds < 60) return 'just now'
     const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return minutes === 1 ? '1 minute ago' : `${minutes} minutes ago`
+    if (minutes < 60) return `${minutes}m ago`
     const hours = Math.floor(minutes / 60)
-    if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`
+    if (hours < 24) return `${hours}h ago`
     const days = Math.floor(hours / 24)
-    if (days < 7) return days === 1 ? '1 day ago' : `${days} days ago`
+    if (days < 7) return `${days}d ago`
     return new Intl.DateTimeFormat('en-US', {
         timeZone: 'America/Costa_Rica',
         dateStyle: 'medium',

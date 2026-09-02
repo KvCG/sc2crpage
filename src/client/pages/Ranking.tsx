@@ -22,7 +22,11 @@ export const Ranking = () => {
     const [baseline, setBaseline] = useState<DecoratedRow[] | null>(null)
     const [seasons, setSeasons] = useState<SeasonEntry[]>([])
     const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null)
-    const [snapshotCreatedAt, setSnapshotCreatedAt] = useState<string | null>(null)
+    // Moment the ranking data last resolved. In-memory only: it reads "just now" on
+    // every page load (the data was just fetched) and gains meaning as the tab stays
+    // open or after a manual Refresh. The server-side data age would need the endpoint
+    // to expose a generation timestamp (separate backend ticket).
+    const [updated, setUpdated] = useState<string | null>(null)
     const [quickViewPlayerA, setQuickViewPlayerA] = useState<H2HQuickViewPlayer | null>(null)
 
     const currentSeasonId = seasons.length > 0 ? seasons[0].id : null
@@ -84,22 +88,15 @@ export const Ranking = () => {
             const cached = loadData('dailySnapshot')
             if (isValid('dailySnapshot', cached)) {
                 setBaseline(cached.data as DecoratedRow[])
-                if (typeof cached?.createdAt === 'string') {
-                    setSnapshotCreatedAt(cached.createdAt)
-                }
             } else {
                 try {
                     const resp = await getSnapshot()
                     const serverSnap = resp.data // { data, createdAt (ISO time), expiry }
-                    // Keep createdAt as the raw ISO string: the UI renders it as relative
-                    // time (formatRelativeTime) and the cached copy must round-trip parseable.
-                    serverSnap.createdAt = String(serverSnap.createdAt)
                     serverSnap.expiresAt = DateTime.fromMillis(serverSnap.expiry)
                         .setZone('America/Costa_Rica')
                         .toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)
                     saveSnapShot('dailySnapshot', serverSnap)
                     setBaseline(serverSnap.data as DecoratedRow[])
-                    setSnapshotCreatedAt(serverSnap.createdAt)
                 } catch (e) {
                     // If snapshot fails, proceed without baseline
                     setBaseline([])
@@ -123,6 +120,13 @@ export const Ranking = () => {
             }
         }
     }, [data, baseline])
+
+    // Stamp "Updated" whenever the ranking data resolves (initial load, Refresh, season change).
+    useEffect(() => {
+        if (data !== null) {
+            setUpdated(new Date().toISOString())
+        }
+    }, [data])
 
     // Refetch when URL search params change (for testing)
     useEffect(() => {
@@ -174,7 +178,9 @@ export const Ranking = () => {
                         <div>
                             <div className={classes.kicker}>
                                 <span className={classes.kickerBar} aria-hidden />
-                                {selectedSeason ? `LADDER · SEASON ${selectedSeason.number}` : 'LADDER'}
+                                {selectedSeason
+                                    ? `LADDER · ${selectedSeason.year} · SEASON ${selectedSeason.number}`
+                                    : 'LADDER'}
                             </div>
                             <h1 className={classes.title}>StarCraft II Costa Rica's Top Players</h1>
                             <p className={classes.subtitle}>
@@ -192,11 +198,11 @@ export const Ranking = () => {
                                     <dd className={classes.statValue}>{topMmr}</dd>
                                 </div>
                             )}
-                            {snapshotCreatedAt !== null && (
+                            {updated !== null && (
                                 <div className={classes.stat}>
                                     <dt className={classes.statLabel}>Updated</dt>
                                     <dd className={classes.statValue}>
-                                        {formatRelativeTime(snapshotCreatedAt)}
+                                        {formatRelativeTime(updated)}
                                     </dd>
                                 </div>
                             )}
