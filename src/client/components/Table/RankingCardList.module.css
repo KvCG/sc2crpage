@@ -38,9 +38,14 @@
     color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-1));
 }
 
-/* The number stays neutral; only the arrow+delta is the motion indicator, colored the same
-   as the desktop table (.posIndicator in Table.module.css) — both clear 4.5:1 on the dark panel */
+/* Small standalone badge next to the (neutral) position number; colored the same as the
+   desktop table (.posIndicator in Table.module.css) — both clear 4.5:1 on the dark panel */
 .positionDelta {
+    flex: 0 0 auto;
+    padding: 0 rem(4px);
+    border-radius: rem(3px);
+    font-size: 0.85em;
+    line-height: rem(16px);
     white-space: nowrap;
 }
 
@@ -84,6 +89,12 @@
 
 .leagueIcon {
     flex: 0 0 auto;
+}
+
+.games {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .lastPlayed {

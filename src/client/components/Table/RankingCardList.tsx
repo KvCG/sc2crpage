@@ -18,11 +18,33 @@ type RankingCardProps = {
     onOpenH2HQuickView?: (player: H2HQuickViewPlayer) => void
 }
 
+const RACE_SHORT: Record<string, string> = { TERRAN: 'T', PROTOSS: 'P', ZERG: 'Z', RANDOM: 'R' }
+
+/** "75 games, P 9, Z 66" — total first, then only the races that actually have games. */
+function formatGames(row: DecoratedRow): string | null {
+    const parts: string[] = []
+    if (typeof row.totalGames === 'number' && row.totalGames > 0) {
+        parts.push(`${row.totalGames} games`)
+    }
+    const perRace = row.gamesPerRace
+    if (perRace && typeof perRace === 'object') {
+        // Fixed T, P, Z, R order — same as the desktop table's race columns, not the data's key order
+        for (const race of Object.keys(RACE_SHORT)) {
+            const count = perRace[race]
+            if (typeof count === 'number' && count > 0) {
+                parts.push(`${RACE_SHORT[race]} ${count}`)
+            }
+        }
+    }
+    return parts.length ? parts.join(', ') : null
+}
+
 function RankingCard({ row, index, onOpenH2HQuickView }: RankingCardProps) {
     const displayName = getStandardName(row)
     const characterId = typeof row.id === 'number' ? row.id : null
     const { arrow, deltaText } = formatPositionChange(row.positionChangeIndicator, row.positionDelta)
     const race = raceAssets[row.mainRace as keyof typeof raceAssets]
+    const gamesText = formatGames(row)
 
     // Mirror of handleOpenH2H in RankingTableRow.tsx
     const handleOpenH2H = () => {
@@ -49,15 +71,13 @@ function RankingCard({ row, index, onOpenH2HQuickView }: RankingCardProps) {
             aria-label={`Open H2H with ${displayName}`}
         >
             <span className={classes.line1}>
-                <span className={classes.position}>
-                    {(arrow || deltaText) && (
-                        <span className={classes.positionDelta} data-content={arrow}>
-                            {arrow}
-                            {deltaText}
-                        </span>
-                    )}
-                    {index + 1}
-                </span>
+                <span className={classes.position}>{index + 1}</span>
+                {(arrow || deltaText) && (
+                    <span className={classes.positionDelta} data-content={arrow}>
+                        {arrow}
+                        {deltaText.trim()}
+                    </span>
+                )}
                 <span className={classes.name}>{displayName}</span>
                 <span className={classes.mmr}>{row.rating}</span>
             </span>
@@ -75,6 +95,7 @@ function RankingCard({ row, index, onOpenH2HQuickView }: RankingCardProps) {
                     title={LEAGUE_NAMES[row.leagueType] ?? 'Unranked'}
                     alt=""
                 />
+                {gamesText && <span className={classes.games}>{gamesText}</span>}
                 <span className={classes.lastPlayed}>{addOnlineIndicator(row.lastDatePlayed, row.online)}</span>
             </span>
         </button>

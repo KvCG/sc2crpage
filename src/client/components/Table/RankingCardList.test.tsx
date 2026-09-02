@@ -201,4 +201,70 @@ describe('RankingCardList (SC2CR-S21-T6)', () => {
         expect(rule(".positionDelta[data-content='▲']")).toContain('var(--mantine-color-sc2cyan-4)')
         expect(rule(".positionDelta[data-content='▼']")).toContain('#E5566B')
     })
+
+    it('shows the total games and only the races that have games in the breakdown', () => {
+        const gamesRows: DecoratedRow[] = [
+            {
+                id: 61,
+                name: 'Mixto',
+                btag: 'Mixto#1',
+                rating: 3000,
+                mainRace: 'ZERG',
+                leagueType: 1,
+                positionChangeIndicator: 'none',
+                lastDatePlayed: '2026-08-30',
+                gamesPerRace: { PROTOSS: 9, ZERG: 66 },
+                totalGames: 75,
+                online: false,
+            } as unknown as DecoratedRow,
+            {
+                id: 62,
+                name: 'Puro',
+                btag: 'Puro#2',
+                rating: 2900,
+                mainRace: 'ZERG',
+                leagueType: 2,
+                positionChangeIndicator: 'none',
+                lastDatePlayed: '2026-08-30',
+                gamesPerRace: { ZERG: 154 },
+                totalGames: 154,
+                online: false,
+            } as unknown as DecoratedRow,
+        ]
+
+        render(
+            <MantineProvider>
+                <RankingCardList data={gamesRows} />
+            </MantineProvider>
+        )
+
+        expect(screen.getByRole('button', { name: 'Open H2H with Mixto' }).textContent).toContain('75 games, P 9, Z 66')
+        expect(screen.getByRole('button', { name: 'Open H2H with Puro' }).textContent).toContain('154 games, Z 154')
+    })
+
+    it('renders a row without gamesPerRace or totalGames without the games text and without crashing', () => {
+        const noGames: DecoratedRow[] = [
+            {
+                id: 63,
+                name: 'SinJuegos',
+                btag: 'SinJuegos#3',
+                rating: 2800,
+                mainRace: 'TERRAN',
+                leagueType: 3,
+                positionChangeIndicator: 'none',
+                lastDatePlayed: '2026-08-30',
+                online: false,
+            } as unknown as DecoratedRow,
+        ]
+
+        render(
+            <MantineProvider>
+                <RankingCardList data={noGames} />
+            </MantineProvider>
+        )
+
+        const row = screen.getByRole('button', { name: 'Open H2H with SinJuegos' })
+        expect(row.textContent).not.toContain('games')
+        expect(row.querySelectorAll('img').length).toBeGreaterThanOrEqual(2)
+    })
 })
