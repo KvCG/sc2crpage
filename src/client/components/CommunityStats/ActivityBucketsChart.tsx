@@ -2,7 +2,7 @@ import { Bar } from 'react-chartjs-2'
 import { Title, Text } from '@mantine/core'
 import { ActivityBuckets } from '../../types/communityStats'
 import { barChartConfig } from './chartConfig'
-import { CHART_THEME } from '../../../shared/colorTokens'
+import { CHART_THEME, ACTIVITY_BUCKET_COLORS } from '../../../shared/colorTokens'
 import styles from './Charts.module.css'
 
 interface ActivityBucketsChartProps {
@@ -45,15 +45,7 @@ export const ActivityBucketsChart = ({ data, loading, error, title }: ActivityBu
         data.older,
     ]
 
-    // Color scheme based on recency (newer = more vibrant)
-    const bucketColors = [
-        '#37b24d', // Very recent - bright green
-        '#51cf66', // Recent - green
-        '#69db7c', // Today - light green
-        '#fab005', // Yesterday - yellow
-        '#fd7e14', // This week - orange
-        '#868e96', // Older - gray
-    ]
+    const bucketColors = ACTIVITY_BUCKET_COLORS
 
     const total = bucketValues.reduce((sum, val) => sum + val, 0)
 

@@ -2,7 +2,7 @@ import { Line } from 'react-chartjs-2'
 import { Title, Text } from '@mantine/core'
 import { TemporalPatterns } from '../../types/communityStats'
 import { baseChartConfig } from './chartConfig'
-import { CHART_THEME } from '../../../shared/colorTokens'
+import { CHART_THEME, ACTIVITY_COLORS } from '../../../shared/colorTokens'
 import styles from './Charts.module.css'
 
 interface HourlyActivityChartProps {
@@ -51,11 +51,11 @@ export const HourlyActivityChart = ({ data, loading, error, title }: HourlyActiv
             {
                 label: 'Active Players',
                 data: activityValues,
-                borderColor: '#228be6', // Blue from Mantine theme
+                borderColor: ACTIVITY_COLORS.HIGH_ACTIVITY, // Blue
                 backgroundColor: 'rgba(34, 139, 230, 0.1)',
                 borderWidth: 2,
-                pointBackgroundColor: '#228be6',
-                pointBorderColor: '#ffffff',
+                pointBackgroundColor: ACTIVITY_COLORS.HIGH_ACTIVITY,
+                pointBorderColor: CHART_THEME.HOVER_BORDER,
                 pointBorderWidth: 2,
                 pointRadius: 4,
                 pointHoverRadius: 6,

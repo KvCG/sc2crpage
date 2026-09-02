@@ -69,16 +69,16 @@ export const LEAGUE_COLOR_ARRAY = [
   LEAGUE_COLORS.BRONZE,
 ] as const
 
-// Chart theme colors for consistency across all charts
+// Chart theme colors for consistency across all charts (S21 Command Console)
 export const CHART_THEME = {
-  BACKGROUND: '#1B232E',           // S20 navy dark-6 (slice separators)
+  BACKGROUND: '#161F29',           // dark-6
   GRID_COLOR: 'rgba(255, 255, 255, 0.1)',
-  TEXT_COLOR: '#c1c2c5',          // neutral light gray, legible on navy
-  BORDER_COLOR: '#232C38',        // S20 navy dark-5 (axis borders)
-  TOOLTIP_BG: '#1B232E',          // S20 navy dark-6
-  TOOLTIP_BORDER: '#394453',      // S20 navy dark-4
+  TEXT_COLOR: '#C8D4DF',          // dark-1, legible on navy
+  BORDER_COLOR: '#2A3947',        // dark-4 (axis borders)
+  TOOLTIP_BG: '#161F29',          // dark-6
+  TOOLTIP_BORDER: '#55697D',      // dark-3
   HOVER_BORDER: '#ffffff',
-  AXIS_TEXT: '#909296',           // neutral gray, legible on navy
+  AXIS_TEXT: '#8497A8',           // dark-2, legible on navy
 } as const
 
 // Activity level colors for activity distribution charts
@@ -88,6 +88,17 @@ export const ACTIVITY_COLORS = {
   MODERATE_ACTIVITY: '#51cf66',   // Green
   HIGH_ACTIVITY: '#228be6',       // Blue
 } as const
+
+// Recency bucket colors for the activity buckets chart (newer = more vibrant)
+// Ordered to match bucketLabels: Very Recent, Recent, Today, Yesterday, This Week, Older
+export const ACTIVITY_BUCKET_COLORS = [
+  '#37b24d', // Very recent - bright green
+  '#51cf66', // Recent - green
+  '#69db7c', // Today - light green
+  '#fab005', // Yesterday - yellow
+  '#fd7e14', // This week - orange
+  '#868e96', // Older - gray
+] as const
 
 // League assets for icons
 import bronze from '../client/assets/Bronze.png'
