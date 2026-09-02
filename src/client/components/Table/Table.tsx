@@ -124,7 +124,6 @@ export function RankingTable({ data, loading, onOpenH2HQuickView, onRefresh, ref
                     <div className={classes.tableContainer}>
                         <Table
                             verticalSpacing="6"
-                            stickyHeader
                             highlightOnHover
                             w="100%"
                             miw={250}
