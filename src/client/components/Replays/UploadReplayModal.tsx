@@ -249,7 +249,7 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
                                     disabled
                                     styles={{
                                         input: {
-                                            backgroundColor: '#f8f9fa',
+                                            backgroundColor: 'var(--mantine-color-dark-6)',
                                             cursor: 'not-allowed'
                                         }
                                     }}
@@ -262,7 +262,7 @@ export const UploadReplayModal = ({ opened, close, fetchReplays }) => {
                                     disabled
                                     styles={{
                                         input: {
-                                            backgroundColor: '#f8f9fa',
+                                            backgroundColor: 'var(--mantine-color-dark-6)',
                                             cursor: 'not-allowed'
                                         }
                                     }}

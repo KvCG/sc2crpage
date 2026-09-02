@@ -59,8 +59,8 @@ export const Search = () => {
 
                 <Button
                     onClick={handleClick}
-                    variant="gradient"
-                    gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
+                    variant="filled"
+                    color="blue"
                     loading={loading}
                     top={12}
                 >

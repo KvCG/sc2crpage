@@ -1,0 +1,124 @@
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: rem(4px);
+}
+
+/* Full-width row, whole card is the H2H tap target (≥44px) */
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: rem(2px);
+    width: 100%;
+    min-height: 44px;
+    padding: rem(8px) rem(10px);
+    border: rem(1px) solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-3));
+    border-radius: var(--mantine-radius-sm);
+    background-color: var(--mantine-color-body);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.row:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Wraps instead of overflowing: when the card is too narrow, the breakdown drops to its own
+   line (and the name can wrap internally via overflow-wrap: anywhere) — line 1 never pushes
+   the card past its width, and the btag is never clamped */
+.line1 {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: rem(8px);
+    row-gap: rem(2px);
+}
+
+.position {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-1));
+}
+
+/* Small standalone badge next to the (neutral) position number; colored the same as the
+   desktop table (.posIndicator in Table.module.css) — both clear 4.5:1 on the dark panel */
+.positionDelta {
+    flex: 0 0 auto;
+    padding: 0 rem(4px);
+    border-radius: rem(3px);
+    font-size: 0.85em;
+    line-height: rem(16px);
+    white-space: nowrap;
+}
+
+.positionDelta[data-content='▲'] {
+    color: var(--mantine-color-sc2cyan-4);
+}
+
+.positionDelta[data-content='▼'] {
+    color: #E5566B;
+}
+
+/* no clamp/ellipsis: full btag must stay readable on mobile. min-width: 0 lets it yield space
+   to the breakdown instead of forcing the line past the card width */
+.name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Per-race breakdown on line 1: muted and small so it never competes with the MMR, and
+   shrink-resistant (0 0 auto + nowrap) so it either fits whole or wraps to its own line.
+   dark-2 (not dark-3): the site is dark-only, and at 0.8em this is normal text that needs
+   4.5:1 — dark-2 hits 6.15:1 on the dark-7 body, dark-3 only 3.26:1 */
+.raceGames {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: 0.8em;
+    font-variant-numeric: tabular-nums;
+    color: var(--mantine-color-dark-2);
+}
+
+.mmr {
+    flex: 0 0 auto;
+    margin-left: auto;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.line2 {
+    display: flex;
+    align-items: center;
+    gap: rem(6px);
+    font-size: 0.85em;
+    color: light-dark(var(--mantine-color-gray-5), var(--mantine-color-dark-2));
+}
+
+.line2 img {
+    max-width: rem(16px);
+    max-height: rem(16px);
+}
+
+.raceName {
+    flex: 0 0 auto;
+}
+
+.leagueIcon {
+    flex: 0 0 auto;
+}
+
+.games {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-1));
+}
+
+.lastPlayed {
+    flex: 0 0 auto;
+    margin-left: auto;
+}

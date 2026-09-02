@@ -3,11 +3,26 @@ import cx from 'clsx'
 import classes from './Table.module.css'
 import { addOnlineIndicator, getLeagueSrc } from '../../utils/rankingHelper'
 import { raceAssets } from '../../constants/races'
+import { RACE_COLORS } from '../../../shared/colorTokens'
+import { getRaceDisplayName, normalizeRace } from '../../utils/raceUtils'
 import { getStandardName } from '../../utils/common'
 import { formatPositionChange } from '../../utils/tableHelpers'
 import type { DecoratedRow } from '../../utils/rankingHelper'
 import type { ColumnOptions } from './TableColumnFilters'
 import type { H2HQuickViewPlayer } from '../../types/h2hQuickView'
+
+// Mirror of getLeagueSrc (src/client/utils/rankingHelper.ts) — leagueType → display name
+export const LEAGUE_NAMES: Record<number, string> = {
+    0: 'Bronze',
+    1: 'Silver',
+    2: 'Gold',
+    3: 'Platinum',
+    4: 'Diamond',
+    5: 'Master',
+    6: 'Grandmaster',
+}
+
+const getLeagueName = (leagueType: number): string => LEAGUE_NAMES[leagueType] ?? 'Unranked'
 
 interface RankingTableRowProps {
     row: DecoratedRow
@@ -49,6 +64,7 @@ export function RankingTableRow({ row, index, visibleColumns, onOpenH2HQuickView
     }
 
     const { arrow, deltaText } = formatPositionChange(positionChangeIndicator, positionDelta)
+    const normalizedRace = normalizeRace(mainRace ?? '')
 
     return (
         <Table.Tr key={btag}>
@@ -73,19 +89,39 @@ export function RankingTableRow({ row, index, visibleColumns, onOpenH2HQuickView
                     </Group>
                 </Table.Td>
             )}
-            {visibleColumns.mmr && <Table.Td>{rating}</Table.Td>}
+            {visibleColumns.mmr && <Table.Td className={classes.mmr}>{rating}</Table.Td>}
             {visibleColumns.rank && (
                 <Table.Td>
-                    <img className={classes.rank} src={getLeagueSrc(leagueType)} alt="league" />
+                    <img
+                        className={cx(classes.rank, classes.league)}
+                        src={getLeagueSrc(leagueType)}
+                        title={getLeagueName(leagueType)}
+                        alt="league"
+                    />
                 </Table.Td>
             )}
             {visibleColumns.race && (
-                <Table.Td className={cx(raceAssets[mainRace as keyof typeof raceAssets]?.className)}>
-                    <img
-                        className={classes.rank}
-                        src={raceAssets[mainRace as keyof typeof raceAssets]?.assetPath}
-                        alt={mainRace}
-                    />
+                <Table.Td>
+                    {mainRace &&
+                        (() => {
+                            const raceColor = RACE_COLORS[normalizedRace as keyof typeof RACE_COLORS]
+                            return (
+                                <span
+                                    className={classes.racePill}
+                                    style={{
+                                        color: raceColor,
+                                        backgroundColor: `color-mix(in srgb, ${raceColor} 16%, transparent)`,
+                                    }}
+                                >
+                                    {/* decorative: the race name is rendered as text right next to it */}
+                                    <img
+                                        src={raceAssets[normalizedRace as keyof typeof raceAssets]?.assetPath}
+                                        alt=""
+                                    />
+                                    {getRaceDisplayName(mainRace)}
+                                </span>
+                            )
+                        })()}
                 </Table.Td>
             )}
             {visibleColumns.terran && <Table.Td>{gamesPerRace?.TERRAN || '-'}</Table.Td>}

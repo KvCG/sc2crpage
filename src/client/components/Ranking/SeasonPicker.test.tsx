@@ -39,4 +39,13 @@ describe('SeasonPicker', () => {
 
         expect(onChange).toHaveBeenCalledWith(66)
     })
+
+    it('applies the fixed width (280px) so the full label fits at narrow viewports', () => {
+        const { container } = wrap(<SeasonPicker seasons={seasons} value={67} onChange={vi.fn()} />)
+
+        // Mantine converts w={280} to 17.5rem (280/16) scaled by --mantine-scale
+        const root = container.querySelector('.mantine-Select-root')
+        expect(root).toBeTruthy()
+        expect(root?.getAttribute('style')).toContain('width: calc(17.5rem')
+    })
 })

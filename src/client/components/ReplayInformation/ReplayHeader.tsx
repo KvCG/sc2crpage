@@ -7,8 +7,8 @@ export const ReplayHeader = () => {
             p="xl" 
             mb="xl" 
             radius="lg"
-            style={{ 
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            style={{
+                background: 'linear-gradient(135deg, var(--mantine-color-blue-8) 0%, var(--mantine-color-dark-7) 100%)',
                 color: 'white'
             }}
         >

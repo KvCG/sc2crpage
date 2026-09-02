@@ -47,7 +47,7 @@ export function RankingTableColumnFilters({
     return (
         <Menu shadow="md" width={250}>
             <Menu.Target>
-                <Button variant="outline">Select Columns To Display</Button>
+                <Button variant="subtle">Select Columns To Display</Button>
             </Menu.Target>
             <Menu.Dropdown>
                 <SimpleGrid

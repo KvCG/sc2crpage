@@ -45,9 +45,22 @@ export const Header = () => {
     ))
     return (
         <header className={classes.header}>
-            <Container size="md" className={classes.inner}>
-                <Logo />
-                <Group gap={5} visibleFrom="md">
+            <Container size="lg" className={classes.inner}>
+                <Group gap="sm">
+                    <Logo />
+                    <Text
+                        component="span"
+                        ff="var(--mantine-font-family-headings)"
+                        fz="16px"
+                        fw={700}
+                        lts="0.18em"
+                        c="dark.0"
+                        visibleFrom="lg"
+                    >
+                        SC2CR
+                    </Text>
+                </Group>
+                <Group gap={5} visibleFrom="nav">
                     {items}
                 </Group>
 
@@ -57,17 +70,15 @@ export const Header = () => {
                             {!opened && (
                                 <Text
                                     className={classes.banner}
-                                    gradient={{ from: 'yellow', to: 'green', deg: 90 }}
-                                    variant="gradient"
-                                    hiddenFrom="md"
-                                    fw={700}
-                                    c={'orange'}
+                                    hiddenFrom="nav"
+                                    fw={600}
+                                    c="blue.4"
                                     size="sm"
                                 >
                                     {"See what's new →"}
                                 </Text>
                             )}
-                            <Burger opened={opened} onClick={toggle} hiddenFrom="md" size="sm" />
+                            <Burger opened={opened} onClick={toggle} hiddenFrom="nav" size="sm" />
                         </Group>
                     </Menu.Target>
                     <Menu.Dropdown>{mobileItems}</Menu.Dropdown>

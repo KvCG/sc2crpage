@@ -2,14 +2,9 @@
 #root {
     max-width: 1440px;
     margin: 0 auto;
-    text-align: center;
 }
 
 /* Mantine overrides */
-.mantine-Table-th {
-	text-align: center;
-}
-
 .mantine-Tabs-tabLabel {
 	font-size: var(--mantine-font-size-sm);
 	font-weight: 500;

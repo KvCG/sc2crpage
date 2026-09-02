@@ -1,5 +1,6 @@
 import { Grid, Card, Group, Title, Badge, Stack, Text } from '@mantine/core'
 import { IconTrophy, IconCrown, IconX } from '@tabler/icons-react'
+import { LEAGUE_COLORS_BY_ID, LEAGUE_NAMES, getLeagueFromReplayId } from '../../../shared/colorTokens'
 
 interface Player {
     name: string
@@ -10,16 +11,6 @@ interface Player {
 
 interface PlayersOverviewTabProps {
     players: Record<string, Player>
-}
-
-const leagueMap: Record<number, { name: string; color: string }> = {
-    1: { name: 'Bronze', color: '#965c22ff' },
-    2: { name: 'Silver', color: '#C0C0C0' },
-    3: { name: 'Gold', color: '#FFD700' },
-    4: { name: 'Platinum', color: '#b1b0b0ff' },
-    5: { name: 'Diamond', color: '#71adc5bd' },
-    6: { name: 'Master', color: '#1E40AF' },
-    7: { name: 'GrandMaster', color: '#EA580C' }
 }
 
 const raceColors: Record<string, string> = {
@@ -34,6 +25,15 @@ export const PlayersOverviewTab = ({ players }: PlayersOverviewTabProps) => {
         <Grid>
             {Object.keys(players).map(playerKey => {
                 const player = players[playerKey]
+                // Replay league ids are sc2reader's highest_league (1=Bronze .. 7=Grandmaster,
+                // 8=Unranked) — resolved against the shared tokens in src/shared/colorTokens.ts
+                const sharedLeagueId = getLeagueFromReplayId(player.league)
+                const leagueName = sharedLeagueId
+                    ? LEAGUE_NAMES[sharedLeagueId]
+                    : player.league === 8
+                        ? 'Unranked'
+                        : 'Unknown'
+                const leagueColor = sharedLeagueId ? LEAGUE_COLORS_BY_ID[sharedLeagueId] : '#868E96'
                 return (
                     <Grid.Col span={{ base: 12, md: 6 }} key={playerKey}>
                         <Card shadow="sm" p="lg" radius="md" h="100%">
@@ -73,10 +73,10 @@ export const PlayersOverviewTab = ({ players }: PlayersOverviewTabProps) => {
                                     <Badge 
                                         variant="filled" 
                                         style={{ 
-                                            backgroundColor: leagueMap[player.league]?.color || '#868E96' 
+                                            backgroundColor: leagueColor
                                         }}
                                     >
-                                        {leagueMap[player.league]?.name || 'Unknown'}
+                                        {leagueName}
                                     </Badge>
                                 </Group>
                                 
