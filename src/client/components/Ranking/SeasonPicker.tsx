@@ -26,7 +26,7 @@ export const SeasonPicker = ({ seasons, value, onChange }: SeasonPickerProps) =>
             value={String(value)}
             onChange={(selected) => { if (selected !== null) onChange(Number(selected)) }}
             aria-label="Select season"
-            width={280}
+            w={280}
         />
     )
 }
