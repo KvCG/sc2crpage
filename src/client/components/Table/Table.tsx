@@ -112,11 +112,13 @@ export function RankingTable({ data, loading, onOpenH2HQuickView, onRefresh, ref
 
             {isSmallScreen ? (
                 // S21-T7: mobile renders the card list, not a table. tableData is already race-filtered.
-                tableData?.length ? (
-                    <RankingCardList data={tableData} onOpenH2HQuickView={onOpenH2HQuickView} />
-                ) : (
-                    <Skeleton visible={loading} miw={250} h={250} />
-                )
+                <Grid.Col span={12}>
+                    {tableData?.length ? (
+                        <RankingCardList data={tableData} onOpenH2HQuickView={onOpenH2HQuickView} />
+                    ) : (
+                        <Skeleton visible={loading} miw={250} h={250} />
+                    )}
+                </Grid.Col>
             ) : (
                 <Skeleton className={classes.skeleton} visible={loading} miw={250}>
                     <div className={classes.tableContainer}>
