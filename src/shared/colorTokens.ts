@@ -134,6 +134,20 @@ export const getLeagueName = (leagueId: string | number): string => {
   return LEAGUE_NAMES[id] || `League ${id}`
 }
 
+/**
+ * Maps a replay league id to the shared token id (0-6, see LEAGUE_COLORS_BY_ID),
+ * or null when it does not map to a token (e.g. 8 = Unranked).
+ * The replay id comes from sc2reader's highest_league field (surfaced via
+ * spawningtool), which is 1-indexed: 1=Bronze .. 7=Grandmaster, 8=Unranked.
+ * The -1 is that convention, not a bug — do not remove it.
+ */
+export const getLeagueFromReplayId = (replayLeagueId: number): keyof typeof LEAGUE_COLORS_BY_ID | null => {
+  if (replayLeagueId >= 1 && replayLeagueId <= 7) {
+    return String(replayLeagueId - 1) as keyof typeof LEAGUE_COLORS_BY_ID
+  }
+  return null
+}
+
 export const getLeagueIcon = (leagueId: string | number): string => {
   const id = String(leagueId) as keyof typeof LEAGUE_ASSETS
   return LEAGUE_ASSETS[id] || LEAGUE_ASSETS['0']
