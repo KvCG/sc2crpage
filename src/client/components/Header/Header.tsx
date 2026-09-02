@@ -55,6 +55,7 @@ export const Header = () => {
                         fw={700}
                         lts="0.18em"
                         c="dark.0"
+                        visibleFrom="lg"
                     >
                         SC2CR
                     </Text>
