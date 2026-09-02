@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 import { RankingCardList } from './RankingCardList'
 import type { DecoratedRow } from '../../utils/rankingHelper'
@@ -238,8 +238,18 @@ describe('RankingCardList (SC2CR-S21-T6)', () => {
             </MantineProvider>
         )
 
-        expect(screen.getByRole('button', { name: 'Open H2H with Mixto' }).textContent).toContain('75 games, P 9, Z 66')
-        expect(screen.getByRole('button', { name: 'Open H2H with Puro' }).textContent).toContain('154 games, Z 154')
+        // The total is its own line-2 segment and the per-race breakdown sits on line 1, so each
+        // fact is asserted on its own segment (exact text) instead of the old combined string.
+        const mixto = screen.getByRole('button', { name: 'Open H2H with Mixto' })
+        const puro = screen.getByRole('button', { name: 'Open H2H with Puro' })
+
+        // Mixed: the total is shown, and the breakdown is exactly the two races that have games (no T/R)
+        expect(within(mixto).getByText('75 games')).toBeInTheDocument()
+        expect(within(mixto).getByText('P 9, Z 66')).toBeInTheDocument()
+
+        // Pure: single race, exact count
+        expect(within(puro).getByText('154 games')).toBeInTheDocument()
+        expect(within(puro).getByText('Z 154')).toBeInTheDocument()
     })
 
     it('renders a row without gamesPerRace or totalGames without the games text and without crashing', () => {

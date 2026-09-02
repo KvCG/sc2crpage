@@ -26,10 +26,15 @@
     cursor: not-allowed;
 }
 
+/* Wraps instead of overflowing: when the card is too narrow, the breakdown drops to its own
+   line (and the name can wrap internally via overflow-wrap: anywhere) — line 1 never pushes
+   the card past its width, and the btag is never clamped */
 .line1 {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: rem(8px);
+    row-gap: rem(2px);
 }
 
 .position {
@@ -57,10 +62,24 @@
     color: #E5566B;
 }
 
-/* no clamp/ellipsis: full btag must stay readable on mobile */
+/* no clamp/ellipsis: full btag must stay readable on mobile. min-width: 0 lets it yield space
+   to the breakdown instead of forcing the line past the card width */
 .name {
     flex: 1 1 auto;
+    min-width: 0;
     overflow-wrap: anywhere;
+}
+
+/* Per-race breakdown on line 1: muted and small so it never competes with the MMR, and
+   shrink-resistant (0 0 auto + nowrap) so it either fits whole or wraps to its own line.
+   dark-2 (not dark-3): the site is dark-only, and at 0.8em this is normal text that needs
+   4.5:1 — dark-2 hits 6.15:1 on the dark-7 body, dark-3 only 3.26:1 */
+.raceGames {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: 0.8em;
+    font-variant-numeric: tabular-nums;
+    color: var(--mantine-color-dark-2);
 }
 
 .mmr {
@@ -95,6 +114,8 @@
     flex: 0 0 auto;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-1));
 }
 
 .lastPlayed {
