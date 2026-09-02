@@ -153,4 +153,52 @@ describe('RankingCardList (SC2CR-S21-T6)', () => {
     it('declares min-height: 44px on the row rule', () => {
         expect(rule('.row')).toContain('min-height: 44px')
     })
+
+    it('carries a distinct direction on the position delta for up vs down rows (SC2CR-S21-T6 color)', () => {
+        const upDown: DecoratedRow[] = [
+            {
+                id: 51,
+                name: 'Sube',
+                btag: 'Sube#1',
+                rating: 3200,
+                mainRace: 'ZERG',
+                leagueType: 3,
+                positionChangeIndicator: 'up',
+                positionDelta: 3,
+                lastDatePlayed: '2026-08-30',
+                gamesPerRace: { ZERG: 20 },
+                totalGames: 20,
+                online: false,
+            } as unknown as DecoratedRow,
+            {
+                id: 52,
+                name: 'Baja',
+                btag: 'Baja#2',
+                rating: 3100,
+                mainRace: 'TERRAN',
+                leagueType: 2,
+                positionChangeIndicator: 'down',
+                positionDelta: 1,
+                lastDatePlayed: '2026-08-30',
+                gamesPerRace: { TERRAN: 25 },
+                totalGames: 25,
+                online: false,
+            } as unknown as DecoratedRow,
+        ]
+
+        render(
+            <MantineProvider>
+                <RankingCardList data={upDown} />
+            </MantineProvider>
+        )
+
+        const upDelta = screen.getByRole('button', { name: 'Open H2H with Sube' }).querySelector('[data-content]')
+        const downDelta = screen.getByRole('button', { name: 'Open H2H with Baja' }).querySelector('[data-content]')
+        expect(upDelta?.getAttribute('data-content')).toBe('▲')
+        expect(downDelta?.getAttribute('data-content')).toBe('▼')
+
+        // the two directions get the same pair of colors as the desktop table's .posIndicator
+        expect(rule(".positionDelta[data-content='▲']")).toContain('var(--mantine-color-sc2cyan-4)')
+        expect(rule(".positionDelta[data-content='▼']")).toContain('#E5566B')
+    })
 })

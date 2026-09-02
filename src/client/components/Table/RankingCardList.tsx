@@ -50,8 +50,12 @@ function RankingCard({ row, index, onOpenH2HQuickView }: RankingCardProps) {
         >
             <span className={classes.line1}>
                 <span className={classes.position}>
-                    {arrow}
-                    {deltaText}
+                    {(arrow || deltaText) && (
+                        <span className={classes.positionDelta} data-content={arrow}>
+                            {arrow}
+                            {deltaText}
+                        </span>
+                    )}
                     {index + 1}
                 </span>
                 <span className={classes.name}>{displayName}</span>

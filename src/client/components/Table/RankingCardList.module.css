@@ -38,6 +38,20 @@
     color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-1));
 }
 
+/* The number stays neutral; only the arrow+delta is the motion indicator, colored the same
+   as the desktop table (.posIndicator in Table.module.css) — both clear 4.5:1 on the dark panel */
+.positionDelta {
+    white-space: nowrap;
+}
+
+.positionDelta[data-content='▲'] {
+    color: var(--mantine-color-sc2cyan-4);
+}
+
+.positionDelta[data-content='▼'] {
+    color: #E5566B;
+}
+
 /* no clamp/ellipsis: full btag must stay readable on mobile */
 .name {
     flex: 1 1 auto;
