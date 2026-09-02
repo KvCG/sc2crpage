@@ -97,10 +97,8 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
                     <div className={classes.tableContainer}>
                         <Table
                             verticalSpacing="6"
-                            striped
                             stickyHeader
                             highlightOnHover
-                            stripedColor="dark"
                             w="100%"
                             miw={250}
                             mb="md"

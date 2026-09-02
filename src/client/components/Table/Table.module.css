@@ -1,7 +1,8 @@
-.header {
+/* th specificity: Mantine's own sticky-thead rule is (0,1,0) — thead.header (0,1,1) wins regardless of cascade order */
+thead.header {
     position: sticky;
     top: 0;
-    background-color: var(--mantine-color-body);
+    background-color: var(--mantine-color-dark-6);
     transition: box-shadow 150ms ease;
 
     &::after {
@@ -10,8 +11,21 @@
         left: 0;
         right: 0;
         bottom: 0;
-        border-bottom: rem(1px) solid
-            light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-3));
+        border-bottom: rem(1px) solid var(--mantine-color-dark-4);
+    }
+
+    th {
+        font-family: var(--mantine-font-family-headings);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--mantine-color-dark-2);
+    }
+
+    /* MMR header keeps its right alignment from .mmr */
+    th:not(.mmr) {
+        text-align: left;
     }
 }
 
@@ -54,6 +68,9 @@
 .mmr {
     text-align: right;
     font-variant-numeric: tabular-nums;
+    color: var(--mantine-color-sc2cyan-4);
+    font-size: 16px;
+    font-weight: 500;
 }
 
 .scrolled {
@@ -66,10 +83,21 @@
     margin: auto;
 }
 
+/* Command Console panel: chamfered corners (S21-T10). The 1px border is clipped at the chamfer by design */
 .tableContainer {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    background: var(--mantine-color-dark-6);
+    border: 1px solid var(--mantine-color-dark-4);
+    padding: 12px 0 4px;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+
+/* hairline row rules: Mantine's tr border (withRowBorders, default on) keeps its 1px width and
+   last-row exception; only the color moves to dark-5 */
+.tableContainer tbody tr {
+    border-bottom-color: var(--mantine-color-dark-5);
 }
 
 .posIndicator {
@@ -83,12 +111,13 @@
     opacity: 0.95;
 }
 
+/* delta colors: sole motion indicator, so both clear 4.5:1 on the dark-6 panel */
 .posIndicator[data-content='▲'] {
-    color: rgba(34, 139, 34, 0.85); /* subdued green */
+    color: var(--mantine-color-sc2cyan-4);
 }
 
 .posIndicator[data-content='▼'] {
-    color: rgba(220, 53, 69, 0.85); /* subdued red */
+    color: #E5566B;
 }
 
 .top {
@@ -109,6 +138,7 @@
 }
 
 .playerName {
+    text-align: left;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
