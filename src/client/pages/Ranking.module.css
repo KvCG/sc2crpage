@@ -92,6 +92,8 @@
     font-size: 19px;
     font-variant-numeric: tabular-nums;
     color: var(--mantine-color-dark-0);
+    /* no wrap: .stats is flex-end aligned, a two-line value pushes its label up */
+    white-space: nowrap;
 }
 
 .toolbar {

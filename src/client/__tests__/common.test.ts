@@ -5,6 +5,7 @@ import {
     calculateRounds,
     filterMatches,
     formatFileSize,
+    formatRelativeTime,
 } from '../utils/common'
 
 describe('common utils', () => {
@@ -49,5 +50,43 @@ describe('common utils', () => {
         expect(formatFileSize(2048)).toBe('2.00 KB')
         expect(formatFileSize(5 * 1048576)).toBe('5.00 MB')
         expect(formatFileSize(2 * 1073741824)).toBe('2.00 GB')
+    })
+})
+
+describe('formatRelativeTime', () => {
+    const now = new Date('2026-09-01T12:00:00.000Z')
+
+    it('formats seconds as "just now"', () => {
+        expect(formatRelativeTime('2026-09-01T11:59:30.000Z', now)).toBe('just now')
+    })
+
+    it('formats minutes with singular and plural', () => {
+        expect(formatRelativeTime('2026-09-01T11:59:00.000Z', now)).toBe('1 minute ago')
+        expect(formatRelativeTime('2026-09-01T11:55:00.000Z', now)).toBe('5 minutes ago')
+    })
+
+    it('formats hours with singular and plural', () => {
+        expect(formatRelativeTime('2026-09-01T11:00:00.000Z', now)).toBe('1 hour ago')
+        expect(formatRelativeTime('2026-09-01T10:00:00.000Z', now)).toBe('2 hours ago')
+    })
+
+    it('formats days with singular and plural', () => {
+        expect(formatRelativeTime('2026-08-31T12:00:00.000Z', now)).toBe('1 day ago')
+        expect(formatRelativeTime('2026-08-29T12:00:00.000Z', now)).toBe('3 days ago')
+    })
+
+    it('falls back to the full Costa Rica date beyond 7 days', () => {
+        const result = formatRelativeTime('2026-08-10T12:00:00.000Z', now)
+        expect(result).not.toContain('ago')
+        expect(result).toMatch(/2026/)
+    })
+
+    it('returns the raw string when the value is not an ISO date (legacy cache format)', () => {
+        const legacy = 'Sep 1, 2026, 8:15:42 PM'
+        expect(formatRelativeTime(legacy, now)).toBe(legacy)
+    })
+
+    it('treats future timestamps (clock skew) as "just now"', () => {
+        expect(formatRelativeTime('2026-09-01T12:00:30.000Z', now)).toBe('just now')
     })
 })

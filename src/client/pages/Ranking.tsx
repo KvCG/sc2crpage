@@ -9,6 +9,7 @@ import { addPositionChangeIndicator, type DecoratedRow } from '../utils/rankingH
 import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
 import { getSnapshot, getSeasons } from '../services/api'
 import { DateTime } from 'luxon'
+import { formatRelativeTime } from '../utils/common'
 import type { SeasonEntry } from '../../shared/types'
 import classes from './Ranking.module.css'
 import { PlayerQuickView } from '../components/h2h/PlayerQuickView'
@@ -89,12 +90,10 @@ export const Ranking = () => {
             } else {
                 try {
                     const resp = await getSnapshot()
-                    const serverSnap = resp.data // { data, createdAt (CR ISO time), expiry }
-                    // Format timestamp in Costa Rica time (independent of the user's system timezone)
-                    const dtCR = DateTime.fromISO(String(serverSnap.createdAt)).setZone(
-                        'America/Costa_Rica'
-                    )
-                    serverSnap.createdAt = dtCR.toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)
+                    const serverSnap = resp.data // { data, createdAt (ISO time), expiry }
+                    // Keep createdAt as the raw ISO string: the UI renders it as relative
+                    // time (formatRelativeTime) and the cached copy must round-trip parseable.
+                    serverSnap.createdAt = String(serverSnap.createdAt)
                     serverSnap.expiresAt = DateTime.fromMillis(serverSnap.expiry)
                         .setZone('America/Costa_Rica')
                         .toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)
@@ -196,7 +195,9 @@ export const Ranking = () => {
                             {snapshotCreatedAt !== null && (
                                 <div className={classes.stat}>
                                     <dt className={classes.statLabel}>Updated</dt>
-                                    <dd className={classes.statValue}>{snapshotCreatedAt}</dd>
+                                    <dd className={classes.statValue}>
+                                        {formatRelativeTime(snapshotCreatedAt)}
+                                    </dd>
                                 </div>
                             )}
                         </dl>
