@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -8,10 +8,13 @@ const hoisted = vi.hoisted(() => ({
     mockGetSeasons: vi.fn(),
     mockGetSnapshot: vi.fn(),
     mockGetTopH2HPairs: vi.fn(),
+    // Driven per-test so new cases can load rows; null (the default) matches the
+    // pre-refactor behavior pinned by the three existing cases.
+    mockUseFetchData: null as unknown,
 }))
 
 vi.mock('../hooks/useFetch', () => ({
-    useFetch: () => ({ data: null, loading: false, error: null, fetch: hoisted.mockFetch }),
+    useFetch: () => ({ data: hoisted.mockUseFetchData, loading: false, error: null, fetch: hoisted.mockFetch }),
 }))
 
 vi.mock('../services/api', () => ({
@@ -38,6 +41,7 @@ const wrap = (ui: React.ReactElement) =>
 describe('Ranking toolbar (behavior pinned before hero refactor)', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        hoisted.mockUseFetchData = null
         hoisted.mockFetch.mockResolvedValue([])
         hoisted.mockGetSeasons.mockResolvedValue({
             data: [
@@ -52,9 +56,14 @@ describe('Ranking toolbar (behavior pinned before hero refactor)', () => {
     })
 
     it('renders the Refresh button and clicking it calls fetch', async () => {
+        // S21-T11: Refresh moved out of the hero into the table controls row, which only
+        // renders once data is loaded — so this case loads rows.
+        hoisted.mockUseFetchData = [
+            { btag: 'Alpha#1', rating: 2540, name: 'Alpha', mainRace: 'TERRAN', positionChangeIndicator: 'none' },
+        ]
         wrap(<Ranking />)
 
-        const refresh = screen.getByRole('button', { name: 'Refresh' })
+        const refresh = await screen.findByRole('button', { name: 'Refresh' })
         fireEvent.click(refresh)
 
         expect(hoisted.mockFetch).toHaveBeenCalled()
@@ -83,5 +92,25 @@ describe('Ranking toolbar (behavior pinned before hero refactor)', () => {
             name: "StarCraft II Costa Rica's Top Players",
         })
         expect(h1.textContent).toBe("StarCraft II Costa Rica's Top Players")
+    })
+
+    it('shows player count and top MMR in the stats bar when data is loaded, and does not crash with empty data', async () => {
+        hoisted.mockUseFetchData = [
+            { btag: 'Alpha#1', rating: 2540 },
+            { btag: 'Bravo#2', rating: 1830 },
+        ]
+        wrap(<Ranking />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Players').parentElement?.textContent).toContain('2')
+            expect(screen.getByText('Top MMR').parentElement?.textContent).toContain('2540')
+        })
+
+        cleanup()
+        hoisted.mockUseFetchData = []
+        wrap(<Ranking />)
+
+        expect(screen.getByText('Players').parentElement?.textContent).toContain('0')
+        expect(screen.queryByText('Top MMR')).toBeNull()
     })
 })

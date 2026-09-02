@@ -3,14 +3,15 @@ import { useSearchParams } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import { RankingTable } from '../components/Table/Table'
 import { SeasonPicker } from '../components/Ranking/SeasonPicker'
-import { Button, Flex, Group, Text } from '@mantine/core'
-import { IconRefresh } from '@tabler/icons-react'
+import { Group } from '@mantine/core'
 import terranBanner from '../assets/terran_banner.png'
 import { addPositionChangeIndicator, type DecoratedRow } from '../utils/rankingHelper'
 import { isValid, loadData, saveSnapShot } from '../utils/localStorage.ts'
 import { getSnapshot, getSeasons } from '../services/api'
 import { DateTime } from 'luxon'
+import { formatRelativeTime } from '../utils/common'
 import type { SeasonEntry } from '../../shared/types'
+import classes from './Ranking.module.css'
 import { PlayerQuickView } from '../components/h2h/PlayerQuickView'
 import type { H2HQuickViewPlayer } from '../types/h2hQuickView'
 
@@ -21,6 +22,11 @@ export const Ranking = () => {
     const [baseline, setBaseline] = useState<DecoratedRow[] | null>(null)
     const [seasons, setSeasons] = useState<SeasonEntry[]>([])
     const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null)
+    // Moment the ranking data last resolved. In-memory only: it reads "just now" on
+    // every page load (the data was just fetched) and gains meaning as the tab stays
+    // open or after a manual Refresh. The server-side data age would need the endpoint
+    // to expose a generation timestamp (separate backend ticket).
+    const [updated, setUpdated] = useState<string | null>(null)
     const [quickViewPlayerA, setQuickViewPlayerA] = useState<H2HQuickViewPlayer | null>(null)
 
     const currentSeasonId = seasons.length > 0 ? seasons[0].id : null
@@ -85,12 +91,7 @@ export const Ranking = () => {
             } else {
                 try {
                     const resp = await getSnapshot()
-                    const serverSnap = resp.data // { data, createdAt (CR ISO time), expiry }
-                    // Format timestamp in Costa Rica time (independent of the user's system timezone)
-                    const dtCR = DateTime.fromISO(String(serverSnap.createdAt)).setZone(
-                        'America/Costa_Rica'
-                    )
-                    serverSnap.createdAt = dtCR.toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)
+                    const serverSnap = resp.data // { data, createdAt (ISO time), expiry }
                     serverSnap.expiresAt = DateTime.fromMillis(serverSnap.expiry)
                         .setZone('America/Costa_Rica')
                         .toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)
@@ -120,6 +121,13 @@ export const Ranking = () => {
         }
     }, [data, baseline])
 
+    // Stamp "Updated" whenever the ranking data resolves (initial load, Refresh, season change).
+    useEffect(() => {
+        if (data !== null) {
+            setUpdated(new Date().toISOString())
+        }
+    }, [data])
+
     // Refetch when URL search params change (for testing)
     useEffect(() => {
         if (baseline !== null) {
@@ -141,11 +149,20 @@ export const Ranking = () => {
                     data={currentData}
                     loading={loading}
                     onOpenH2HQuickView={(player) => setQuickViewPlayerA(player)}
+                    onRefresh={() => fetch(getUrlParams())}
+                    refreshLoading={loading}
                 />
             )
         }
         return <p>No results found.</p>
     }
+
+    const selectedSeason = seasons.find((s) => s.id === selectedSeasonId) ?? null
+    const playerCount = currentData?.length ?? 0
+    const topMmr =
+        currentData && currentData.length > 0
+            ? Math.max(...currentData.map((row) => Number(row.rating) || 0))
+            : null
 
     return (
         <>
@@ -154,63 +171,44 @@ export const Ranking = () => {
                 player={quickViewPlayerA}
                 onClose={() => setQuickViewPlayerA(null)}
             />
-            <section style={{ position: 'relative', overflow: 'hidden' }}>
-                <img
-                    src={terranBanner}
-                    alt=""
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        // Height-constrained (no object-fit): the full square asset fits
-                        // the hero height, so the emblem is never cropped and reads as a
-                        // centered watermark behind the title.
-                        height: '100%',
-                        width: 'auto',
-                        // 0.07 (slice contract) was invisible in practice: the emblem
-                        // is dark steel blue on navy.
-                        opacity: 0.2,
-                        // Fade anchored to the hero box: emblem (top) stays in the
-                        // fully-opaque part of the mask, bottom edge dissolves.
-                        maskImage: 'linear-gradient(to bottom, black 30%, transparent 90%)',
-                        WebkitMaskImage: 'linear-gradient(to bottom, black 30%, transparent 90%)',
-                        pointerEvents: 'none',
-                    }}
-                />
-                <Flex
-                    justify={'center'}
-                    align={'center'}
-                    direction={'column'}
-                    style={{ position: 'relative', zIndex: 1, paddingTop: '24px', paddingBottom: '16px' }}
-                >
-                    <Text
-                        c="blue.3"
-                        style={{ textTransform: 'uppercase', letterSpacing: '0.25em', fontSize: '0.8rem', fontWeight: 600 }}
-                    >
-                        SC2CR
-                    </Text>
-                    <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'white' }}>
-                        StarCraft II Costa Rica's Top Players
-                    </h1>
-                    <div
-                        style={{
-                            width: 120,
-                            height: 3,
-                            background: 'var(--mantine-color-blue-4)',
-                            transform: 'skewX(-12deg)',
-                            marginTop: '8px',
-                        }}
-                    />
-                    <Group justify="center" gap="sm" style={{ marginTop: '16px' }}>
-                        <Button
-                            leftSection={<IconRefresh size={16} />}
-                            variant="light"
-                            onClick={() => fetch(getUrlParams())}
-                            loading={loading}
-                        >
-                            Refresh
-                        </Button>
+            <section className={classes.hero}>
+                <img src={terranBanner} alt="" className={classes.banner} />
+                <div className={classes.content}>
+                    <div className={classes.columns}>
+                        <div>
+                            <div className={classes.kicker}>
+                                <span className={classes.kickerBar} aria-hidden />
+                                {selectedSeason
+                                    ? `LADDER · ${selectedSeason.year} · SEASON ${selectedSeason.number}`
+                                    : 'LADDER'}
+                            </div>
+                            <h1 className={classes.title}>StarCraft II Costa Rica's Top Players</h1>
+                            <p className={classes.subtitle}>
+                                Live 1v1 ladder standings for the Costa Rican StarCraft II community, pulled from SC2Pulse.
+                            </p>
+                        </div>
+                        <dl className={classes.stats}>
+                            <div className={classes.stat}>
+                                <dt className={classes.statLabel}>Players</dt>
+                                <dd className={classes.statValue}>{playerCount}</dd>
+                            </div>
+                            {topMmr !== null && (
+                                <div className={classes.stat}>
+                                    <dt className={classes.statLabel}>Top MMR</dt>
+                                    <dd className={classes.statValue}>{topMmr}</dd>
+                                </div>
+                            )}
+                            {updated !== null && (
+                                <div className={classes.stat}>
+                                    <dt className={classes.statLabel}>Updated</dt>
+                                    <dd className={classes.statValue}>
+                                        {formatRelativeTime(updated)}
+                                    </dd>
+                                </div>
+                            )}
+                        </dl>
+                    </div>
+                    <Group gap="sm" className={classes.toolbar}>
                         {seasons.length > 0 && selectedSeasonId !== null && (
                             <SeasonPicker
                                 seasons={seasons}
@@ -219,7 +217,7 @@ export const Ranking = () => {
                             />
                         )}
                     </Group>
-                </Flex>
+                </div>
             </section>
             {renderResults()}
         </>

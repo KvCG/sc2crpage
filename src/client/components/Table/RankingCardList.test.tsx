@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 import { RankingCardList } from './RankingCardList'
 import type { DecoratedRow } from '../../utils/rankingHelper'
@@ -152,5 +152,129 @@ describe('RankingCardList (SC2CR-S21-T6)', () => {
 
     it('declares min-height: 44px on the row rule', () => {
         expect(rule('.row')).toContain('min-height: 44px')
+    })
+
+    it('carries a distinct direction on the position delta for up vs down rows (SC2CR-S21-T6 color)', () => {
+        const upDown: DecoratedRow[] = [
+            {
+                id: 51,
+                name: 'Sube',
+                btag: 'Sube#1',
+                rating: 3200,
+                mainRace: 'ZERG',
+                leagueType: 3,
+                positionChangeIndicator: 'up',
+                positionDelta: 3,
+                lastDatePlayed: '2026-08-30',
+                gamesPerRace: { ZERG: 20 },
+                totalGames: 20,
+                online: false,
+            } as unknown as DecoratedRow,
+            {
+                id: 52,
+                name: 'Baja',
+                btag: 'Baja#2',
+                rating: 3100,
+                mainRace: 'TERRAN',
+                leagueType: 2,
+                positionChangeIndicator: 'down',
+                positionDelta: 1,
+                lastDatePlayed: '2026-08-30',
+                gamesPerRace: { TERRAN: 25 },
+                totalGames: 25,
+                online: false,
+            } as unknown as DecoratedRow,
+        ]
+
+        render(
+            <MantineProvider>
+                <RankingCardList data={upDown} />
+            </MantineProvider>
+        )
+
+        const upDelta = screen.getByRole('button', { name: 'Open H2H with Sube' }).querySelector('[data-content]')
+        const downDelta = screen.getByRole('button', { name: 'Open H2H with Baja' }).querySelector('[data-content]')
+        expect(upDelta?.getAttribute('data-content')).toBe('▲')
+        expect(downDelta?.getAttribute('data-content')).toBe('▼')
+
+        // the two directions get the same pair of colors as the desktop table's .posIndicator
+        expect(rule(".positionDelta[data-content='▲']")).toContain('var(--mantine-color-sc2cyan-4)')
+        expect(rule(".positionDelta[data-content='▼']")).toContain('#E5566B')
+    })
+
+    it('shows the total games and only the races that have games in the breakdown', () => {
+        const gamesRows: DecoratedRow[] = [
+            {
+                id: 61,
+                name: 'Mixto',
+                btag: 'Mixto#1',
+                rating: 3000,
+                mainRace: 'ZERG',
+                leagueType: 1,
+                positionChangeIndicator: 'none',
+                lastDatePlayed: '2026-08-30',
+                gamesPerRace: { PROTOSS: 9, ZERG: 66 },
+                totalGames: 75,
+                online: false,
+            } as unknown as DecoratedRow,
+            {
+                id: 62,
+                name: 'Puro',
+                btag: 'Puro#2',
+                rating: 2900,
+                mainRace: 'ZERG',
+                leagueType: 2,
+                positionChangeIndicator: 'none',
+                lastDatePlayed: '2026-08-30',
+                gamesPerRace: { ZERG: 154 },
+                totalGames: 154,
+                online: false,
+            } as unknown as DecoratedRow,
+        ]
+
+        render(
+            <MantineProvider>
+                <RankingCardList data={gamesRows} />
+            </MantineProvider>
+        )
+
+        // The total is its own line-2 segment and the per-race breakdown sits on line 1, so each
+        // fact is asserted on its own segment (exact text) instead of the old combined string.
+        const mixto = screen.getByRole('button', { name: 'Open H2H with Mixto' })
+        const puro = screen.getByRole('button', { name: 'Open H2H with Puro' })
+
+        // Mixed: the total is shown, and the breakdown is exactly the two races that have games (no T/R)
+        expect(within(mixto).getByText('75 games')).toBeInTheDocument()
+        expect(within(mixto).getByText('P 9, Z 66')).toBeInTheDocument()
+
+        // Pure: single race, exact count
+        expect(within(puro).getByText('154 games')).toBeInTheDocument()
+        expect(within(puro).getByText('Z 154')).toBeInTheDocument()
+    })
+
+    it('renders a row without gamesPerRace or totalGames without the games text and without crashing', () => {
+        const noGames: DecoratedRow[] = [
+            {
+                id: 63,
+                name: 'SinJuegos',
+                btag: 'SinJuegos#3',
+                rating: 2800,
+                mainRace: 'TERRAN',
+                leagueType: 3,
+                positionChangeIndicator: 'none',
+                lastDatePlayed: '2026-08-30',
+                online: false,
+            } as unknown as DecoratedRow,
+        ]
+
+        render(
+            <MantineProvider>
+                <RankingCardList data={noGames} />
+            </MantineProvider>
+        )
+
+        const row = screen.getByRole('button', { name: 'Open H2H with SinJuegos' })
+        expect(row.textContent).not.toContain('games')
+        expect(row.querySelectorAll('img').length).toBeGreaterThanOrEqual(2)
     })
 })

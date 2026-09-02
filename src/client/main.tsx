@@ -18,6 +18,7 @@ const theme: MantineThemeOverride = createTheme({
         xs: '20em',
         sm: '30em',
         md: '48em',
+        nav: '52em',
         lg: '74em',
         xl: '90em',
     },

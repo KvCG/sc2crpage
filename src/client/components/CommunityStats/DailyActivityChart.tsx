@@ -2,7 +2,7 @@ import { Bar } from 'react-chartjs-2'
 import { Title, Text } from '@mantine/core'
 import { TemporalPatterns } from '../../types/communityStats'
 import { barChartConfig } from './chartConfig'
-import { CHART_THEME } from '../../../shared/colorTokens'
+import { CHART_THEME, ACTIVITY_COLORS } from '../../../shared/colorTokens'
 import styles from './Charts.module.css'
 
 interface DailyActivityChartProps {
@@ -49,7 +49,7 @@ export const DailyActivityChart = ({ data, loading, error, title }: DailyActivit
 
     // Highlight peak day with different color
     const colors = dailyValues.map(
-        (_, index) => (index === data.peakDay ? '#40c057' : '#228be6') // Green for peak, blue for others
+        (_, index) => (index === data.peakDay ? '#40c057' : ACTIVITY_COLORS.HIGH_ACTIVITY) // Green for peak, blue for others
     )
 
     const chartData = {

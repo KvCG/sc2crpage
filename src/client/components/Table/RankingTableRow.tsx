@@ -3,6 +3,8 @@ import cx from 'clsx'
 import classes from './Table.module.css'
 import { addOnlineIndicator, getLeagueSrc } from '../../utils/rankingHelper'
 import { raceAssets } from '../../constants/races'
+import { RACE_COLORS } from '../../../shared/colorTokens'
+import { getRaceDisplayName, normalizeRace } from '../../utils/raceUtils'
 import { getStandardName } from '../../utils/common'
 import { formatPositionChange } from '../../utils/tableHelpers'
 import type { DecoratedRow } from '../../utils/rankingHelper'
@@ -62,6 +64,7 @@ export function RankingTableRow({ row, index, visibleColumns, onOpenH2HQuickView
     }
 
     const { arrow, deltaText } = formatPositionChange(positionChangeIndicator, positionDelta)
+    const normalizedRace = normalizeRace(mainRace ?? '')
 
     return (
         <Table.Tr key={btag}>
@@ -98,12 +101,27 @@ export function RankingTableRow({ row, index, visibleColumns, onOpenH2HQuickView
                 </Table.Td>
             )}
             {visibleColumns.race && (
-                <Table.Td className={cx(raceAssets[mainRace as keyof typeof raceAssets]?.className)}>
-                    <img
-                        className={classes.rank}
-                        src={raceAssets[mainRace as keyof typeof raceAssets]?.assetPath}
-                        alt={mainRace}
-                    />
+                <Table.Td>
+                    {mainRace &&
+                        (() => {
+                            const raceColor = RACE_COLORS[normalizedRace as keyof typeof RACE_COLORS]
+                            return (
+                                <span
+                                    className={classes.racePill}
+                                    style={{
+                                        color: raceColor,
+                                        backgroundColor: `color-mix(in srgb, ${raceColor} 16%, transparent)`,
+                                    }}
+                                >
+                                    {/* decorative: the race name is rendered as text right next to it */}
+                                    <img
+                                        src={raceAssets[normalizedRace as keyof typeof raceAssets]?.assetPath}
+                                        alt=""
+                                    />
+                                    {getRaceDisplayName(mainRace)}
+                                </span>
+                            )
+                        })()}
                 </Table.Td>
             )}
             {visibleColumns.terran && <Table.Td>{gamesPerRace?.TERRAN || '-'}</Table.Td>}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMediaQuery } from '@mantine/hooks'
-import { Table, Skeleton, Grid, Text, Box, Flex, Chip } from '@mantine/core'
+import { Table, Skeleton, Grid, Text, Flex, Chip, Button, Group } from '@mantine/core'
+import { IconRefresh } from '@tabler/icons-react'
 import classes from './Table.module.css'
 import { raceAssets } from '../../constants/races'
 import { RankingTableColumnFilters } from './TableColumnFilters'
@@ -17,8 +18,10 @@ type TableProps = {
     data: DecoratedRow[] | null
     loading: boolean
     onOpenH2HQuickView?: (player: H2HQuickViewPlayer) => void
+    onRefresh?: () => void
+    refreshLoading?: boolean
 }
-export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) {
+export function RankingTable({ data, loading, onOpenH2HQuickView, onRefresh, refreshLoading }: TableProps) {
     const isSmallScreen = useMediaQuery('(max-width: 48em)') ?? false
     const [selectedRace, setSelectedRace] = useState<string>('')
 
@@ -40,13 +43,21 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
         <Grid gutter="md">
             <Grid.Col span={12}>
                 {!loading && Array.isArray(tableData) && tableData.length > 0 && (
-                    <Text ta="center" mb="md" size="xs" c="dimmed">
+                    <Text ta="left" mb="md" size="xs" c="dimmed">
                         Select a race to filter the table. Click again to remove.
                     </Text>
                 )}
                 {!loading && data && (
-                    <Box>
-                        <Flex direction="row" gap="xl" wrap="wrap" align="center" justify="center">
+                    <Flex
+                        direction="row"
+                        wrap="wrap"
+                        align="center"
+                        justify="space-between"
+                        gap="sm"
+                        mb="md"
+                        data-controls-row=""
+                    >
+                        <Flex direction="row" wrap="wrap" align="center" gap="md">
                             {Object.entries(countRaces(data)).map(([race, count]) => {
                                 const normalizedRace = normalizeRace(race)
                                 return (
@@ -67,11 +78,25 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
                                                 src={raceAssets[normalizedRace as keyof typeof raceAssets]?.assetPath}
                                                 alt={getRaceDisplayName(race)}
                                             />
+                                            <span className={classes.raceChipLabel}>{getRaceDisplayName(race)}</span>
                                             <span className={classes.raceChipCount}>{count}</span>
                                         </span>
                                     </Chip>
                                 )
                             })}
+                        </Flex>
+                        <Group gap="sm" wrap="nowrap">
+                            {onRefresh && (
+                                <Button
+                                    leftSection={<IconRefresh size={16} />}
+                                    variant="light"
+                                    size="xs"
+                                    onClick={onRefresh}
+                                    loading={refreshLoading}
+                                >
+                                    Refresh
+                                </Button>
+                            )}
                             {/* No column selector on small screens: the card list has no columns to toggle */}
                             {!isSmallScreen && (
                                 <RankingTableColumnFilters
@@ -79,28 +104,27 @@ export function RankingTable({ data, loading, onOpenH2HQuickView }: TableProps) 
                                     onColumnChange={setVisibleColumns}
                                 />
                             )}
-                        </Flex>
-                    </Box>
+                        </Group>
+                    </Flex>
                 )}
                 {loading && <div>Loading...</div>}
             </Grid.Col>
 
             {isSmallScreen ? (
                 // S21-T7: mobile renders the card list, not a table. tableData is already race-filtered.
-                tableData?.length ? (
-                    <RankingCardList data={tableData} onOpenH2HQuickView={onOpenH2HQuickView} />
-                ) : (
-                    <Skeleton visible={loading} miw={250} h={250} />
-                )
+                <Grid.Col span={12}>
+                    {tableData?.length ? (
+                        <RankingCardList data={tableData} onOpenH2HQuickView={onOpenH2HQuickView} />
+                    ) : (
+                        <Skeleton visible={loading} miw={250} h={250} />
+                    )}
+                </Grid.Col>
             ) : (
                 <Skeleton className={classes.skeleton} visible={loading} miw={250}>
                     <div className={classes.tableContainer}>
                         <Table
                             verticalSpacing="6"
-                            striped
-                            stickyHeader
                             highlightOnHover
-                            stripedColor="dark"
                             w="100%"
                             miw={250}
                             mb="md"
