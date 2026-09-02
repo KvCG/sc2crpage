@@ -60,7 +60,7 @@ export const Header = () => {
                         SC2CR
                     </Text>
                 </Group>
-                <Group gap={5} visibleFrom="52em">
+                <Group gap={5} visibleFrom="nav">
                     {items}
                 </Group>
 
@@ -70,7 +70,7 @@ export const Header = () => {
                             {!opened && (
                                 <Text
                                     className={classes.banner}
-                                    hiddenFrom="52em"
+                                    hiddenFrom="nav"
                                     fw={600}
                                     c="blue.4"
                                     size="sm"
@@ -78,7 +78,7 @@ export const Header = () => {
                                     {"See what's new →"}
                                 </Text>
                             )}
-                            <Burger opened={opened} onClick={toggle} hiddenFrom="52em" size="sm" />
+                            <Burger opened={opened} onClick={toggle} hiddenFrom="nav" size="sm" />
                         </Group>
                     </Menu.Target>
                     <Menu.Dropdown>{mobileItems}</Menu.Dropdown>
