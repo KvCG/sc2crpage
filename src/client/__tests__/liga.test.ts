@@ -23,4 +23,17 @@ describe('constants/liga — bloque de contenido Liga Tica', () => {
         expect(liga.partidasSemanales).toBe('2 partidas semanales')
         expect(liga.ctaUrl).toBe('https://tico-devcr.github.io/sc2-ligatica-divisiones/')
     })
+
+    it('las fechas del contador son instantes válidos y coinciden con las fechas mostradas', () => {
+        const inicio = new Date(liga.inicioISO)
+        const cierre = new Date(liga.cierreInscripcionesISO)
+        expect(Number.isNaN(+inicio)).toBe(false)
+        expect(Number.isNaN(+cierre)).toBe(false)
+        expect(+cierre).toBeLessThan(+inicio)
+        // Día del mes en hora de Costa Rica = el número de la fecha mostrada.
+        const diaCR = (d: Date) =>
+            new Intl.DateTimeFormat('es-CR', { day: 'numeric', timeZone: 'America/Costa_Rica' }).format(d)
+        expect(liga.fechaInicio).toMatch(new RegExp(`^${diaCR(inicio)} de `))
+        expect(liga.cierreInscripciones).toMatch(new RegExp(`^${diaCR(cierre)} de `))
+    })
 })

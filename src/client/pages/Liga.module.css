@@ -5,6 +5,8 @@
  *   fondo dark.7 #0E141B · panel dark.6 #161F29 · borde panel dark.4 #2A3947
  *   steel blue.4 #4E9FD8 · heading dark.0 #F2F6FA · cuerpo dark.1 #C8D4DF
  *   atenuado dark.2 #8497A8 · anillo de foco blue.3 #7FC4F0
+ *   borde de control dark.3 #55697D · hairline dark.5 #1A242F
+ * El movimiento se apaga entero con prefers-reduced-motion (al final del archivo).
  */
 
 .page {
@@ -80,13 +82,162 @@
     border-radius: rem(4px);
     text-decoration: none;
     transition: background-color 0.15s ease;
+    animation: ctaGlow 2.8s ease-in-out 1.2s infinite;
 }
 
 .cta:hover {
     background-color: var(--mantine-color-blue-3);
+    animation-play-state: paused;
 }
 
 .cta:focus-visible {
     outline: rem(2px) solid var(--mantine-color-blue-3);
     outline-offset: rem(2px);
+}
+
+/* ── Estado de inscripciones ───────────────────────────────────────────── */
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: rem(8px);
+    padding: rem(4px) rem(10px);
+    border: rem(1px) solid var(--mantine-color-dark-4);
+    border-radius: rem(2px);
+    color: var(--mantine-color-dark-2);
+    font-family: var(--mantine-font-family-headings);
+    font-size: rem(12px);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.statusDot {
+    width: rem(8px);
+    height: rem(8px);
+    border-radius: 50%;
+    background-color: var(--mantine-color-dark-3);
+}
+
+.status[data-live] {
+    color: var(--mantine-color-dark-1);
+}
+
+.status[data-live] .statusDot {
+    background-color: var(--mantine-color-blue-4);
+    animation: livePulse 1.8s ease-out infinite;
+}
+
+/* ── Contador ──────────────────────────────────────────────────────────── */
+
+.countdownPanel {
+    background-color: var(--mantine-color-dark-6);
+    border: rem(1px) solid var(--mantine-color-dark-4);
+    border-radius: rem(4px);
+    box-shadow: inset 0 rem(2px) 0 var(--mantine-color-blue-4);
+    padding: rem(16px) rem(20px) rem(20px);
+}
+
+.countdown {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: rem(12px);
+    margin-top: rem(10px);
+}
+
+.cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: rem(4px);
+    padding: rem(10px) 0;
+    border: rem(1px) solid var(--mantine-color-dark-5);
+    border-radius: rem(2px);
+    overflow: hidden;
+}
+
+.digits {
+    display: block;
+    color: var(--mantine-color-dark-0);
+    font-family: var(--mantine-font-family-headings);
+    font-size: rem(44px);
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    animation: digitIn 0.35s ease-out;
+}
+
+.cellLabel {
+    color: var(--mantine-color-dark-2);
+    font-size: rem(11px);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+@media (max-width: $mantine-breakpoint-sm) {
+    .digits {
+        font-size: rem(30px);
+    }
+
+    .countdown {
+        gap: rem(8px);
+    }
+}
+
+/* ── Movimiento ────────────────────────────────────────────────────────── */
+
+/* Entrada escalonada: el retardo de cada bloque llega inline desde Liga.tsx. */
+.reveal {
+    animation: revealUp 0.5s ease-out both;
+}
+
+@keyframes revealUp {
+    from {
+        opacity: 0;
+        transform: translateY(rem(10px));
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes digitIn {
+    from {
+        opacity: 0.2;
+        transform: translateY(-35%);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes livePulse {
+    0% {
+        box-shadow: 0 0 0 0 alpha(var(--mantine-color-blue-4), 0.6);
+    }
+    100% {
+        box-shadow: 0 0 0 rem(7px) alpha(var(--mantine-color-blue-4), 0);
+    }
+}
+
+@keyframes ctaGlow {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 alpha(var(--mantine-color-blue-4), 0);
+    }
+    50% {
+        box-shadow: 0 0 rem(18px) rem(2px) alpha(var(--mantine-color-blue-4), 0.45);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .digits,
+    .cta,
+    .status[data-live] .statusDot {
+        animation: none;
+    }
 }
