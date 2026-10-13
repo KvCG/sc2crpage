@@ -3,6 +3,9 @@
     "private": true,
     "version": "2.0.11",
     "type": "module",
+    "engines": {
+        "node": "24.x"
+    },
     "scripts": {
         "fedev": "vite --config vite.config.ts",
         "dev": "concurrently --names \"FE,BE\" -c \"auto,green\" \"vite\" \"nodemon\"",
