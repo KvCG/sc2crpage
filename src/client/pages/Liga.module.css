@@ -1,0 +1,92 @@
+/*
+ * /liga — Liga Tica.
+ * Tokens del contrato "Command Console" ([[SC2CR Design Direction — Public Site]]),
+ * citados como escalas del tema, sin hex nuevos:
+ *   fondo dark.7 #0E141B · panel dark.6 #161F29 · borde panel dark.4 #2A3947
+ *   steel blue.4 #4E9FD8 · heading dark.0 #F2F6FA · cuerpo dark.1 #C8D4DF
+ *   atenuado dark.2 #8497A8 · anillo de foco blue.3 #7FC4F0
+ */
+
+.page {
+    padding-top: rem(40px);
+    padding-bottom: rem(64px);
+}
+
+.kicker {
+    color: var(--mantine-color-blue-4);
+    font-family: var(--mantine-font-family-headings);
+    font-size: rem(13px);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.title {
+    color: var(--mantine-color-dark-0);
+    font-family: var(--mantine-font-family-headings);
+    font-size: rem(42px);
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0;
+}
+
+.lead {
+    color: var(--mantine-color-dark-1);
+    font-size: rem(16px);
+}
+
+.panel {
+    background-color: var(--mantine-color-dark-6);
+    border: rem(1px) solid var(--mantine-color-dark-4);
+    border-radius: rem(4px);
+    padding: rem(16px) rem(20px);
+}
+
+.factRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: rem(12px);
+}
+
+.factLabel {
+    color: var(--mantine-color-dark-2);
+    font-size: rem(13px);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.factValue {
+    color: var(--mantine-color-dark-0);
+    font-size: rem(16px);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* CTA: steel (#4E9FD8) con texto oscuro (#0E141B) — par verificado en el contrato (6.41:1). */
+.cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mantine-color-blue-4);
+    color: var(--mantine-color-dark-7);
+    font-family: var(--mantine-font-family-headings);
+    font-size: rem(14px);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: rem(12px) rem(26px);
+    border-radius: rem(4px);
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.cta:hover {
+    background-color: var(--mantine-color-blue-3);
+}
+
+.cta:focus-visible {
+    outline: rem(2px) solid var(--mantine-color-blue-3);
+    outline-offset: rem(2px);
+}
