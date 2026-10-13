@@ -10,6 +10,7 @@ import { Tournament } from './pages/Tournament.tsx'
 import { CommunityStats } from './pages/CommunityStats.tsx'
 import { PlayerActivity } from './pages/PlayerActivity.tsx'
 import { H2H } from './pages/H2H.tsx'
+import { Liga } from './pages/Liga.tsx'
 import { AdminLogin } from './pages/AdminLogin.tsx'
 import { AdminDashboard } from './pages/AdminDashboard.tsx'
 import { FlagReview } from './pages/FlagReview.tsx'
@@ -34,6 +35,7 @@ const App: React.FC = () => {
                     <Route path="/community-stats" element={<CommunityStats />} />
                     <Route path="/player-activity" element={<PlayerActivity />} />
                     <Route path="/h2h" element={<H2H />} />
+                    <Route path="/liga" element={<Liga />} />
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
                         <Route index element={<AdminDashboard />} />

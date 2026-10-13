@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 import { MemoryRouter } from 'react-router-dom'
 import { Header } from './Header'
+import { links } from '../../constants/navigation'
 
 /** Extract the declaration block for a selector using brace matching (handles nested @mixin blocks). */
 function extractBlock(css: string, selectorPattern: RegExp): string {
@@ -72,6 +73,17 @@ describe('Header — mobile menu parity', () => {
         expect(links[0].getAttribute('data-active')).not.toBeNull()
         const ranking = screen.getByText('Ranking') as HTMLElement
         expect(ranking.getAttribute('data-active')).toBeNull()
+    })
+
+    it('nav incluye Liga → /liga: el link se renderiza en desktop y el menú mobile hereda el item', () => {
+        // `items` (desktop) y `mobileItems` (menú) se mapean del mismo array `links`;
+        // el test de wiring de abajo (2 usos de classes.link + data-active) asegura que
+        // el item del array llega al menú mobile.
+        expect(links).toContainEqual({ link: '/liga', label: 'Liga' })
+        renderHeader('/liga')
+        const ligaLink = screen.getByRole('link', { name: 'Liga' })
+        expect(ligaLink).toHaveAttribute('href', '/liga')
+        expect(ligaLink.getAttribute('data-active')).not.toBeNull()
     })
 
     it('mobile menu items are wired with the same .link class and data-active as desktop (underline parity)', () => {
