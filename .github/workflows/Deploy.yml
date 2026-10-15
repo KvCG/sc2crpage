@@ -99,9 +99,11 @@ jobs:
                       registry.fly.io/${{ secrets.FLY_APP_NAME_DEV }}:${{ steps.meta.outputs.tag }}
                       ghcr.io/kvcg/sc2crpage:${{ steps.meta.outputs.tag }}
                       ghcr.io/kvcg/sc2crpage:${{ github.sha }}
-                  # Links the GHCR package to this repo, so it inherits its public visibility
+                  # source links the GHCR package to this repo (public like it); revision is the
+                  # commit the QA notice in Matrix shows
                   labels: |
                       org.opencontainers.image.source=https://github.com/${{ github.repository }}
+                      org.opencontainers.image.revision=${{ github.sha }}
                   cache-from: type=local,src=/tmp/.buildx-cache
                   cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
