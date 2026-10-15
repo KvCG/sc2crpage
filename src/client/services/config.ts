@@ -6,28 +6,27 @@ interface Config {
     API_URL: string
 }
 
-let config = {}
-let hostName = window.location.hostname
-if (hostName.includes('sc2cr-dev') || hostName.includes('project')) {
-    // This is to standardize dev environment hostnames 
-    hostName = 'sc2cr-dev'
+export function resolveConfig(hostName: string, origin: string): Config {
+    if (hostName.includes('sc2cr-dev') || hostName.includes('project')) {
+        // This is to standardize dev environment hostnames
+        hostName = 'sc2cr-dev'
+    }
+
+    switch (hostName) {
+        case 'sc2cr.vercel.app':
+        case 'sc2cr-latest.onrender.com':
+            return prod
+        case 'sc2cr-dev':
+            return dev
+        case 'localhost':
+        case '127.0.0.1':
+            // Vite dev server on :5173 talks to the API on :3000
+            return local
+        default:
+            // Any other host (QA on KevServer via Tailscale, a LAN IP) is the
+            // Express server itself, which serves both the client and the API
+            return { API_URL: `${origin}/` }
+    }
 }
 
-switch (hostName) {
-    case 'sc2cr.vercel.app':
-    case 'sc2cr-latest.onrender.com':
-        config = prod
-        break
-    case 'sc2cr-dev':
-        config = dev
-        break
-    case 'localhost':
-        config = local
-        break
-    default:
-        config = local
-}
-
-const typedConfig = config as Config
-
-export default typedConfig
+export default resolveConfig(window.location.hostname, window.location.origin)
